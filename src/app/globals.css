@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-navy: #00005a;
-  --color-navy-light: #000080;
-  --color-purple: #0037eb;
-  --color-purple-light: #7850fa;
-  --color-cyan: #23d2ff;
-  --color-blue-light: #e4eff4;
+  --color-navy: #0a1f5c;
+  --color-navy-light: #122a6b;
+  --color-purple: #c41e2a;
+  --color-purple-light: #e63946;
+  --color-cyan: #e63946;
+  --color-blue-light: #f5f0ee;
   --color-background: #ffffff;
   --color-foreground: #171717;
   --font-sans: var(--font-geist-sans);
