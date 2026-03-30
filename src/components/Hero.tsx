@@ -7,7 +7,7 @@ export default function Hero() {
 
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Trust badges */}
-        <div className="flex items-center justify-center gap-6 mb-10 text-sm text-navy/60">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-navy/60">
           <span className="flex items-center gap-2">
             <svg className="w-5 h-5 text-cyan" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -62,36 +62,42 @@ export default function Hero() {
         >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
+              <label htmlFor="pickup" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
                 Pickup Location
               </label>
               <input
+                id="pickup"
+                name="pickup"
                 type="text"
                 placeholder="Your address"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
+              <label htmlFor="destination" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
                 Destination Airport
               </label>
               <input
+                id="destination"
+                name="destination"
                 type="text"
                 placeholder="e.g. LAX, JFK"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
+              <label htmlFor="travel-date" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
                 Travel Date
               </label>
               <input
+                id="travel-date"
+                name="travel-date"
                 type="date"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm text-navy/70"
               />
             </div>
             <div className="flex items-end">
-              <button className="w-full bg-gradient-to-r from-purple to-purple-light text-white py-3 px-6 rounded-xl font-semibold hover:opacity-90 transition-opacity text-sm">
+              <button className="w-full bg-gradient-to-r from-purple to-purple-light text-white py-3 px-6 rounded-xl font-semibold hover:opacity-90 transition-opacity text-sm cursor-pointer">
                 Get Quote
               </button>
             </div>
