@@ -13,7 +13,7 @@ export default function Services() {
         "Seat selection assistance",
         "Expedited gate access",
       ],
-      gradient: "from-purple to-purple-light",
+      image: "/service-departures.jpg",
     },
     {
       label: "Arrivals",
@@ -28,7 +28,7 @@ export default function Services() {
         "Same-day delivery guarantee",
         "Multi-bag support",
       ],
-      gradient: "from-cyan to-purple",
+      image: "/service-arrivals.jpg",
     },
     {
       label: "Transfer",
@@ -43,7 +43,7 @@ export default function Services() {
         "Storage options available",
         "Group & family plans",
       ],
-      gradient: "from-purple-light to-cyan",
+      image: "/service-transfer.jpg",
     },
   ];
 
@@ -73,25 +73,19 @@ export default function Services() {
             >
               {/* Visual */}
               <div className="flex-1 w-full">
-                <div
-                  className={`bg-gradient-to-br ${service.gradient} rounded-3xl p-12 md:p-16 aspect-[4/3] flex items-center justify-center relative overflow-hidden`}
-                >
-                  <div className="absolute inset-0 bg-white/5" />
-                  <div className="relative text-center text-white">
-                    <div className="text-6xl md:text-8xl font-bold opacity-20 mb-4">
-                      0{i + 1}
-                    </div>
-                    <div className="text-2xl md:text-3xl font-bold">
-                      {service.label}
-                    </div>
-                  </div>
+                <div className="rounded-3xl overflow-hidden aspect-[4/3]">
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
 
               {/* Content */}
               <div className="flex-1">
                 <span
-                  className={`inline-block text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${service.gradient} bg-clip-text text-transparent mb-3`}
+                  className="inline-block text-xs font-bold uppercase tracking-wider text-cyan mb-3"
                 >
                   {service.label}
                 </span>

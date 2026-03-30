@@ -1,13 +1,15 @@
 export default function Hero() {
   return (
-    <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 bg-gradient-to-b from-blue-light to-white overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-cyan/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+    <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
+      {/* Hero background image */}
+      <div className="absolute inset-0">
+        <img src="/hero-travel.jpg" alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 to-white" />
+      </div>
 
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Trust badges */}
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-navy/60">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-white/70">
           <span className="flex items-center gap-2">
             <svg className="w-5 h-5 text-cyan" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -42,14 +44,14 @@ export default function Hero() {
 
         {/* Headline */}
         <div className="text-center max-w-4xl mx-auto mb-12">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-navy leading-tight mb-6">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
             Travel Light.
             <br />
-            <span className="bg-gradient-to-r from-purple to-purple-light bg-clip-text text-transparent">
+            <span className="text-cyan">
               Arrive Smart.
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-navy/70 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
             We pick up your bags from your door, check you in, and deliver
             everything to your destination. Skip the airport queues forever.
           </p>

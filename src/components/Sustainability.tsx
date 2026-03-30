@@ -48,16 +48,23 @@ export default function Sustainability() {
 
           {/* Visual */}
           <div className="relative">
-            <div className="bg-gradient-to-br from-cyan/20 to-purple/20 rounded-3xl p-12 md:p-16 aspect-square flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-7xl md:text-9xl font-bold text-white/10 mb-4">
-                  30%
-                </div>
-                <div className="text-lg font-semibold text-cyan">
-                  Less Airport Congestion
-                </div>
-                <div className="text-sm text-white/40 mt-2">
-                  Through optimized baggage logistics
+            <div className="rounded-3xl overflow-hidden aspect-square">
+              <img
+                src="/sustainability.jpg"
+                alt="Sustainable travel logistics"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-navy/40 flex items-center justify-center rounded-3xl">
+                <div className="text-center">
+                  <div className="text-7xl md:text-9xl font-bold text-white/20 mb-4">
+                    30%
+                  </div>
+                  <div className="text-lg font-semibold text-cyan">
+                    Less Airport Congestion
+                  </div>
+                  <div className="text-sm text-white/50 mt-2">
+                    Through optimized baggage logistics
+                  </div>
                 </div>
               </div>
             </div>
