@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Footer() {
   return (
     <footer className="bg-navy text-white">
@@ -5,8 +7,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <a href="#" className="text-2xl font-bold tracking-tight">
-              travel<span className="text-cyan">yt</span>
+            <a href="#" className="inline-block">
+              <Image src="/logo.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto brightness-0 invert" />
             </a>
             <p className="text-white/40 text-sm mt-4 leading-relaxed">
               Travel light, arrive smart. Door-to-door baggage solutions for the

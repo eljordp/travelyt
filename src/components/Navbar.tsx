@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -9,8 +10,8 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-navy text-white">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="text-2xl font-bold tracking-tight">
-          travel<span className="text-cyan">yt</span>
+        <a href="#" className="flex items-center">
+          <Image src="/logo.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto brightness-0 invert" priority />
         </a>
 
         {/* Desktop Links */}
