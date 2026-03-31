@@ -97,9 +97,9 @@ export default function AirlinesPage() {
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Compatibility</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Works with every major airline</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">We work with all airlines</h1>
           <p className="text-navy/60 max-w-2xl mx-auto text-lg">
-            We follow each airline&apos;s baggage policies to the letter. Your bags are tagged, weighed, and checked in exactly how the airline requires.
+            Every airline. Every flight. We follow each carrier&apos;s baggage policies to the letter — your bags are tagged, weighed, and checked in exactly how the airline requires.
           </p>
         </div>
       </section>
@@ -135,6 +135,7 @@ export default function AirlinesPage() {
             ))}
           </div>
           <p className="text-center text-sm text-navy/40 mt-8">
+            These are our most popular carriers — but we work with <strong className="text-navy/60">every airline</strong> operating at our served airports. Don&apos;t see yours? We&apos;ve got you covered.<br />
             Airline baggage fees are paid separately to the airline. Travelyt service fees are in addition to airline charges.
           </p>
         </div>
