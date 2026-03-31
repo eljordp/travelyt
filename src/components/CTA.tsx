@@ -16,10 +16,10 @@ export default function CTA() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
-            href="#book"
+            href="/quote"
             className="bg-white text-purple px-8 py-4 rounded-full font-bold text-lg hover:bg-white/90 transition-colors"
           >
-            Book Now
+            Get a Quote
           </a>
           <a
             href="#how-it-works"

@@ -45,15 +45,14 @@ export default function Hero() {
         {/* Headline */}
         <div className="text-center max-w-4xl mx-auto mb-12">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
-            Travel Light.
+            Your bags fly ahead.
             <br />
             <span className="text-cyan">
-              Arrive Smart.
+              You walk free.
             </span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We pick up your bags from your door, check you in, and deliver
-            everything to your destination. Skip the airport queues forever.
+            We collect your bags from your door, check them into your flight, and deliver them to your destination. You never touch your luggage at the airport.
           </p>
         </div>
 
@@ -77,15 +76,19 @@ export default function Hero() {
             </div>
             <div>
               <label htmlFor="destination" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
-                Destination Airport
+                Airport
               </label>
-              <input
+              <select
                 id="destination"
                 name="destination"
-                type="text"
-                placeholder="e.g. LAX, JFK"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm"
-              />
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm bg-white appearance-none text-navy/70"
+              >
+                <option value="">Select airport...</option>
+                {[["ATL","Atlanta (ATL)"],["BOS","Boston (BOS)"],["BWI","Baltimore/Washington (BWI)"],["DCA","Reagan National (DCA)"],["DEN","Denver (DEN)"],["DFW","Dallas/Fort Worth (DFW)"],["DTW","Detroit (DTW)"],["EWR","New York Newark (EWR)"],["HOU","Houston Hobby (HOU)"],["IAD","Washington Dulles (IAD)"],["IAH","Houston Intercontinental (IAH)"],["JFK","New York JFK (JFK)"],["LAS","Las Vegas (LAS)"],["LAX","Los Angeles (LAX)"],["MCO","Orlando (MCO)"],["MDW","Chicago Midway (MDW)"],["MIA","Miami (MIA)"],["MSP","Minneapolis (MSP)"],["ORD","Chicago O'Hare (ORD)"],["ORF","Norfolk (ORF)"],["PDX","Portland (PDX)"],["PHX","Phoenix (PHX)"],["RIC","Richmond (RIC)"],["SEA","Seattle (SEA)"],["SFO","San Francisco (SFO)"]].map(([code, label]) => (
+                  <option key={code} value={code}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-navy/40 mt-1.5">Service within 50 miles of each airport</p>
             </div>
             <div>
               <label htmlFor="travel-date" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
@@ -115,8 +118,8 @@ export default function Hero() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               ),
-              title: "Doorstep Check-in",
-              desc: "We come to you. Bags tagged, boarding pass printed, you're done.",
+              title: "Doorstep Bag Collection",
+              desc: "We come to your door, weigh, tag, and check your bags into your flight.",
             },
             {
               icon: (
@@ -124,8 +127,8 @@ export default function Hero() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               ),
-              title: "Land & Leave",
-              desc: "Walk off the plane hands-free. We deliver your bags to any address.",
+              title: "Arrival Delivery",
+              desc: "Walk off the plane. We collect your bags from the carousel and deliver them to you.",
             },
             {
               icon: (
