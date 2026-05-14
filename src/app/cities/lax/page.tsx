@@ -42,8 +42,8 @@ export default function LAXPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { step: "01", title: "We come to you", desc: "Anywhere in the greater LA area — your home, hotel, Airbnb, or office. Our agent arrives at your scheduled time." },
-              { step: "02", title: "Bags tagged & checked in", desc: "We weigh, tag, and seal your bags on-site. They're checked into your flight — you get confirmation on your phone." },
-              { step: "03", title: "You skip the line", desc: "Head straight to security at LAX. No bag drop, no carousel wait. Your bags are already on the plane." },
+              { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal your bags on-site. Live GPS tracking is active from the moment we collect — you can follow along from your phone." },
+              { step: "03", title: "You skip the drag", desc: "Drive or ride to LAX hands-free. We meet you curbside with your bags ready for the counter — or, for arrivals, we deliver after your flight lands." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#c41e2a]/20 mb-3">{s.step}</div>

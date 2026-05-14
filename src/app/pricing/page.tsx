@@ -7,12 +7,12 @@ const plans = [
     name: "Departure",
     price: 49,
     unit: "per bag",
-    description: "We collect your bags and check them into your flight.",
+    description: "We collect your bags at your door and move them to the airport. You arrive hands-free.",
     features: [
       "Doorstep bag collection",
-      "Airline bag tagging & check-in",
-      "Weigh & seal before transport",
-      "Real-time GPS tracking",
+      "Weigh, tag, and seal",
+      "GPS tracking end-to-end",
+      "Curbside or terminal meet-up",
       "Full insurance coverage",
       "SMS & email updates",
     ],
@@ -39,14 +39,14 @@ const plans = [
     name: "Arrival",
     price: 29,
     unit: "per bag",
-    description: "We collect your bags from the carousel and deliver them to you.",
+    description: "We collect your bags after your flight lands and deliver them to your address.",
     features: [
-      "Carousel bag collection",
-      "Customs clearance support",
+      "Post-flight bag collection",
       "Delivery to any address",
       "Real-time tracking",
       "Full insurance coverage",
-      "4-hour delivery window",
+      "Flexible delivery windows",
+      "Multi-bag support",
     ],
     cta: "Book Arrival",
     popular: false,
@@ -61,11 +61,11 @@ const addons = [
 ];
 
 const competitors = [
-  { name: "Travelyt", departure: "$49", arrival: "$29", checkin: "Yes", sameDay: "Yes", tracking: "Yes", highlight: true },
-  { name: "Bags VIP", departure: "—", arrival: "$29", checkin: "No", sameDay: "4-6 hrs", tracking: "No", highlight: false },
-  { name: "LugLess", departure: "$35+", arrival: "$35+", checkin: "No", sameDay: "2-5 days", tracking: "Limited", highlight: false },
-  { name: "Luggage Forward", departure: "$99+", arrival: "$99+", checkin: "No", sameDay: "1-3 days", tracking: "Yes", highlight: false },
-  { name: "AirPortr (UK)", departure: "$45-95", arrival: "$45-95", checkin: "Yes", sameDay: "Yes", tracking: "Yes", highlight: false },
+  { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: true },
+  { name: "Bags VIP", departure: "—", arrival: "$29", sameDay: "4-6 hrs", tracking: "No", curbside: "No", highlight: false },
+  { name: "LugLess", departure: "$35+", arrival: "$35+", sameDay: "2-5 days", tracking: "Limited", curbside: "No", highlight: false },
+  { name: "Luggage Forward", departure: "$99+", arrival: "$99+", sameDay: "1-3 days", tracking: "Yes", curbside: "No", highlight: false },
+  { name: "AirPortr (UK)", departure: "$45-95", arrival: "$45-95", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: false },
 ];
 
 export default function PricingPage() {
@@ -120,6 +120,9 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+          <p className="text-center text-sm text-navy/40 mt-8 max-w-2xl mx-auto">
+            Airline baggage fees are paid separately to the airline at check-in. Travelyt fees cover pickup, transport, sealing, tracking, and insurance only.
+          </p>
         </div>
       </section>
 
@@ -142,12 +145,12 @@ export default function PricingPage() {
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">How we compare</h2>
-          <p className="text-navy/50 text-center mb-10 max-w-xl mx-auto">The only US service that picks up your bags, checks them in, and delivers them — same day.</p>
+          <p className="text-navy/50 text-center mb-10 max-w-xl mx-auto">Same-day pickup, real-time tracking, curbside meet-up at the airport. We pick up and deliver — the airline handles the counter.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-gray-100">
-                  {["Service", "Departure", "Arrival", "Airline Check-In", "Same Day", "Live Tracking"].map((h) => (
+                  {["Service", "Departure", "Arrival", "Same Day", "Live Tracking", "Curbside Meet-up"].map((h) => (
                     <th key={h} className="text-left text-xs font-semibold text-navy/40 uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                 </tr>
@@ -158,25 +161,26 @@ export default function PricingPage() {
                     <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#c41e2a]" : "text-navy"}`}>{c.name}</td>
                     <td className="px-4 py-4 text-navy/70">{c.departure}</td>
                     <td className="px-4 py-4 text-navy/70">{c.arrival}</td>
-                    <td className="px-4 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.checkin === "Yes" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{c.checkin}</span>
-                    </td>
                     <td className="px-4 py-4 text-navy/70">{c.sameDay}</td>
                     <td className="px-4 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.tracking === "Yes" ? "bg-green-100 text-green-700" : c.tracking === "Limited" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>{c.tracking}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.curbside === "Yes" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{c.curbside}</span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-navy/40 mt-6 text-center">Competitor pricing is approximate and gathered from public sources. No endorsement or affiliation implied.</p>
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-16 bg-navy text-white text-center">
         <div className="max-w-2xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">Ready to ditch the baggage lines?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to travel hands-free?</h2>
           <p className="text-white/60 mb-8">Get a free quote in under 60 seconds.</p>
           <Link href="/quote" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#e63946] transition-colors">
             Get Your Quote

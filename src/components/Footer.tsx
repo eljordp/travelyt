@@ -24,7 +24,7 @@ export default function Footer() {
             <ul className="space-y-3 text-sm text-white/40">
               <li>
                 <a href="#services" className="hover:text-cyan transition-colors">
-                  Doorstep Check-in
+                  Doorstep Pickup
                 </a>
               </li>
               <li>
@@ -38,8 +38,8 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#services" className="hover:text-cyan transition-colors">
-                  Airline Partnerships
+                <a href="/trust" className="hover:text-cyan transition-colors">
+                  Trust & Security
                 </a>
               </li>
             </ul>

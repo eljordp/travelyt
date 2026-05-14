@@ -40,8 +40,8 @@ export default function ORDPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { step: "01", title: "We come to you", desc: "Loop high-rise, suburban home, hotel on Michigan Ave — our agent arrives at your scheduled time." },
-              { step: "02", title: "Bags tagged & checked in", desc: "Everything handled at your door. Bags weighed, tagged, and checked into your flight." },
-              { step: "03", title: "You skip the line", desc: "Take the Blue Line to O'Hare hands-free. Walk straight to security, no bag drop needed." },
+              { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal each bag at your door. Live GPS tracking goes active the moment we pick up." },
+              { step: "03", title: "You skip the drag", desc: "Take the Blue Line or ride to O'Hare hands-free — we meet you curbside with your bags ready for the counter." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#c41e2a]/20 mb-3">{s.step}</div>

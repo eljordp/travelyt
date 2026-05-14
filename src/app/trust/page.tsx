@@ -4,8 +4,8 @@ import Link from "next/link";
 
 const securityFeatures = [
   {
-    title: "Tamper-Proof Smart Seals",
-    desc: "Every bag is sealed with a unique, numbered tamper-evident seal at your door. If the seal is broken at any point, our system flags it immediately and you're notified.",
+    title: "Tamper-Evident Seals",
+    desc: "Every bag is sealed with a unique, numbered tamper-evident seal at your door. If the seal is broken at any point before you or your recipient receive the bag, our system flags it and you're notified immediately.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -13,8 +13,8 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Real-Time GPS Tracking",
-    desc: "From the moment we collect your bags to the moment they're loaded onto your flight, you can track them live on a map. Updates at every checkpoint.",
+    title: "Live GPS Tracking",
+    desc: "From pickup to delivery, you can follow your bags on a live map and see status updates at every checkpoint. A tracking link goes to the traveler and, if you choose, to anyone meeting them at the other end.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -24,7 +24,7 @@ const securityFeatures = [
   },
   {
     title: "Chain of Custody Logging",
-    desc: "Every handoff is logged — who handled your bag, where, and when. A full digital audit trail from door to plane and back.",
+    desc: "Every handoff is logged — who handled your bag, where, and when. A full digital audit trail from your door through transport to final delivery.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -32,8 +32,8 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Full Insurance Coverage",
-    desc: "Every bag is insured from the moment we collect it until delivery. Coverage for loss, damage, and delay — up to $3,000 per bag.",
+    title: "Insurance Coverage",
+    desc: "Every bag we pick up is insured from the moment we collect it until delivery. Standard coverage applies automatically; declared-value upgrades are available for high-value items. Full terms apply.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -41,8 +41,8 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Background-Checked Agents",
-    desc: "Every Travelyt agent undergoes a thorough background check, TSA compliance training, and ongoing performance reviews. Your bags are in trusted hands.",
+    title: "Vetted Agents",
+    desc: "Every Travelyt agent is ID-verified and trained on handling, sealing, and chain-of-custody procedures. You always know who's handling your bags.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -50,8 +50,8 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Aviation Security Compliance",
-    desc: "We operate in full compliance with TSA regulations and airline security protocols. All bags are screened and handled according to federal aviation standards.",
+    title: "Operates Within the Rules",
+    desc: "Travelyt is a federally registered motor carrier. We follow TSA guidance on restricted items, airport authority rules on landside pickup and delivery, and FMCSA requirements for property transport.",
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -61,11 +61,11 @@ const securityFeatures = [
 ];
 
 const process = [
-  { title: "Collection", desc: "Agent arrives, verifies your identity, weighs and seals each bag with a numbered tamper-proof seal." },
-  { title: "Transport", desc: "Bags loaded into secure, GPS-tracked Travelyt vehicles. Live tracking enabled from this point." },
-  { title: "Airport Handoff", desc: "Bags delivered to airline baggage system. Digital chain-of-custody handoff logged." },
-  { title: "Flight Loading", desc: "Airline loads bags onto your flight per standard procedures. You receive confirmation." },
-  { title: "Arrival (if booked)", desc: "Bags collected from carousel, cleared through customs if needed, delivered to your address." },
+  { title: "Pickup", desc: "Agent arrives at your door, verifies your ID, weighs each bag, and applies a uniquely numbered tamper-evident seal." },
+  { title: "Transport", desc: "Bags are loaded into a GPS-tracked Travelyt vehicle. Live tracking is active from this moment on." },
+  { title: "Airport Meet-Up", desc: "For departures, we meet you curbside or at a designated point so you can walk your bags to the airline counter yourself — where the airline takes over." },
+  { title: "Arrival Pickup", desc: "For arrivals service, our agent collects your bags from baggage claim using your bag tag receipt and flight info." },
+  { title: "Delivery", desc: "Bags are delivered to your chosen address — hotel, home, office — within the agreed delivery window." },
 ];
 
 export default function TrustPage() {
@@ -79,7 +79,7 @@ export default function TrustPage() {
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Trust & Security</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Your bags are in safe hands</h1>
           <p className="text-navy/60 max-w-2xl mx-auto text-lg">
-            Every bag is tracked, insured, sealed, and handled by vetted professionals. Here&apos;s exactly how we protect your belongings.
+            Every bag is tracked, insured, sealed, and handled by vetted agents. Here&apos;s exactly how we protect your belongings.
           </p>
         </div>
       </section>
@@ -129,15 +129,16 @@ export default function TrustPage() {
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-[#f5f0ee] rounded-2xl p-8 md:p-12">
-            <h2 className="text-2xl font-bold text-navy mb-4">Insurance coverage details</h2>
+            <h2 className="text-2xl font-bold text-navy mb-2">Insurance coverage</h2>
+            <p className="text-sm text-navy/50 mb-8">Standard coverage is included on every booking. Full terms and claim procedures apply — details below, and complete terms are available on request.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               {[
-                { label: "Coverage per bag", value: "Up to $3,000" },
-                { label: "Lost bag compensation", value: "Full declared value" },
-                { label: "Damaged item coverage", value: "Repair or replacement cost" },
-                { label: "Delayed delivery", value: "Full service refund" },
-                { label: "Fragile / high-value items", value: "Additional coverage available" },
-                { label: "Claims processing", value: "48-hour resolution target" },
+                { label: "Standard coverage per bag", value: "Included in every booking" },
+                { label: "Declared value upgrade", value: "Available for high-value items" },
+                { label: "Lost or damaged bag", value: "Claim for documented value" },
+                { label: "Delayed delivery", value: "Service fee refund options" },
+                { label: "Fragile / high-value items", value: "Must be declared at pickup" },
+                { label: "Claims process", value: "Initiated via your Travelyt account" },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between gap-4 border-b border-gray-200 pb-3">
                   <span className="text-navy/50">{item.label}</span>
@@ -145,23 +146,25 @@ export default function TrustPage() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-navy/40 mt-6">
+              Specific coverage limits are set out in the Travelyt Terms of Service. Items restricted by law or by carrier policy (flammable liquids, lithium batteries shipped loose, currency, irreplaceable documents, etc.) are not eligible for coverage.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Numbers */}
+      {/* What we stand for */}
       <section className="py-16 bg-[#f5f0ee]">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             {[
-              { num: "0", label: "Bags lost to date" },
-              { num: "99.8%", label: "On-time delivery" },
-              { num: "$3K", label: "Insurance per bag" },
-              { num: "24/7", label: "Support available" },
+              { label: "Every bag sealed and tracked", icon: "✓" },
+              { label: "Insurance on every booking", icon: "✓" },
+              { label: "Federally registered motor carrier", icon: "✓" },
             ].map((s) => (
-              <div key={s.label}>
-                <div className="text-3xl md:text-4xl font-bold text-[#c41e2a]">{s.num}</div>
-                <div className="text-sm text-navy/50 mt-1">{s.label}</div>
+              <div key={s.label} className="bg-white rounded-2xl p-8">
+                <div className="text-3xl text-[#c41e2a] mb-2 font-bold">{s.icon}</div>
+                <div className="text-sm text-navy/60">{s.label}</div>
               </div>
             ))}
           </div>

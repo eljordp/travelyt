@@ -8,7 +8,6 @@ const airlines = [
     code: "AA",
     bags: "2 checked bags (23kg/50lb each)",
     fee: "$35 first bag, $45 second",
-    status: "Supported",
     hubs: ["DFW", "CLT", "MIA", "ORD", "PHX", "LAX", "JFK"],
   },
   {
@@ -16,7 +15,6 @@ const airlines = [
     code: "DL",
     bags: "2 checked bags (23kg/50lb each)",
     fee: "$35 first bag, $45 second",
-    status: "Supported",
     hubs: ["ATL", "MSP", "DTW", "SLC", "SEA", "JFK", "LAX"],
   },
   {
@@ -24,7 +22,6 @@ const airlines = [
     code: "UA",
     bags: "2 checked bags (23kg/50lb each)",
     fee: "$35 first bag, $45 second",
-    status: "Supported",
     hubs: ["ORD", "DEN", "IAH", "EWR", "SFO", "IAD", "LAX"],
   },
   {
@@ -32,7 +29,6 @@ const airlines = [
     code: "WN",
     bags: "2 free checked bags (23kg/50lb each)",
     fee: "Free (first 2 bags)",
-    status: "Supported",
     hubs: ["DAL", "MDW", "BWI", "DEN", "LAS", "PHX", "HOU"],
   },
   {
@@ -40,7 +36,6 @@ const airlines = [
     code: "B6",
     bags: "Varies by fare (0-2 free)",
     fee: "$35-$40 if not included",
-    status: "Supported",
     hubs: ["JFK", "BOS", "FLL", "MCO", "LAX"],
   },
   {
@@ -48,7 +43,6 @@ const airlines = [
     code: "AS",
     bags: "2 checked bags (23kg/50lb each)",
     fee: "$35 first bag, $45 second",
-    status: "Supported",
     hubs: ["SEA", "PDX", "SFO", "LAX", "ANC"],
   },
   {
@@ -56,7 +50,6 @@ const airlines = [
     code: "NK",
     bags: "Checked bags available",
     fee: "$31-$55+ (varies by route/timing)",
-    status: "Supported",
     hubs: ["FLL", "MCO", "ATL", "DFW", "LAS"],
   },
   {
@@ -64,27 +57,26 @@ const airlines = [
     code: "F9",
     bags: "Checked bags available",
     fee: "$30-$52+ (varies)",
-    status: "Supported",
     hubs: ["DEN", "MCO", "ATL", "LAS", "PHX"],
   },
 ];
 
 const features = [
   {
-    title: "We handle the airline rules",
-    desc: "Every airline has different weight limits, size restrictions, and fees. Our agents know them all and ensure your bags are compliant before they leave your door.",
+    title: "We know the rules for every airline",
+    desc: "Weight limits, size restrictions, and fee schedules vary by carrier. We prep each bag to match your airline's policy so nothing gets flagged at the counter.",
   },
   {
-    title: "Excess baggage? We handle it",
-    desc: "Overweight or oversized? We calculate fees and handle payment at check-in so you're not stuck at the counter.",
+    title: "Oversized and sports equipment",
+    desc: "Golf clubs, skis, surfboards, strollers. We handle the odd-shaped stuff and route it with the same care as a regular suitcase — priced transparently up front.",
   },
   {
-    title: "Boarding pass ready",
-    desc: "Where airline integration allows, we generate your boarding pass during doorstep check-in. You go straight to security.",
+    title: "Curbside meet-up",
+    desc: "When your bags arrive at the airport, we meet you at the curb or a designated spot so you can walk straight in and hand them to the airline agent yourself.",
   },
   {
-    title: "Baggage receipts on your phone",
-    desc: "You get a digital receipt for every bag the moment it's tagged — tracking number, weight, airline confirmation.",
+    title: "Digital bag receipts",
+    desc: "You get a digital receipt the moment each bag is picked up and sealed — tracking number, weight, photo, and seal ID. Everything stays in your account.",
   },
 ];
 
@@ -96,10 +88,13 @@ export default function AirlinesPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Compatibility</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">We work with all airlines</h1>
+          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Baggage Rules</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
           <p className="text-navy/60 max-w-2xl mx-auto text-lg">
-            Every airline. Every flight. We follow each carrier&apos;s baggage policies to the letter — your bags are tagged, weighed, and checked in exactly how the airline requires.
+            Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — so when you walk into the terminal, everything&apos;s ready for the counter.
+          </p>
+          <p className="text-navy/40 max-w-2xl mx-auto text-sm mt-6">
+            Travelyt is an independent baggage logistics service. We are not affiliated with, endorsed by, or partnered with any airline unless explicitly stated. Airline names and logos are used here only to describe their baggage policies.
           </p>
         </div>
       </section>
@@ -115,7 +110,6 @@ export default function AirlinesPage() {
                     <h3 className="text-lg font-bold text-navy">{airline.name}</h3>
                     <span className="text-xs font-mono text-navy/40">{airline.code}</span>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">{airline.status}</span>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -127,16 +121,15 @@ export default function AirlinesPage() {
                     <span className="text-navy/70 font-medium">{airline.fee}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-navy/40">Hub airports</span>
+                    <span className="text-navy/40">Major hubs</span>
                     <span className="text-navy/70 font-medium">{airline.hubs.join(", ")}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-navy/40 mt-8">
-            These are our most popular carriers — but we work with <strong className="text-navy/60">every airline</strong> operating at our served airports. Don&apos;t see yours? We&apos;ve got you covered.<br />
-            Airline baggage fees are paid separately to the airline. Travelyt service fees are in addition to airline charges.
+          <p className="text-center text-sm text-navy/40 mt-8 max-w-2xl mx-auto">
+            Airline fees are paid directly to the airline at check-in. Travelyt service fees are separate and cover pickup, transport, sealing, tracking, and insurance. Fee schedules above are summaries — check your airline&apos;s site for the current, complete terms.
           </p>
         </div>
       </section>
@@ -160,7 +153,7 @@ export default function AirlinesPage() {
       <section className="py-16 bg-navy text-white text-center">
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">Flying soon?</h2>
-          <p className="text-white/60 mb-8">Tell us your airline and we&apos;ll handle the rest.</p>
+          <p className="text-white/60 mb-8">Tell us your airline and we&apos;ll prep your bags to match.</p>
           <Link href="/quote" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#e63946] transition-colors">
             Get Your Quote
           </Link>

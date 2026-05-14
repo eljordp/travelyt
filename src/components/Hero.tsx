@@ -42,7 +42,7 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Trust badges */}
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-white/70">
-          {["Airline Approved", "Fully Insured", "Real-Time Tracking"].map((badge) => (
+          {["Fully Insured", "Live Tracking", "Sealed In Transit"].map((badge) => (
             <span key={badge} className="flex items-center gap-2">
               <svg className="w-5 h-5 text-cyan" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -55,12 +55,15 @@ export default function Hero() {
         {/* Headline */}
         <div className="text-center max-w-4xl mx-auto mb-12">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
-            Your bags fly ahead.
+            We move your bags.
             <br />
-            <span className="text-cyan">You walk free.</span>
+            <span className="text-cyan">You move freely.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We collect your bags from your door, check them into your flight, and deliver them to your destination. You never touch your luggage at the airport.
+            We pick up your luggage at your door, transport it to the airport, and deliver it to your destination. Travel hands-free — without ever lugging a suitcase through a terminal.
+          </p>
+          <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
+            Handle the bags, you handle the journey.
           </p>
         </div>
 
@@ -129,8 +132,8 @@ export default function Hero() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               ),
-              title: "Doorstep Bag Collection",
-              desc: "We come to your door, weigh, tag, and check your bags into your flight.",
+              title: "Doorstep Pickup",
+              desc: "We come to your door, weigh and tag your bags, and drive them to the airport. You arrive hands-free.",
             },
             {
               icon: (
@@ -139,7 +142,7 @@ export default function Hero() {
                 </svg>
               ),
               title: "Arrival Delivery",
-              desc: "Walk off the plane. We collect your bags from the carousel and deliver them to you.",
+              desc: "Walk off the plane, skip the carousel. We collect your bags after your flight and deliver them to your hotel or address.",
             },
             {
               icon: (

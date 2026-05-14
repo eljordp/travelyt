@@ -1,54 +1,45 @@
 export default function Stats() {
-  const stats = [
-    { number: "500K+", label: "Passengers Served" },
-    { number: "50+", label: "Airport Partners" },
-    { number: "99.8%", label: "On-Time Delivery" },
-    { number: "4.9/5", label: "Customer Rating" },
-  ];
-
-  const partners = [
-    "Emirates",
-    "Delta",
-    "United",
-    "British Airways",
-    "Lufthansa",
-    "KLM",
-    "Qatar Airways",
-    "Singapore Airlines",
+  const pillars = [
+    {
+      title: "Built for the bag",
+      desc: "Not another courier. A service designed around one job: getting your luggage where it needs to be.",
+    },
+    {
+      title: "Tracked end-to-end",
+      desc: "Every handoff logged. Every bag sealed. A live location you can check on your phone from pickup to drop-off.",
+    },
+    {
+      title: "Fully insured",
+      desc: "Coverage on every bag we touch. If something goes wrong, you're made whole — no fine print.",
+    },
+    {
+      title: "Pre-launch — early access open",
+      desc: "We're onboarding partners and early customers now. Sign up and you'll be among the first to use the service at launch.",
+    },
   ];
 
   return (
     <section className="py-20 md:py-28 bg-gradient-to-b from-white to-blue-light">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
-          {stats.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple to-cyan bg-clip-text text-transparent mb-2">
-                {stat.number}
-              </div>
-              <div className="text-sm text-navy/50 font-medium">
-                {stat.label}
-              </div>
-            </div>
-          ))}
+        <div className="text-center mb-16">
+          <span className="text-sm font-semibold text-purple uppercase tracking-wider">
+            Why Travelyt
+          </span>
+          <h2 className="text-3xl md:text-5xl font-bold text-navy mt-3 mb-4">
+            A service that does one thing well
+          </h2>
         </div>
 
-        {/* Partner Logos */}
-        <div className="text-center">
-          <span className="text-sm font-semibold text-navy/40 uppercase tracking-wider">
-            Trusted by Leading Airlines
-          </span>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {partners.map((partner) => (
-              <div
-                key={partner}
-                className="text-navy/20 font-bold text-lg md:text-xl tracking-wide hover:text-navy/40 transition-colors"
-              >
-                {partner}
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {pillars.map((p) => (
+            <div
+              key={p.title}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            >
+              <h3 className="text-lg font-bold text-navy mb-2">{p.title}</h3>
+              <p className="text-sm text-navy/50 leading-relaxed">{p.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -15,7 +15,7 @@ export default function HowItWorks() {
       step: "02",
       title: "We Collect",
       description:
-        "A certified Travelyt agent arrives at your door at the scheduled time. Bags weighed, tagged, sealed.",
+        "A vetted Travelyt agent arrives at your door at the scheduled time. Bags weighed, tagged, and sealed on the spot.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -38,7 +38,7 @@ export default function HowItWorks() {
       step: "04",
       title: "Arrive Free",
       description:
-        "Walk through the airport hands-free. Your bags are already checked in or waiting at your destination.",
+        "Walk through the airport hands-free. We meet you curbside to hand off — or for arrivals, your bags are already on their way to your address.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />

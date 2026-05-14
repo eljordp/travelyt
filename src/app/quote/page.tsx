@@ -146,9 +146,9 @@ export default function QuotePage() {
                   <p className="text-navy/50 text-sm mb-6">Select the baggage service that fits your trip.</p>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { value: "departure", icon: "🏠→✈️", title: "Departure Pickup", desc: "We collect your bags from your door, tag and check them in. You go straight to your gate." },
-                      { value: "arrival", icon: "✈️→🏠", title: "Arrival Delivery", desc: "We collect your bags from the carousel and deliver them to your door. Walk off the plane free." },
-                      { value: "both", icon: "🔄", title: "Both Ways", desc: "Full round-trip baggage handling. Your bags leave with you and come back to you." },
+                      { value: "departure", icon: "🏠→✈️", title: "Departure Pickup", desc: "We collect your bags at your door, weigh and seal them, and meet you curbside at the airport. You walk in hands-free." },
+                      { value: "arrival", icon: "✈️→🏠", title: "Arrival Delivery", desc: "After your flight lands, we pick up your bags and deliver them to your hotel, home, or any address." },
+                      { value: "both", icon: "🔄", title: "Both Ways", desc: "Full round-trip baggage handling. We pick up before the flight and deliver after — no lifting in between." },
                     ].map((opt) => (
                       <button key={opt.value} type="button"
                         onClick={() => set("service", opt.value)}

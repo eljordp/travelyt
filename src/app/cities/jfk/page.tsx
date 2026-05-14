@@ -40,8 +40,8 @@ export default function JFKPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { step: "01", title: "We come to you", desc: "Manhattan apartment, Brooklyn brownstone, hotel in Midtown — our agent meets you at your door." },
-              { step: "02", title: "Bags tagged & checked in", desc: "We handle everything curbside. Bags weighed, tagged, sealed. Checked into your flight on the spot." },
-              { step: "03", title: "You skip the chaos", desc: "Take the AirTrain hands-free. No hauling luggage through Penn Station or on the subway." },
+              { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal each bag on the spot. GPS tracking is live from the moment we pick up." },
+              { step: "03", title: "You skip the chaos", desc: "Take the AirTrain or your car hands-free — we meet you curbside at JFK with your bags ready for the counter." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#c41e2a]/20 mb-3">{s.step}</div>

@@ -16,17 +16,17 @@ export default function Sustainability() {
               smaller footprint
             </h2>
             <p className="text-white/60 leading-relaxed mb-8">
-              By optimizing routes and consolidating deliveries, Travelyt
-              reduces the carbon footprint of baggage handling while cutting
-              airport congestion. Fewer individual trips means less emissions
-              and a better travel experience for everyone.
+              A single Travelyt van can consolidate trips that would otherwise
+              each require a separate rideshare or taxi to the airport. Fewer
+              vehicles on the curb, less idling, less fuel — and a calmer
+              experience for everyone involved.
             </p>
             <div className="space-y-4">
               {[
-                "Carbon footprint reduction through optimized logistics",
-                "Efficient resource utilization across all operations",
-                "Airport congestion reduction up to 30%",
-                "Working toward ISO 14001:2015 certification",
+                "Consolidated pickups reduce solo airport runs",
+                "Route optimization cuts empty miles",
+                "Reusable tags, sealed transit, minimal packaging",
+                "Working toward lower-emissions vehicles over time",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3">
                   <svg
@@ -55,15 +55,12 @@ export default function Sustainability() {
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-navy/40 flex items-center justify-center rounded-3xl">
-                <div className="text-center">
-                  <div className="text-7xl md:text-9xl font-bold text-white/20 mb-4">
-                    30%
+                <div className="text-center px-6">
+                  <div className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
+                    One van.<br />Many trips.
                   </div>
-                  <div className="text-lg font-semibold text-cyan">
-                    Less Airport Congestion
-                  </div>
-                  <div className="text-sm text-white/50 mt-2">
-                    Through optimized baggage logistics
+                  <div className="text-sm text-white/60 mt-2 max-w-xs mx-auto">
+                    Consolidated pickups replace individual rides to the airport.
                   </div>
                 </div>
               </div>

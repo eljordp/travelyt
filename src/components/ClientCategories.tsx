@@ -3,7 +3,7 @@ export default function ClientCategories() {
     {
       title: "Business Travelers",
       description:
-        "Your time is money. We collect your bags, check them in, and have them at your destination. You walk straight to the gate.",
+        "Your time is money. We collect your bags at your door and move them to the airport — you arrive hands-free and head straight for the line with nothing to drag.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -25,7 +25,7 @@ export default function ClientCategories() {
     {
       title: "Frequent Flyers",
       description:
-        "You've done this a hundred times. Now do it without ever touching your bags at the airport.",
+        "You've done this a hundred times. Now do it without ever dragging a suitcase through a terminal or waiting at baggage claim.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}

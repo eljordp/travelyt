@@ -8,24 +8,28 @@ const faqs = [
     a: "We recommend booking at least 24 hours before your flight. Same-day bookings may be available depending on your location and availability.",
   },
   {
-    q: "What airports do you serve?",
-    a: "We currently operate in major airports across the US, UK, and UAE, with rapid expansion planned. Check our booking tool for availability in your area.",
+    q: "What airports and cities do you serve?",
+    a: "We're rolling out service market by market. Check our booking tool for availability in your area — and if we're not in your city yet, sign up and we'll let you know when we launch there.",
+  },
+  {
+    q: "Do you check my bags in for me at the airline counter?",
+    a: "No — and nobody legally can. After 9/11, only the ticketed passenger can hand a bag to the airline at the counter (you have to show ID). What we do is remove the lugging: we pick up your bags at your door, drive them to the airport, and meet you curbside so you walk in with nothing to carry. For arrivals, we pick up from baggage claim and deliver to your address.",
   },
   {
     q: "Is my luggage insured?",
-    a: "Yes. Every bag is fully insured from the moment we collect it until delivery. We also use tamper-proof seals and GPS tracking for complete peace of mind.",
+    a: "Yes. Every bag we touch is covered from pickup to delivery. Our standard coverage applies automatically; additional declared-value coverage is available for high-value items. Full details are in our Terms.",
   },
   {
     q: "Can I track my bags in real time?",
-    a: "Absolutely. You'll receive a tracking link via SMS and email. Follow your bags on a live map with status updates at every checkpoint.",
+    a: "Yes. You get a tracking link via SMS and email. Follow your bags on a live map with status updates at every checkpoint.",
   },
   {
     q: "What if my flight is delayed or cancelled?",
-    a: "We monitor flight status in real time. If your flight changes, we automatically adjust pickup and delivery schedules. No action needed from you.",
+    a: "We monitor flight status and adjust pickup and delivery timing where possible. If a change requires rescheduling, we'll reach out directly to confirm new times.",
   },
   {
-    q: "How does doorstep check-in work with different airlines?",
-    a: "We're integrated with major airline departure control systems. Our agents can check you in, print boarding passes, and tag bags for most major carriers.",
+    q: "What about fragile items, liquids, or restricted goods?",
+    a: "Same rules that apply to any checked bag apply to us: no lithium batteries loose in cargo, no flammable liquids, no restricted items. If you're unsure, ask us before pickup and we'll walk you through it.",
   },
 ];
 
