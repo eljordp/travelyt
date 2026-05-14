@@ -11,8 +11,8 @@ export default function CTA() {
           Ready to travel differently?
         </h2>
         <p className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-          Join thousands of travelers who&apos;ve ditched the airport chaos. Book
-          your first Travelyt experience today.
+          Pre-launch — early customers and partner inquiries welcome. Tell us
+          where you&apos;re flying and we&apos;ll be in touch.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
