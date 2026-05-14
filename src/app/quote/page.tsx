@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import Link from "next/link";
+import { createBooking, type ServiceType as BookingServiceType } from "@/lib/bookings";
 
 const AIRPORTS = [
   { code: "ATL", name: "Atlanta Hartsfield-Jackson" },
@@ -50,8 +51,8 @@ interface FormData {
 const STEPS = ["Service", "Trip Details", "Contact", "Review"];
 
 export default function QuotePage() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormData>({
     service: "",
@@ -92,6 +93,23 @@ export default function QuotePage() {
   function next() { if (validate()) setStep((s) => s + 1); }
   function back() { setStep((s) => s - 1); setErrors({}); }
 
+  function submitBooking() {
+    if (!form.service) return;
+    const b = createBooking({
+      service: form.service as BookingServiceType,
+      airport: form.airport,
+      address: form.address,
+      date: form.date,
+      flight: form.flight || undefined,
+      bags: form.bags,
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      notes: form.notes || undefined,
+    });
+    router.push(`/booking/${b.id}/pay`);
+  }
+
   const serviceLabels: Record<string, string> = {
     departure: "Departure Pickup",
     arrival: "Arrival Delivery",
@@ -109,7 +127,7 @@ export default function QuotePage() {
           <p className="text-navy/50">We&apos;ll get back to you within 2 hours.</p>
         </div>
 
-        {!submitted ? (
+        {(
           <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 overflow-hidden">
             {/* Progress Bar */}
             <div className="px-8 pt-8 pb-6 border-b border-gray-100">
@@ -313,32 +331,12 @@ export default function QuotePage() {
                     Continue →
                   </button>
                 ) : (
-                  <button type="button" onClick={() => setSubmitted(true)}
+                  <button type="button" onClick={submitBooking}
                     className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
-                    Request My Quote
+                    Continue to Payment →
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-        ) : (
-          /* Success state */
-          <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-navy mb-3">Quote request sent!</h2>
-            <p className="text-navy/60 mb-2">We&apos;ll contact <strong>{form.email}</strong> within 2 hours with your quote.</p>
-            <p className="text-navy/40 text-sm mb-8">Reference: TVT-{Math.random().toString(36).slice(2, 8).toUpperCase()}</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/" className="px-6 py-3 rounded-xl border border-gray-200 text-navy font-semibold text-sm hover:bg-gray-50 transition-colors">
-                Back to Home
-              </Link>
-              <Link href="/register" className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-semibold text-sm hover:opacity-90 transition-opacity">
-                Create an Account
-              </Link>
             </div>
           </div>
         )}

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# internal docs — pitches, LOIs, attorney briefs, etc. Repo is public.
+docs/
