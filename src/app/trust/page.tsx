@@ -1,6 +1,22 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Trust & Security",
+  description:
+    "How Travelyt protects luggage with tamper-evident seals, live tracking, chain-of-custody logs, vetted agents, and insurance coverage.",
+  alternates: {
+    canonical: "/trust",
+  },
+  openGraph: {
+    title: "Trust & Security | Travelyt",
+    description:
+      "Learn how Travelyt handles luggage with seals, tracking, custody logs, vetted agents, and insurance coverage.",
+    url: "/trust",
+  },
+};
 
 const securityFeatures = [
   {
@@ -78,7 +94,7 @@ export default function TrustPage() {
         <div className="max-w-5xl mx-auto px-6 text-center">
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Trust & Security</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Your bags are in safe hands</h1>
-          <p className="text-navy/60 max-w-2xl mx-auto text-lg">
+          <p className="text-navy/70 max-w-2xl mx-auto text-lg">
             Every bag is tracked, insured, sealed, and handled by vetted agents. Here&apos;s exactly how we protect your belongings.
           </p>
         </div>
@@ -94,7 +110,7 @@ export default function TrustPage() {
                   {f.icon}
                 </div>
                 <h3 className="text-lg font-bold text-navy mb-2">{f.title}</h3>
-                <p className="text-sm text-navy/50 leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-navy/70 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -105,7 +121,7 @@ export default function TrustPage() {
       <section className="py-20 bg-navy text-white">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-4">Chain of custody</h2>
-          <p className="text-white/50 text-center mb-12">Every step is logged, tracked, and verified.</p>
+          <p className="text-white/70 text-center mb-12">Every step is logged, tracked, and verified.</p>
           <div className="space-y-6">
             {process.map((step, i) => (
               <div key={step.title} className="flex gap-6 items-start">
@@ -117,7 +133,7 @@ export default function TrustPage() {
                 </div>
                 <div className="pb-4">
                   <h3 className="font-bold text-lg mb-1">{step.title}</h3>
-                  <p className="text-white/50 text-sm">{step.desc}</p>
+                  <p className="text-white/70 text-sm">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -130,7 +146,7 @@ export default function TrustPage() {
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-[#f5f0ee] rounded-2xl p-8 md:p-12">
             <h2 className="text-2xl font-bold text-navy mb-2">Insurance coverage</h2>
-            <p className="text-sm text-navy/50 mb-8">Standard coverage is included on every booking. Full terms and claim procedures apply — details below, and complete terms are available on request.</p>
+            <p className="text-sm text-navy/70 mb-8">Standard coverage is included on every booking. Full terms and claim procedures apply — details below, and complete terms are available on request.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               {[
                 { label: "Standard coverage per bag", value: "Included in every booking" },
@@ -141,12 +157,12 @@ export default function TrustPage() {
                 { label: "Claims process", value: "Initiated via your Travelyt account" },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between gap-4 border-b border-gray-200 pb-3">
-                  <span className="text-navy/50">{item.label}</span>
+                  <span className="text-navy/70">{item.label}</span>
                   <span className="text-navy font-semibold text-right">{item.value}</span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-navy/40 mt-6">
+            <p className="text-xs text-navy/70 mt-6">
               Specific coverage limits are set out in the Travelyt Terms of Service. Items restricted by law or by carrier policy (flammable liquids, lithium batteries shipped loose, currency, irreplaceable documents, etc.) are not eligible for coverage.
             </p>
           </div>
@@ -164,7 +180,7 @@ export default function TrustPage() {
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-8">
                 <div className="text-3xl text-[#c41e2a] mb-2 font-bold">{s.icon}</div>
-                <div className="text-sm text-navy/60">{s.label}</div>
+                <div className="text-sm text-navy/70">{s.label}</div>
               </div>
             ))}
           </div>

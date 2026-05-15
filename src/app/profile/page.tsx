@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
 type Tab = "overview" | "bookings" | "settings";
@@ -30,14 +31,14 @@ export default function ProfilePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-navy">Welcome back, Jordan</h1>
-          <p className="text-navy/50 mt-1">Manage your baggage pickups and account settings.</p>
+          <p className="text-navy/70 mt-1">Manage your baggage pickups and account settings.</p>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm shadow-navy/5 w-fit mb-8">
           {(["overview", "bookings", "settings"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold capitalize transition-all cursor-pointer ${tab === t ? "bg-navy text-white shadow-sm" : "text-navy/50 hover:text-navy"}`}>
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold capitalize transition-all cursor-pointer ${tab === t ? "bg-navy text-white shadow-sm" : "text-navy/70 hover:text-navy"}`}>
               {t}
             </button>
           ))}
@@ -56,7 +57,7 @@ export default function ProfilePage() {
                 <div key={s.label} className="bg-white rounded-2xl p-6 shadow-sm shadow-navy/5">
                   <div className="text-3xl mb-3">{s.icon}</div>
                   <div className="text-3xl font-bold text-navy">{s.value}</div>
-                  <div className="text-sm text-navy/50 mt-1">{s.label}</div>
+                  <div className="text-sm text-navy/70 mt-1">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -72,20 +73,20 @@ export default function ProfilePage() {
 
             {/* Quick actions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <a href="/quote" className="bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white rounded-2xl p-6 flex items-center gap-4 hover:opacity-90 transition-opacity">
+              <Link href="/quote" className="bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white rounded-2xl p-6 flex items-center gap-4 hover:opacity-90 transition-opacity">
                 <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-xl">📦</div>
                 <div>
                   <div className="font-bold">Book a Pickup</div>
                   <div className="text-sm text-white/70">Get an instant quote</div>
                 </div>
-              </a>
-              <a href="#" className="bg-white text-navy rounded-2xl p-6 flex items-center gap-4 hover:shadow-md transition-shadow shadow-sm shadow-navy/5">
+              </Link>
+              <Link href="/booking/demo" className="bg-white text-navy rounded-2xl p-6 flex items-center gap-4 hover:shadow-md transition-shadow shadow-sm shadow-navy/5">
                 <div className="w-12 h-12 rounded-xl bg-[#f5f0ee] flex items-center justify-center text-xl">📍</div>
                 <div>
                   <div className="font-bold">Track My Bags</div>
-                  <div className="text-sm text-navy/50">Live GPS tracking</div>
+                  <div className="text-sm text-navy/70">Live GPS tracking</div>
                 </div>
-              </a>
+              </Link>
             </div>
           </div>
         )}
@@ -107,7 +108,7 @@ export default function ProfilePage() {
             <div className="space-y-5">
               {(["name", "email", "phone", "address"] as const).map((field) => (
                 <div key={field}>
-                  <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5 capitalize">
+                  <label className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5 capitalize">
                     {field === "address" ? "Home Address" : field}
                   </label>
                   <input
@@ -136,14 +137,14 @@ function BookingsTable({ bookings }: { bookings: typeof mockBookings }) {
         <thead>
           <tr className="border-b border-gray-100">
             {["Booking ID", "Date", "Service", "Airport", "Bags", "Status"].map((h) => (
-              <th key={h} className="text-left text-xs font-semibold text-navy/40 uppercase tracking-wider px-6 py-3">{h}</th>
+              <th key={h} className="text-left text-xs font-semibold text-navy/70 uppercase tracking-wider px-6 py-3">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
           {bookings.map((b) => (
             <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
-              <td className="px-6 py-4 font-mono text-xs text-navy/60">{b.id}</td>
+              <td className="px-6 py-4 font-mono text-xs text-navy/70">{b.id}</td>
               <td className="px-6 py-4 text-navy/70">{b.date}</td>
               <td className="px-6 py-4 text-navy font-medium">{b.service}</td>
               <td className="px-6 py-4 font-semibold text-navy">{b.airport}</td>

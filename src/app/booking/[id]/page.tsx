@@ -28,13 +28,17 @@ export default function BookingPage() {
   useEffect(() => {
     if (!params?.id) return;
     const refresh = () => setBooking(getBooking(params.id));
-    refresh();
-    setLoading(false);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const handle = window.setTimeout(() => {
+      refresh();
+      setLoading(false);
+      interval = setInterval(refresh, 1500);
+    }, 0);
     const unsub = subscribe(refresh);
-    const interval = setInterval(refresh, 1500);
     return () => {
+      window.clearTimeout(handle);
       unsub();
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
   }, [params?.id]);
 
@@ -42,7 +46,7 @@ export default function BookingPage() {
     return (
       <div className="min-h-screen bg-[#f5f0ee]">
         <Navbar />
-        <div className="max-w-3xl mx-auto px-4 pt-28 pb-16 text-center text-navy/50">
+        <div className="max-w-3xl mx-auto px-4 pt-28 pb-16 text-center text-navy/70">
           Loading…
         </div>
       </div>
@@ -55,7 +59,7 @@ export default function BookingPage() {
         <Navbar />
         <div className="max-w-3xl mx-auto px-4 pt-28 pb-16 text-center">
           <h1 className="text-2xl font-bold text-navy mb-3">Booking not found</h1>
-          <p className="text-navy/50 mb-8">We couldn&apos;t find that booking on this device.</p>
+          <p className="text-navy/70 mb-8">We couldn&apos;t find that booking on this device.</p>
           <Link href="/quote" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Start a new quote
           </Link>
@@ -72,13 +76,13 @@ export default function BookingPage() {
 
       <div className="max-w-3xl mx-auto px-4 pt-28 pb-16">
         <div className="mb-10">
-          <p className="text-xs text-navy/40 uppercase tracking-wider font-semibold mb-2">
+          <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-2">
             Booking {booking.id}
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">
             {STATUS_LABELS[booking.status]}
           </h1>
-          <p className="text-navy/50">
+          <p className="text-navy/70">
             {SERVICE_LABELS[booking.service]} · {booking.bags} bag
             {booking.bags > 1 ? "s" : ""} · {booking.date}
           </p>
@@ -86,7 +90,7 @@ export default function BookingPage() {
 
         {/* Status timeline */}
         <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
-          <h2 className="text-xs font-semibold text-navy/40 uppercase tracking-wider mb-5">
+          <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
             Live status
           </h2>
           <div className="space-y-4">
@@ -121,7 +125,7 @@ export default function BookingPage() {
         {/* Photo proofs */}
         {booking.proofs.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
-            <h2 className="text-xs font-semibold text-navy/40 uppercase tracking-wider mb-5">
+            <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
               Chain of custody
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,12 +143,12 @@ export default function BookingPage() {
                     <div className="font-semibold text-sm text-navy capitalize">
                       {p.kind === "pickup" ? "Picked up" : "Delivered"}
                     </div>
-                    <div className="text-xs text-navy/40 mt-0.5">
+                    <div className="text-xs text-navy/70 mt-0.5">
                       {new Date(p.timestamp).toLocaleString()}
                       {p.driverName ? ` · ${p.driverName}` : ""}
                     </div>
                     {p.note && (
-                      <div className="text-xs text-navy/60 mt-2">{p.note}</div>
+                      <div className="text-xs text-navy/70 mt-2">{p.note}</div>
                     )}
                   </div>
                 </div>
@@ -155,7 +159,7 @@ export default function BookingPage() {
 
         {/* Trip details */}
         <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
-          <h2 className="text-xs font-semibold text-navy/40 uppercase tracking-wider mb-5">
+          <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
             Trip details
           </h2>
           <div className="space-y-3 text-sm">
@@ -168,13 +172,13 @@ export default function BookingPage() {
             {booking.driverName && <Row label="Driver" value={booking.driverName} />}
           </div>
           <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between">
-            <span className="text-navy/40 font-medium">Total paid</span>
+            <span className="text-navy/70 font-medium">Total paid</span>
             <span className="font-bold text-navy">{formatPrice(booking.priceCents)}</span>
           </div>
         </div>
 
         {/* Demo helper */}
-        <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/60">
+        <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70">
           <div className="font-semibold text-navy mb-1">Demo tip</div>
           Open <Link href="/driver" className="underline font-semibold">/driver</Link> in another tab to play the courier flow. Photos uploaded there will appear here in real time.
         </div>
@@ -186,9 +190,8 @@ export default function BookingPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-navy/40 font-medium shrink-0">{label}</span>
+      <span className="text-navy/70 font-medium shrink-0">{label}</span>
       <span className="text-navy font-semibold text-right break-words">{value}</span>
     </div>
   );
 }
-

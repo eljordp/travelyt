@@ -1,6 +1,22 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Transparent Travelyt per-bag pricing for departure pickup, arrival delivery, and round-trip baggage handling.",
+  alternates: {
+    canonical: "/pricing",
+  },
+  openGraph: {
+    title: "Travelyt Pricing",
+    description:
+      "See per-bag rates for Travelyt pickup, delivery, tracking, sealing, and insured baggage transport.",
+    url: "/pricing",
+  },
+};
 
 const plans = [
   {
@@ -17,6 +33,7 @@ const plans = [
       "SMS & email updates",
     ],
     cta: "Book Departure",
+    href: "/quote?service=departure",
     popular: false,
   },
   {
@@ -33,6 +50,7 @@ const plans = [
       "Best value for round trips",
     ],
     cta: "Book Both Ways",
+    href: "/quote?service=both",
     popular: true,
   },
   {
@@ -49,6 +67,7 @@ const plans = [
       "Multi-bag support",
     ],
     cta: "Book Arrival",
+    href: "/quote?service=arrival",
     popular: false,
   },
 ];
@@ -78,7 +97,7 @@ export default function PricingPage() {
         <div className="max-w-5xl mx-auto px-6 text-center">
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Pricing</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
-          <p className="text-navy/60 max-w-2xl mx-auto text-lg">
+          <p className="text-navy/70 max-w-2xl mx-auto text-lg">
             No hidden fees. No surge pricing. Just straightforward per-bag rates.
           </p>
         </div>
@@ -97,11 +116,11 @@ export default function PricingPage() {
                 )}
                 <div className="mb-6">
                   <h3 className={`text-lg font-bold mb-1 ${plan.popular ? "text-white" : "text-navy"}`}>{plan.name}</h3>
-                  <p className={`text-sm ${plan.popular ? "text-white/60" : "text-navy/50"}`}>{plan.description}</p>
+                  <p className={`text-sm ${plan.popular ? "text-white/60" : "text-navy/70"}`}>{plan.description}</p>
                 </div>
                 <div className="mb-6">
                   <span className={`text-5xl font-bold ${plan.popular ? "text-white" : "text-navy"}`}>${plan.price}</span>
-                  <span className={`text-sm ml-1 ${plan.popular ? "text-white/50" : "text-navy/40"}`}>{plan.unit}</span>
+                  <span className={`text-sm ml-1 ${plan.popular ? "text-white/70" : "text-navy/70"}`}>{plan.unit}</span>
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((f) => (
@@ -109,18 +128,18 @@ export default function PricingPage() {
                       <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#e63946]" : "text-[#c41e2a]"}`} fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span className={plan.popular ? "text-white/80" : "text-navy/60"}>{f}</span>
+                      <span className={plan.popular ? "text-white/80" : "text-navy/70"}>{f}</span>
                     </li>
                   ))}
                 </ul>
-                <Link href="/quote"
+                <Link href={plan.href}
                   className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#c41e2a] text-white hover:bg-[#e63946]" : "bg-navy text-white hover:bg-navy/90"}`}>
                   {plan.cta}
                 </Link>
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-navy/40 mt-8 max-w-2xl mx-auto">
+          <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
             Airline baggage fees are paid separately to the airline at check-in. Travelyt fees cover pickup, transport, sealing, tracking, and insurance only.
           </p>
         </div>
@@ -134,7 +153,7 @@ export default function PricingPage() {
             {addons.map((a) => (
               <div key={a.name} className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="font-bold text-navy text-sm mb-1">{a.name}</div>
-                <div className="text-navy/50 text-sm">{a.detail}</div>
+                <div className="text-navy/70 text-sm">{a.detail}</div>
               </div>
             ))}
           </div>
@@ -145,13 +164,13 @@ export default function PricingPage() {
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">How we compare</h2>
-          <p className="text-navy/50 text-center mb-10 max-w-xl mx-auto">Same-day pickup, real-time tracking, curbside meet-up at the airport. We pick up and deliver — the airline handles the counter.</p>
+          <p className="text-navy/70 text-center mb-10 max-w-xl mx-auto">Same-day pickup, real-time tracking, curbside meet-up at the airport. We pick up and deliver — the airline handles the counter.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-gray-100">
                   {["Service", "Departure", "Arrival", "Same Day", "Live Tracking", "Curbside Meet-up"].map((h) => (
-                    <th key={h} className="text-left text-xs font-semibold text-navy/40 uppercase tracking-wider px-4 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs font-semibold text-navy/70 uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -173,7 +192,7 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-navy/40 mt-6 text-center">Competitor pricing is approximate and gathered from public sources. No endorsement or affiliation implied.</p>
+          <p className="text-xs text-navy/70 mt-6 text-center">Competitor pricing is approximate and gathered from public sources. No endorsement or affiliation implied.</p>
         </div>
       </section>
 

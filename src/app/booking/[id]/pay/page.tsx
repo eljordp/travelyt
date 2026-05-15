@@ -25,8 +25,11 @@ export default function PayPage() {
 
   useEffect(() => {
     if (!params?.id) return;
-    setBooking(getBooking(params.id));
-    setLoading(false);
+    const handle = window.setTimeout(() => {
+      setBooking(getBooking(params.id));
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(handle);
   }, [params?.id]);
 
   function pay() {
@@ -45,7 +48,7 @@ export default function PayPage() {
     return (
       <div className="min-h-screen bg-[#f5f0ee]">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 pt-28 pb-16 text-center text-navy/50">
+        <div className="max-w-2xl mx-auto px-4 pt-28 pb-16 text-center text-navy/70">
           Loading…
         </div>
       </div>
@@ -58,7 +61,7 @@ export default function PayPage() {
         <Navbar />
         <div className="max-w-2xl mx-auto px-4 pt-28 pb-16 text-center">
           <h1 className="text-2xl font-bold text-navy mb-3">Booking not found</h1>
-          <p className="text-navy/50 mb-8">We couldn&apos;t find that booking on this device.</p>
+          <p className="text-navy/70 mb-8">We couldn&apos;t find that booking on this device.</p>
           <Link href="/quote" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Start a new quote
           </Link>
@@ -74,7 +77,7 @@ export default function PayPage() {
       <div className="max-w-2xl mx-auto px-4 pt-28 pb-16">
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">Confirm &amp; Pay</h1>
-          <p className="text-navy/50">Booking {booking.id}</p>
+          <p className="text-navy/70">Booking {booking.id}</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 overflow-hidden mb-6">
@@ -97,7 +100,7 @@ export default function PayPage() {
           </div>
 
           <div className="px-8 py-6 space-y-5">
-            <div className="flex items-center gap-2 text-xs text-navy/40 uppercase font-semibold tracking-wider">
+            <div className="flex items-center gap-2 text-xs text-navy/70 uppercase font-semibold tracking-wider">
               <span className="w-2 h-2 rounded-full bg-yellow-400" />
               Demo checkout — no real charges
             </div>
@@ -129,7 +132,7 @@ export default function PayPage() {
           </div>
         </div>
 
-        <p className="text-xs text-navy/40 text-center">
+        <p className="text-xs text-navy/70 text-center">
           This prototype uses a mock payment screen. No card is charged.
         </p>
       </div>
@@ -140,7 +143,7 @@ export default function PayPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-navy/40 font-medium shrink-0">{label}</span>
+      <span className="text-navy/70 font-medium shrink-0">{label}</span>
       <span className="text-navy font-semibold text-right break-words">{value}</span>
     </div>
   );
@@ -149,7 +152,7 @@ function Row({ label, value }: { label: string; value: string }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">{label}</label>
       {children}
     </div>
   );

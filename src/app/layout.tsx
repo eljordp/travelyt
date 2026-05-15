@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
+const siteUrl = "https://travelyt-psi.vercel.app";
+const siteDescription =
+  "Travelyt picks up, seals, tracks, and transports your luggage so you can travel through the airport hands-free.";
+
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -13,9 +17,27 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Travelyt — Travel Light, Arrive Smart",
-  description:
-    "Door-to-door baggage solutions. Skip the lines, lose the stress. We pick up your bags and check you in from your doorstep.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Travelyt — Travel Light, Arrive Smart",
+    template: "%s | Travelyt",
+  },
+  description: siteDescription,
+  openGraph: {
+    type: "website",
+    siteName: "Travelyt",
+    title: "Travelyt — Travel Light, Arrive Smart",
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Travelyt — Travel Light, Arrive Smart",
+    description: siteDescription,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

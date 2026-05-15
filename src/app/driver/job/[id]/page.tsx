@@ -28,13 +28,20 @@ export default function DriverJobPage() {
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    setDriver(localStorage.getItem(DRIVER_KEY));
-    if (!params?.id) return;
     const refresh = () => setBooking(getBooking(params.id));
-    refresh();
+    const handle = window.setTimeout(() => {
+      setMounted(true);
+      setDriver(localStorage.getItem(DRIVER_KEY));
+      if (params?.id) refresh();
+    }, 0);
+    if (!params?.id) {
+      return () => window.clearTimeout(handle);
+    }
     const unsub = subscribe(refresh);
-    return unsub;
+    return () => {
+      window.clearTimeout(handle);
+      unsub();
+    };
   }, [params?.id]);
 
   if (!mounted) {
@@ -147,14 +154,14 @@ export default function DriverJobPage() {
       <Navbar />
 
       <div className="max-w-2xl mx-auto px-4 pt-28 pb-16">
-        <Link href="/driver" className="text-sm text-navy/40 hover:text-navy mb-4 inline-block">
+        <Link href="/driver" className="text-sm text-navy/70 hover:text-navy mb-4 inline-block">
           ← Back to jobs
         </Link>
 
         <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <p className="text-xs text-navy/40 uppercase tracking-wider font-semibold mb-1">
+              <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-1">
                 {booking.id}
               </p>
               <h1 className="text-2xl font-bold text-navy">{booking.name}</h1>
@@ -178,7 +185,7 @@ export default function DriverJobPage() {
           </div>
 
           <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between text-sm">
-            <span className="text-navy/40">Your payout</span>
+            <span className="text-navy/70">Your payout</span>
             <span className="font-bold text-navy">
               {formatPrice(Math.round(booking.priceCents * 0.65))}
             </span>
@@ -196,7 +203,7 @@ export default function DriverJobPage() {
         )}
 
         {!isMine && booking.status !== "paid" && (
-          <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/60 text-center">
+          <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70 text-center">
             Assigned to {booking.driverName ?? "another courier"}.
           </div>
         )}
@@ -215,7 +222,7 @@ export default function DriverJobPage() {
             <h2 className="font-bold text-navy mb-2">
               {needsPickupPhoto ? "Pickup proof" : "Delivery proof"}
             </h2>
-            <p className="text-sm text-navy/50 mb-5">
+            <p className="text-sm text-navy/70 mb-5">
               Take a clear photo of {booking.bags} bag{booking.bags > 1 ? "s" : ""}{" "}
               {needsPickupPhoto
                 ? "at the pickup location with the customer present if possible."
@@ -235,7 +242,7 @@ export default function DriverJobPage() {
                 <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer">
                   <span className="text-3xl block mb-2">📷</span>
                   <span className="text-sm font-semibold text-navy">Tap to capture</span>
-                  <span className="block text-xs text-navy/40 mt-1">
+                  <span className="block text-xs text-navy/70 mt-1">
                     Camera on mobile · File picker on desktop
                   </span>
                 </span>
@@ -275,7 +282,7 @@ export default function DriverJobPage() {
         {/* Existing proofs */}
         {booking.proofs.length > 0 && (
           <div className="mt-6 bg-white rounded-2xl shadow-lg shadow-navy/5 p-6">
-            <h2 className="text-xs font-semibold text-navy/40 uppercase tracking-wider mb-4">
+            <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
               Proofs on file
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -287,7 +294,7 @@ export default function DriverJobPage() {
                   </div>
                   <div className="px-2 py-1.5 text-xs">
                     <div className="font-semibold text-navy capitalize">{p.kind}</div>
-                    <div className="text-navy/40">{new Date(p.timestamp).toLocaleTimeString()}</div>
+                    <div className="text-navy/70">{new Date(p.timestamp).toLocaleTimeString()}</div>
                   </div>
                 </div>
               ))}
@@ -302,7 +309,7 @@ export default function DriverJobPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-navy/40 font-medium shrink-0">{label}</span>
+      <span className="text-navy/70 font-medium shrink-0">{label}</span>
       <span className="text-navy font-semibold text-right break-words">{value}</span>
     </div>
   );

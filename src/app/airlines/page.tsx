@@ -1,6 +1,22 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Airline Baggage Prep",
+  description:
+    "Travelyt weighs, seals, and prepares bags around airline baggage rules before curbside airport handoff.",
+  alternates: {
+    canonical: "/airlines",
+  },
+  openGraph: {
+    title: "Airline Baggage Prep | Travelyt",
+    description:
+      "See how Travelyt prepares luggage for major airline baggage policies and airport handoff.",
+    url: "/airlines",
+  },
+};
 
 const airlines = [
   {
@@ -90,10 +106,10 @@ export default function AirlinesPage() {
         <div className="max-w-5xl mx-auto px-6 text-center">
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Baggage Rules</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
-          <p className="text-navy/60 max-w-2xl mx-auto text-lg">
+          <p className="text-navy/70 max-w-2xl mx-auto text-lg">
             Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — so when you walk into the terminal, everything&apos;s ready for the counter.
           </p>
-          <p className="text-navy/40 max-w-2xl mx-auto text-sm mt-6">
+          <p className="text-navy/70 max-w-2xl mx-auto text-sm mt-6">
             Travelyt is an independent baggage logistics service. We are not affiliated with, endorsed by, or partnered with any airline unless explicitly stated. Airline names and logos are used here only to describe their baggage policies.
           </p>
         </div>
@@ -108,27 +124,27 @@ export default function AirlinesPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-navy">{airline.name}</h3>
-                    <span className="text-xs font-mono text-navy/40">{airline.code}</span>
+                    <span className="text-xs font-mono text-navy/70">{airline.code}</span>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-navy/40">Checked bag allowance</span>
+                    <span className="text-navy/70">Checked bag allowance</span>
                     <span className="text-navy/70 font-medium">{airline.bags}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-navy/40">Airline baggage fee</span>
+                    <span className="text-navy/70">Airline baggage fee</span>
                     <span className="text-navy/70 font-medium">{airline.fee}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-navy/40">Major hubs</span>
+                    <span className="text-navy/70">Major hubs</span>
                     <span className="text-navy/70 font-medium">{airline.hubs.join(", ")}</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-navy/40 mt-8 max-w-2xl mx-auto">
+          <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
             Airline fees are paid directly to the airline at check-in. Travelyt service fees are separate and cover pickup, transport, sealing, tracking, and insurance. Fee schedules above are summaries — check your airline&apos;s site for the current, complete terms.
           </p>
         </div>
@@ -142,7 +158,7 @@ export default function AirlinesPage() {
             {features.map((f) => (
               <div key={f.title} className="bg-white rounded-2xl p-6">
                 <h3 className="font-bold text-navy mb-2">{f.title}</h3>
-                <p className="text-sm text-navy/50 leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-navy/70 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>

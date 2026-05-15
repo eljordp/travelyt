@@ -48,12 +48,12 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg shadow-navy/5 p-8">
         <h1 className="text-2xl font-bold text-navy mb-1">Create your account</h1>
-        <p className="text-sm text-navy/50 mb-8">Start traveling without the baggage stress.</p>
+        <p className="text-sm text-navy/70 mb-8">Start traveling without the baggage stress.</p>
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {/* Full Name */}
           <div>
-            <label htmlFor="reg-name" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Full Name</label>
+            <label htmlFor="reg-name" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Full Name</label>
             <input id="reg-name" type="text" placeholder="Jordan Williams" {...field("name")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -61,7 +61,7 @@ export default function RegisterPage() {
 
           {/* Email */}
           <div>
-            <label htmlFor="reg-email" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Email</label>
+            <label htmlFor="reg-email" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Email</label>
             <input id="reg-email" type="email" placeholder="you@example.com" {...field("email")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
@@ -69,7 +69,7 @@ export default function RegisterPage() {
 
           {/* Password */}
           <div>
-            <label htmlFor="reg-password" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Password</label>
+            <label htmlFor="reg-password" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Password</label>
             <input id="reg-password" type="password" placeholder="At least 8 characters" {...field("password")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
@@ -77,7 +77,7 @@ export default function RegisterPage() {
 
           {/* Confirm */}
           <div>
-            <label htmlFor="reg-confirm" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Confirm Password</label>
+            <label htmlFor="reg-confirm" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Confirm Password</label>
             <input id="reg-confirm" type="password" placeholder="Repeat password" {...field("confirm")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.confirm ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
             {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm}</p>}
@@ -89,11 +89,11 @@ export default function RegisterPage() {
               <input type="checkbox" checked={form.agreed}
                 onChange={(e) => setForm((f) => ({ ...f, agreed: e.target.checked }))}
                 className="mt-0.5 accent-[#c41e2a]" />
-              <span className="text-sm text-navy/60">
+              <span className="text-sm text-navy/70">
                 I agree to the{" "}
-                <a href="#" className="text-[#c41e2a] hover:underline">Terms of Service</a>{" "}
+                <Link href="/terms" className="text-[#c41e2a] hover:underline">Terms of Service</Link>{" "}
                 and{" "}
-                <a href="#" className="text-[#c41e2a] hover:underline">Privacy Policy</a>
+                <Link href="/privacy" className="text-[#c41e2a] hover:underline">Privacy Policy</Link>
               </span>
             </label>
             {errors.agreed && <p className="text-xs text-red-500 mt-1">{errors.agreed}</p>}
@@ -105,7 +105,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-navy/50 mt-6">
+        <p className="text-center text-sm text-navy/70 mt-6">
           Already have an account?{" "}
           <Link href="/login" className="text-[#c41e2a] font-semibold hover:underline">Sign in</Link>
         </p>

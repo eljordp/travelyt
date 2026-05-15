@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { createBooking, type ServiceType as BookingServiceType } from "@/lib/bookings";
@@ -50,22 +50,51 @@ interface FormData {
 
 const STEPS = ["Service", "Trip Details", "Contact", "Review"];
 
+const emptyForm: FormData = {
+  service: "",
+  airport: "",
+  address: "",
+  date: "",
+  flight: "",
+  bags: 2,
+  name: "",
+  email: "",
+  phone: "",
+  notes: "",
+};
+
 export default function QuotePage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [form, setForm] = useState<FormData>({
-    service: "",
-    airport: "",
-    address: "",
-    date: "",
-    flight: "",
-    bags: 2,
-    name: "",
-    email: "",
-    phone: "",
-    notes: "",
-  });
+  const [form, setForm] = useState<FormData>(emptyForm);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const airport = params.get("airport");
+      const date = params.get("date");
+      const service = params.get("service");
+      const nextForm: Partial<FormData> = {};
+
+      if (airport && AIRPORTS.some((a) => a.code === airport)) {
+        nextForm.airport = airport;
+      }
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        nextForm.date = date;
+      }
+      if (service === "departure" || service === "arrival" || service === "both") {
+        nextForm.service = service;
+        setStep(1);
+      }
+
+      if (Object.keys(nextForm).length > 0) {
+        setForm((f) => ({ ...f, ...nextForm }));
+      }
+    }, 0);
+
+    return () => window.clearTimeout(handle);
+  }, []);
 
   function set(field: keyof FormData, value: string | number) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -115,6 +144,7 @@ export default function QuotePage() {
     arrival: "Arrival Delivery",
     both: "Both Ways",
   };
+  const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
 
   return (
     <div className="min-h-screen bg-[#f5f0ee]">
@@ -124,7 +154,7 @@ export default function QuotePage() {
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">Request a Quote</h1>
-          <p className="text-navy/50">We&apos;ll get back to you within 2 hours.</p>
+          <p className="text-navy/70">We&apos;ll get back to you within 2 hours.</p>
         </div>
 
         {(
@@ -161,7 +191,7 @@ export default function QuotePage() {
               {step === 0 && (
                 <div>
                   <h2 className="text-xl font-bold text-navy mb-2">What do you need?</h2>
-                  <p className="text-navy/50 text-sm mb-6">Select the baggage service that fits your trip.</p>
+                  <p className="text-navy/70 text-sm mb-6">Select the baggage service that fits your trip.</p>
                   <div className="grid grid-cols-1 gap-4">
                     {[
                       { value: "departure", icon: "🏠→✈️", title: "Departure Pickup", desc: "We collect your bags at your door, weigh and seal them, and meet you curbside at the airport. You walk in hands-free." },
@@ -170,6 +200,7 @@ export default function QuotePage() {
                     ].map((opt) => (
                       <button key={opt.value} type="button"
                         onClick={() => set("service", opt.value)}
+                        aria-pressed={form.service === opt.value}
                         className={`w-full text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
                           form.service === opt.value
                             ? "border-[#c41e2a] bg-[#c41e2a]/5"
@@ -179,7 +210,7 @@ export default function QuotePage() {
                           <span className="text-2xl">{opt.icon}</span>
                           <div>
                             <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#c41e2a]" : "text-navy"}`}>{opt.title}</div>
-                            <div className="text-sm text-navy/50">{opt.desc}</div>
+                            <div className="text-sm text-navy/70">{opt.desc}</div>
                           </div>
                           <div className={`ml-auto w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
                             form.service === opt.value ? "border-[#c41e2a] bg-[#c41e2a]" : "border-gray-200"
@@ -203,60 +234,60 @@ export default function QuotePage() {
                 <div className="space-y-5">
                   <div>
                     <h2 className="text-xl font-bold text-navy mb-2">Trip details</h2>
-                    <p className="text-navy/50 text-sm mb-6">Tell us about your bags and travel plans.</p>
+                    <p className="text-navy/70 text-sm mb-6">Tell us about your bags and travel plans.</p>
                   </div>
 
                   {/* Airport */}
                   <div>
-                    <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Airport <span className="text-[#c41e2a]">*</span></label>
-                    <select value={form.airport} onChange={(e) => set("airport", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white appearance-none`}>
+                    <label htmlFor="quote-airport" className={labelClass}>Airport <span className="text-[#c41e2a]">*</span></label>
+                    <select id="quote-airport" name="airport" required value={form.airport} onChange={(e) => set("airport", e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white appearance-none text-navy`}>
                       <option value="">Select airport...</option>
                       {AIRPORTS.map((a) => (
                         <option key={a.code} value={a.code}>{a.name} ({a.code})</option>
                       ))}
                     </select>
                     {errors.airport ? <p className="text-xs text-red-500 mt-1">{errors.airport}</p>
-                      : <p className="text-xs text-navy/40 mt-1">We serve within 50 miles of each airport</p>}
+                      : <p className="text-xs text-navy/70 mt-1">We serve within 50 miles of each airport</p>}
                   </div>
 
                   {/* Address */}
                   <div>
-                    <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">
+                    <label htmlFor="quote-address" className={labelClass}>
                       {form.service === "arrival" ? "Delivery Address" : "Pickup Address"} <span className="text-[#c41e2a]">*</span>
                     </label>
-                    <input type="text"
+                    <input id="quote-address" name="address" required type="text"
                       placeholder={form.service === "arrival" ? "Where should we deliver your bags?" : "Where should we collect your bags?"}
                       value={form.address} onChange={(e) => set("address", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
                     {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
                   </div>
 
                   {/* Date + Flight */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Travel Date <span className="text-[#c41e2a]">*</span></label>
-                      <input type="date" value={form.date} onChange={(e) => set("date", e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy/70`} />
+                      <label htmlFor="quote-date" className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
+                      <input id="quote-date" name="date" required type="date" value={form.date} onChange={(e) => set("date", e.target.value)}
+                        className={`w-full px-4 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
                       {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Flight Number <span className="text-navy/30 font-normal normal-case">(optional)</span></label>
-                      <input type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all" />
+                      <label htmlFor="quote-flight" className={labelClass}>Flight Number <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
+                      <input id="quote-flight" name="flight" type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy" />
                     </div>
                   </div>
 
                   {/* Bags counter */}
                   <div>
-                    <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Number of Bags</label>
+                    <label className={labelClass}>Number of Bags</label>
                     <div className="flex items-center gap-4">
                       <button type="button" onClick={() => set("bags", Math.max(1, form.bags - 1))}
                         className="w-10 h-10 rounded-xl bg-gray-100 text-navy font-bold text-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center">−</button>
                       <span className="text-2xl font-bold text-navy w-8 text-center">{form.bags}</span>
                       <button type="button" onClick={() => set("bags", Math.min(10, form.bags + 1))}
                         className="w-10 h-10 rounded-xl bg-gray-100 text-navy font-bold text-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center">+</button>
-                      <span className="text-sm text-navy/40">bags</span>
+                      <span className="text-sm text-navy/70">bags</span>
                     </div>
                   </div>
                 </div>
@@ -267,7 +298,7 @@ export default function QuotePage() {
                 <div className="space-y-5">
                   <div>
                     <h2 className="text-xl font-bold text-navy mb-2">Your contact info</h2>
-                    <p className="text-navy/50 text-sm mb-6">We&apos;ll send your quote here and coordinate pickup details.</p>
+                    <p className="text-navy/70 text-sm mb-6">We&apos;ll send your quote here and coordinate pickup details.</p>
                   </div>
 
                   {[
@@ -276,20 +307,20 @@ export default function QuotePage() {
                     { id: "phone", label: "Phone Number", type: "tel", placeholder: "+1 (555) 000-0000" },
                   ].map((f) => (
                     <div key={f.id}>
-                      <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">{f.label} <span className="text-[#c41e2a]">*</span></label>
-                      <input type={f.type} placeholder={f.placeholder}
+                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#c41e2a]">*</span></label>
+                      <input id={`quote-${f.id}`} name={f.id} required type={f.type} placeholder={f.placeholder}
                         value={form[f.id as keyof FormData] as string}
                         onChange={(e) => set(f.id as keyof FormData, e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
                       {errors[f.id] && <p className="text-xs text-red-500 mt-1">{errors[f.id]}</p>}
                     </div>
                   ))}
 
                   <div>
-                    <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">Special Instructions <span className="text-navy/30 font-normal normal-case">(optional)</span></label>
-                    <textarea rows={3} placeholder="Fragile items, oversized bags, gate code, etc."
+                    <label htmlFor="quote-notes" className={labelClass}>Special Instructions <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
+                    <textarea id="quote-notes" name="notes" rows={3} placeholder="Fragile items, oversized bags, gate code, etc."
                       value={form.notes} onChange={(e) => set("notes", e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none" />
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none text-navy" />
                   </div>
                 </div>
               )}
@@ -298,7 +329,7 @@ export default function QuotePage() {
               {step === 3 && (
                 <div>
                   <h2 className="text-xl font-bold text-navy mb-2">Review your request</h2>
-                  <p className="text-navy/50 text-sm mb-6">Everything look right? Submit and we&apos;ll be in touch within 2 hours.</p>
+                  <p className="text-navy/70 text-sm mb-6">Everything look right? Submit and we&apos;ll be in touch within 2 hours.</p>
 
                   <div className="bg-[#f5f0ee] rounded-xl p-6 space-y-4 text-sm">
                     <Row label="Service" value={serviceLabels[form.service] || form.service} />
@@ -348,7 +379,7 @@ export default function QuotePage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-navy/40 font-medium shrink-0">{label}</span>
+      <span className="text-navy/70 font-medium shrink-0">{label}</span>
       <span className="text-navy font-semibold text-right">{value}</span>
     </div>
   );

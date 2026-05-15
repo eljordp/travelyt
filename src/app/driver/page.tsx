@@ -27,12 +27,17 @@ export default function DriverDashboard() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    setDriver(localStorage.getItem(DRIVER_KEY));
     const refresh = () => setBookings(getBookings());
-    refresh();
+    const handle = window.setTimeout(() => {
+      setMounted(true);
+      setDriver(localStorage.getItem(DRIVER_KEY));
+      refresh();
+    }, 0);
     const unsub = subscribe(refresh);
-    return unsub;
+    return () => {
+      window.clearTimeout(handle);
+      unsub();
+    };
   }, []);
 
   function chooseDriver(name: string) {
@@ -67,7 +72,7 @@ export default function DriverDashboard() {
         <div className="max-w-md mx-auto px-4 pt-28 pb-16">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-navy mb-2">Courier Login</h1>
-            <p className="text-navy/50 text-sm">Pick a driver to sign in as for the demo.</p>
+            <p className="text-navy/70 text-sm">Pick a driver to sign in as for the demo.</p>
           </div>
           <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 space-y-3">
             {DRIVER_OPTIONS.map((name) => (
@@ -81,7 +86,7 @@ export default function DriverDashboard() {
                 </div>
                 <div>
                   <div className="font-semibold text-navy">{name}</div>
-                  <div className="text-xs text-navy/40">Courier · Demo account</div>
+                  <div className="text-xs text-navy/70">Courier · Demo account</div>
                 </div>
               </button>
             ))}
@@ -109,16 +114,16 @@ export default function DriverDashboard() {
       <div className="max-w-3xl mx-auto px-4 pt-28 pb-16">
         <div className="flex items-center justify-between mb-10">
           <div>
-            <p className="text-xs text-navy/40 uppercase tracking-wider font-semibold mb-1">
+            <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-1">
               Courier dashboard
             </p>
             <h1 className="text-2xl font-bold text-navy">Hi, {driver.split(" ")[0]}</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={resetDemo} className="text-xs text-navy/40 hover:text-navy underline cursor-pointer">
+            <button onClick={resetDemo} className="text-xs text-navy/70 hover:text-navy underline cursor-pointer">
               Reset demo
             </button>
-            <button onClick={signOut} className="text-xs text-navy/40 hover:text-navy underline cursor-pointer">
+            <button onClick={signOut} className="text-xs text-navy/70 hover:text-navy underline cursor-pointer">
               Sign out
             </button>
           </div>
@@ -145,7 +150,7 @@ export default function DriverDashboard() {
         )}
 
         {bookings.length === 0 && (
-          <div className="bg-white/60 border border-dashed border-navy/15 rounded-2xl p-8 text-center text-sm text-navy/50">
+          <div className="bg-white/60 border border-dashed border-navy/15 rounded-2xl p-8 text-center text-sm text-navy/70">
             No bookings yet on this device.{" "}
             <Link href="/quote" className="underline font-semibold">
               Create one as a customer
@@ -171,13 +176,13 @@ function Section({
     Array.isArray(children) && children.filter(Boolean).length > 0;
   return (
     <div className="mb-8">
-      <h2 className="text-xs font-semibold text-navy/40 uppercase tracking-wider mb-3">
+      <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-3">
         {title}
       </h2>
       {hasChildren ? (
         <div className="space-y-3">{children}</div>
       ) : empty ? (
-        <div className="bg-white/60 rounded-xl p-5 text-sm text-navy/40 text-center border border-dashed border-navy/10">
+        <div className="bg-white/60 rounded-xl p-5 text-sm text-navy/70 text-center border border-dashed border-navy/10">
           {empty}
         </div>
       ) : null}
@@ -194,27 +199,27 @@ function JobCard({ booking, muted = false }: { booking: Booking; muted?: boolean
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <div className="font-semibold text-navy">{booking.name}</div>
-          <div className="text-xs text-navy/40 mt-0.5">{booking.id}</div>
+          <div className="text-xs text-navy/70 mt-0.5">{booking.id}</div>
         </div>
         <span className="text-xs font-semibold text-[#c41e2a] bg-[#c41e2a]/10 px-2.5 py-1 rounded-full">
           {STATUS_LABELS[booking.status]}
         </span>
       </div>
-      <div className="space-y-1 text-sm text-navy/60">
+      <div className="space-y-1 text-sm text-navy/70">
         <div>
-          <span className="text-navy/40">Service:</span>{" "}
+          <span className="text-navy/70">Service:</span>{" "}
           {SERVICE_LABELS[booking.service]} · {booking.bags} bag
           {booking.bags > 1 ? "s" : ""}
         </div>
         <div>
-          <span className="text-navy/40">Address:</span> {booking.address}
+          <span className="text-navy/70">Address:</span> {booking.address}
         </div>
         <div>
-          <span className="text-navy/40">Airport:</span> {booking.airport} · {booking.date}
+          <span className="text-navy/70">Airport:</span> {booking.airport} · {booking.date}
         </div>
       </div>
       <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-xs">
-        <span className="text-navy/40">Payout</span>
+        <span className="text-navy/70">Payout</span>
         <span className="font-semibold text-navy">
           {formatPrice(Math.round(booking.priceCents * 0.65))}
         </span>
