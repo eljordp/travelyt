@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import { createBooking, type ServiceType as BookingServiceType } from "@/lib/bookings";
+import { Check, Home, PlaneLanding, Repeat2 } from "lucide-react";
+import { calcPriceCents, createBooking, formatPrice, type ServiceType as BookingServiceType } from "@/lib/bookings";
 
 const AIRPORTS = [
   { code: "ATL", name: "Atlanta Hartsfield-Jackson" },
@@ -144,6 +145,10 @@ export default function QuotePage() {
     arrival: "Arrival Delivery",
     both: "Both Ways",
   };
+  const estimate =
+    form.service && form.bags
+      ? formatPrice(calcPriceCents(form.bags, form.service as BookingServiceType))
+      : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
 
   return (
@@ -171,9 +176,7 @@ export default function QuotePage() {
                         "bg-gray-100 text-navy/30"
                       }`}>
                         {i < step ? (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Check className="w-4 h-4" strokeWidth={2.5} />
                         ) : i + 1}
                       </div>
                       <span className={`text-xs mt-1 font-medium hidden sm:block ${i === step ? "text-navy" : "text-navy/30"}`}>{label}</span>
@@ -194,9 +197,9 @@ export default function QuotePage() {
                   <p className="text-navy/70 text-sm mb-6">Select the baggage service that fits your trip.</p>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { value: "departure", icon: "🏠→✈️", title: "Departure Pickup", desc: "We collect your bags at your door, weigh and seal them, and meet you curbside at the airport. You walk in hands-free." },
-                      { value: "arrival", icon: "✈️→🏠", title: "Arrival Delivery", desc: "After your flight lands, we pick up your bags and deliver them to your hotel, home, or any address." },
-                      { value: "both", icon: "🔄", title: "Both Ways", desc: "Full round-trip baggage handling. We pick up before the flight and deliver after — no lifting in between." },
+                      { value: "departure", icon: <Home className="h-6 w-6" strokeWidth={1.7} />, title: "Departure Pickup", desc: "We collect your bags at your door, weigh and seal them, and meet you curbside at the airport. You walk in hands-free." },
+                      { value: "arrival", icon: <PlaneLanding className="h-6 w-6" strokeWidth={1.7} />, title: "Arrival Delivery", desc: "After your flight lands, we pick up your bags and deliver them to your hotel, home, or any address." },
+                      { value: "both", icon: <Repeat2 className="h-6 w-6" strokeWidth={1.7} />, title: "Both Ways", desc: "Full round-trip baggage handling. We pick up before the flight and deliver after — no lifting in between." },
                     ].map((opt) => (
                       <button key={opt.value} type="button"
                         onClick={() => set("service", opt.value)}
@@ -207,7 +210,11 @@ export default function QuotePage() {
                             : "border-gray-100 hover:border-gray-200"
                         }`}>
                         <div className="flex items-start gap-4">
-                          <span className="text-2xl">{opt.icon}</span>
+                          <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${
+                            form.service === opt.value ? "bg-[#c41e2a] text-white" : "bg-[#f5f0ee] text-navy"
+                          }`}>
+                            {opt.icon}
+                          </span>
                           <div>
                             <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#c41e2a]" : "text-navy"}`}>{opt.title}</div>
                             <div className="text-sm text-navy/70">{opt.desc}</div>
@@ -216,9 +223,7 @@ export default function QuotePage() {
                             form.service === opt.value ? "border-[#c41e2a] bg-[#c41e2a]" : "border-gray-200"
                           }`}>
                             {form.service === opt.value && (
-                              <svg className="w-full h-full p-0.5" fill="none" stroke="white" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
+                              <Check className="w-full h-full p-0.5 text-white" strokeWidth={3} />
                             )}
                           </div>
                         </div>
@@ -338,6 +343,7 @@ export default function QuotePage() {
                     <Row label="Travel Date" value={form.date} />
                     {form.flight && <Row label="Flight" value={form.flight} />}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
+                    {estimate && <Row label="Estimated Total" value={estimate} />}
                     <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
                       <Row label="Name" value={form.name} />
                       <Row label="Email" value={form.email} />
@@ -345,6 +351,11 @@ export default function QuotePage() {
                       {form.notes && <Row label="Notes" value={form.notes} />}
                     </div>
                   </div>
+                  <p className="mt-4 text-xs leading-relaxed text-navy/70">
+                    Estimate includes pickup or delivery, sealing, tracking, and
+                    standard coverage. Airline baggage fees, if any, are paid
+                    separately to the airline.
+                  </p>
                 </div>
               )}
 

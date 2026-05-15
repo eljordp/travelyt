@@ -26,7 +26,7 @@ export default function Testimonials() {
           <h2 className="text-3xl md:text-5xl font-bold text-navy mt-3 mb-4">
             Building this the right way
           </h2>
-          <p className="text-navy/60 max-w-2xl mx-auto">
+          <p className="text-navy/70 max-w-2xl mx-auto">
             Travelyt is early-stage. We&apos;re onboarding partners and launch customers now — and we&apos;re committed to being straight with both.
           </p>
         </div>
@@ -38,7 +38,7 @@ export default function Testimonials() {
               className="bg-white rounded-2xl p-8 shadow-lg shadow-navy/5"
             >
               <h3 className="text-lg font-bold text-navy mb-3">{p.title}</h3>
-              <p className="text-navy/60 leading-relaxed text-sm">{p.body}</p>
+              <p className="text-navy/70 leading-relaxed text-sm">{p.body}</p>
             </div>
           ))}
         </div>

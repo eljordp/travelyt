@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Travelyt — Handle the bags, you handle the journey.";
+export const alt = "Travelyt — Travel light, arrive smart.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -78,7 +78,7 @@ export default function OpengraphImage() {
               letterSpacing: -0.5,
             }}
           >
-            Handle the bags, you handle the journey.
+            Travel light, arrive smart.
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export default function OpengraphImage() {
             <span>·</span>
             <span>Fully insured</span>
           </div>
-          <div style={{ color: "white", fontWeight: 700 }}>travelyt.com</div>
+          <div style={{ color: "white", fontWeight: 700 }}>travelyt-psi.vercel.app</div>
         </div>
       </div>
     ),

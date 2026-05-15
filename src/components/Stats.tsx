@@ -10,7 +10,7 @@ export default function Stats() {
     },
     {
       title: "Fully insured",
-      desc: "Coverage on every bag we touch. If something goes wrong, you're made whole — no fine print.",
+      desc: "Coverage on every bag we touch, with clear terms before pickup and declared-value options for higher-value items.",
     },
     {
       title: "Pre-launch — early access open",
@@ -37,7 +37,7 @@ export default function Stats() {
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
             >
               <h3 className="text-lg font-bold text-navy mb-2">{p.title}</h3>
-              <p className="text-sm text-navy/50 leading-relaxed">{p.desc}</p>
+              <p className="text-sm text-navy/70 leading-relaxed">{p.desc}</p>
             </div>
           ))}
         </div>

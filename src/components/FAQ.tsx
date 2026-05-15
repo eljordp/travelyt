@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 const faqs = [
@@ -59,24 +60,15 @@ export default function FAQ() {
                 className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50/50 transition-colors"
               >
                 <span className="font-semibold text-navy pr-4">{faq.q}</span>
-                <svg
+                <ChevronDown
                   className={`w-5 h-5 text-navy/30 flex-shrink-0 transition-transform duration-200 ${
                     openIndex === i ? "rotate-180" : ""
                   }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                  strokeWidth={2}
+                />
               </button>
               {openIndex === i && (
-                <div className="px-5 pb-5 text-sm text-navy/60 leading-relaxed">
+                <div className="px-5 pb-5 text-sm text-navy/70 leading-relaxed">
                   {faq.a}
                 </div>
               )}

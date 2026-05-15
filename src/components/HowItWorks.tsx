@@ -1,3 +1,5 @@
+import { Check, Map, MapPin, Monitor } from "lucide-react";
+
 export default function HowItWorks() {
   const steps = [
     {
@@ -6,9 +8,7 @@ export default function HowItWorks() {
       description:
         "Enter your pickup address, destination, travel date, and number of bags. Get an instant quote.",
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
+        <Monitor className="w-8 h-8" strokeWidth={1.5} />
       ),
     },
     {
@@ -17,10 +17,7 @@ export default function HowItWorks() {
       description:
         "A vetted Travelyt agent arrives at your door at the scheduled time. Bags weighed, tagged, and sealed on the spot.",
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
+        <MapPin className="w-8 h-8" strokeWidth={1.5} />
       ),
     },
     {
@@ -29,9 +26,7 @@ export default function HowItWorks() {
       description:
         "Follow your bags in real-time from pickup to delivery. GPS tracking and status updates at every checkpoint.",
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-        </svg>
+        <Map className="w-8 h-8" strokeWidth={1.5} />
       ),
     },
     {
@@ -40,9 +35,7 @@ export default function HowItWorks() {
       description:
         "Walk through the airport hands-free. We meet you curbside to hand off — or for arrivals, your bags are already on their way to your address.",
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
-        </svg>
+        <Check className="w-8 h-8" strokeWidth={1.5} />
       ),
     },
   ];
@@ -51,7 +44,7 @@ export default function HowItWorks() {
     <section id="how-it-works" className="py-20 md:py-28 bg-navy text-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
-          <span className="text-sm font-semibold text-cyan uppercase tracking-wider">
+          <span className="text-sm font-semibold text-white uppercase tracking-wider">
             Simple Process
           </span>
           <h2 className="text-3xl md:text-5xl font-bold mt-3 mb-4">
@@ -71,14 +64,14 @@ export default function HowItWorks() {
               )}
 
               <div className="text-center">
-                <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 text-cyan">
+                <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 text-white">
                   {step.icon}
                 </div>
-                <div className="text-xs font-bold text-cyan tracking-wider mb-2">
+                <div className="text-xs font-bold text-white tracking-wider mb-2">
                   STEP {step.step}
                 </div>
                 <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed">
+                <p className="text-white/70 text-sm leading-relaxed">
                   {step.description}
                 </p>
               </div>

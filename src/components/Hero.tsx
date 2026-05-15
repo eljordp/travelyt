@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { CircleCheck, Globe2, Package, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -26,16 +28,28 @@ export default function Hero() {
   const [year, setYear] = useState(String(YEARS[0]));
 
   function handleQuote() {
-    router.push("/quote");
+    const params = new URLSearchParams();
+    if (airport) params.set("airport", airport);
+    if (month && day && year) params.set("date", `${year}-${month}-${day}`);
+    const query = params.toString();
+    router.push(query ? `/quote?${query}` : "/quote");
   }
 
-  const selectClass = "w-full px-3 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm bg-white text-navy/70";
+  const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-2";
+  const selectClass = "w-full px-3 py-3 rounded-xl border border-gray-200 focus:border-purple focus:ring-2 focus:ring-purple/20 outline-none transition-all text-sm bg-white text-navy";
 
   return (
     <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden">
       {/* Hero background image */}
       <div className="absolute inset-0">
-        <img src="/hero-travel.jpg" alt="" className="w-full h-full object-cover" />
+        <Image
+          src="/hero-travel.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 to-white" />
       </div>
 
@@ -44,9 +58,7 @@ export default function Hero() {
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-white/70">
           {["Fully Insured", "Live Tracking", "Sealed In Transit"].map((badge) => (
             <span key={badge} className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-cyan" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+              <CircleCheck className="w-5 h-5 text-cyan" fill="currentColor" strokeWidth={1.5} />
               {badge}
             </span>
           ))}
@@ -63,7 +75,7 @@ export default function Hero() {
             We pick up your luggage at your door, transport it to the airport, and deliver it to your destination. Travel hands-free — without ever lugging a suitcase through a terminal.
           </p>
           <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
-            Handle the bags, you handle the journey.
+            Travel light, arrive smart.
           </p>
         </div>
 
@@ -73,7 +85,7 @@ export default function Hero() {
 
             {/* Airport */}
             <div>
-              <label htmlFor="hero-airport" className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
+              <label htmlFor="hero-airport" className={labelClass}>
                 Airport
               </label>
               <select id="hero-airport" value={airport} onChange={(e) => setAirport(e.target.value)} className={selectClass}>
@@ -82,12 +94,12 @@ export default function Hero() {
                   <option key={code} value={code}>{label}</option>
                 ))}
               </select>
-              <p className="text-xs text-navy/40 mt-1.5">Within 50 miles</p>
+              <p className="text-xs text-navy/70 mt-1.5">Within 50 miles</p>
             </div>
 
             {/* Travel Date — 3 dropdowns */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
+              <label className={labelClass}>
                 Travel Date
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -128,27 +140,21 @@ export default function Hero() {
           {[
             {
               icon: (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+                <Package className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Doorstep Pickup",
               desc: "We come to your door, weigh and tag your bags, and drive them to the airport. You arrive hands-free.",
             },
             {
               icon: (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Globe2 className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Arrival Delivery",
               desc: "Walk off the plane, skip the carousel. We collect your bags after your flight and deliver them to your hotel or address.",
             },
             {
               icon: (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+                <ShieldCheck className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Fully Secured",
               desc: "Real-time GPS tracking, tamper-proof seals, and full insurance coverage.",
@@ -158,8 +164,8 @@ export default function Hero() {
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple/10 to-cyan/10 flex items-center justify-center text-purple mb-4">
                 {card.icon}
               </div>
-              <h3 className="text-lg font-bold text-navy mb-2">{card.title}</h3>
-              <p className="text-sm text-navy/60 leading-relaxed">{card.desc}</p>
+              <h2 className="text-lg font-bold text-navy mb-2">{card.title}</h2>
+              <p className="text-sm text-navy/70 leading-relaxed">{card.desc}</p>
             </div>
           ))}
         </div>

@@ -49,7 +49,7 @@ export default function LoginPage() {
           <div>
             <div className="flex justify-between items-center mb-1.5">
               <label htmlFor="login-password" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider">Password</label>
-              <a href="mailto:hello@travelyt.com?subject=Travelyt%20password%20help" className="text-xs text-[#c41e2a] hover:underline">Forgot password?</a>
+              <Link href="/#early-access" className="text-xs text-[#c41e2a] hover:underline">Need access?</Link>
             </div>
             <input id="login-password" type="password" placeholder="Your password" {...field("password")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />

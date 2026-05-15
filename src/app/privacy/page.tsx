@@ -30,7 +30,7 @@ const sections = [
   },
   {
     title: "Your choices",
-    body: "You can request access, correction, or deletion of your personal information by contacting hello@travelyt.com. Some operational records may be retained when needed for security, legal, accounting, or dispute-resolution reasons.",
+    body: "You can request access, correction, or deletion of your personal information through the quote or early-access forms while Travelyt is in pre-launch. Some operational records may be retained when needed for security, legal, accounting, or dispute-resolution reasons.",
   },
 ];
 

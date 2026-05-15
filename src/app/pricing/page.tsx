@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import { CircleCheck } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -125,9 +126,11 @@ export default function PricingPage() {
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
-                      <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#e63946]" : "text-[#c41e2a]"}`} fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                      <CircleCheck
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#e63946]" : "text-[#c41e2a]"}`}
+                        fill="currentColor"
+                        strokeWidth={1.5}
+                      />
                       <span className={plan.popular ? "text-white/80" : "text-navy/70"}>{f}</span>
                     </li>
                   ))}

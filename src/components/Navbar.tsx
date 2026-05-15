@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -10,20 +12,21 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-navy text-white">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="flex items-center">
+        <Link href="/" className="flex items-center">
           <Image src="/logo.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto brightness-0 invert" priority />
-        </a>
+        </Link>
 
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <a href="/pricing" className="hover:text-cyan transition-colors">Pricing</a>
-          <a href="/airlines" className="hover:text-cyan transition-colors">Airlines</a>
-          <a href="/trust" className="hover:text-cyan transition-colors">Trust</a>
-          <a href="#faq" className="hover:text-cyan transition-colors">FAQ</a>
-          <a href="/login" className="text-white/70 hover:text-white transition-colors">Sign In</a>
-          <a href="/quote" className="bg-gradient-to-r from-purple to-purple-light text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
+          <Link href="/pricing" className="hover:text-cyan transition-colors">Pricing</Link>
+          <Link href="/airlines" className="hover:text-cyan transition-colors">Airlines</Link>
+          <Link href="/trust" className="hover:text-cyan transition-colors">Trust</Link>
+          <Link href="/demo" className="hover:text-cyan transition-colors">Demo</Link>
+          <Link href="/#faq" className="hover:text-cyan transition-colors">FAQ</Link>
+          <Link href="/login" className="text-white/70 hover:text-white transition-colors">Sign In</Link>
+          <Link href="/quote" className="bg-gradient-to-r from-purple to-purple-light text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
             Get a Quote
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Toggle */}
@@ -32,42 +35,22 @@ export default function Navbar() {
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {open ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
+          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {open && (
         <div className="md:hidden bg-navy border-t border-white/10 px-6 pb-6 space-y-4">
-          <a href="/pricing" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Pricing</a>
-          <a href="/airlines" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Airlines</a>
-          <a href="/trust" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Trust</a>
-          <a href="#faq" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>FAQ</a>
-          <a href="/login" className="block py-2 text-white/70 hover:text-white" onClick={() => setOpen(false)}>Sign In</a>
-          <a href="/quote" className="block bg-gradient-to-r from-purple to-purple-light text-white px-6 py-3 rounded-full text-center font-semibold" onClick={() => setOpen(false)}>
+          <Link href="/pricing" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Pricing</Link>
+          <Link href="/airlines" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Airlines</Link>
+          <Link href="/trust" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Trust</Link>
+          <Link href="/demo" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Demo</Link>
+          <Link href="/#faq" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>FAQ</Link>
+          <Link href="/login" className="block py-2 text-white/70 hover:text-white" onClick={() => setOpen(false)}>Sign In</Link>
+          <Link href="/quote" className="block bg-gradient-to-r from-purple to-purple-light text-white px-6 py-3 rounded-full text-center font-semibold" onClick={() => setOpen(false)}>
             Get a Quote
-          </a>
+          </Link>
         </div>
       )}
     </nav>

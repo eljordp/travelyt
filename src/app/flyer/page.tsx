@@ -1,5 +1,7 @@
 "use client";
 
+import { Send } from "lucide-react";
+
 export default function FlyerPage() {
   return (
     <>
@@ -24,7 +26,7 @@ export default function FlyerPage() {
       <div className="flyer-screen-wrap min-h-screen bg-[#1a1a1a] py-10 px-4">
         {/* Screen-only controls */}
         <div className="flyer-controls max-w-[8.5in] mx-auto mb-4 flex items-center justify-between text-white/70 text-xs">
-          <span>Print-ready flyer · 8.5" × 11"</span>
+          <span>Print-ready flyer · 8.5&quot; × 11&quot;</span>
           <button
             onClick={() => window.print()}
             className="px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors text-white"
@@ -37,9 +39,7 @@ export default function FlyerPage() {
           {/* Top navy band */}
           <div className="bg-[#0a1f5c] text-white px-12 py-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-                <path d="M2 16l20-7-9 13-2-6-9-0z" fill="#e63946" stroke="#e63946" strokeWidth="1.2" strokeLinejoin="round" />
-              </svg>
+              <Send className="w-[34px] h-[34px] text-[#e63946]" fill="currentColor" strokeWidth={1.2} />
               <div className="text-2xl font-bold tracking-tight">Travelyt</div>
             </div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
@@ -68,7 +68,7 @@ export default function FlyerPage() {
               suitcase through a terminal again.
             </p>
             <p className="italic text-[#0a1f5c]/55 mt-5 text-base">
-              Handle the bags, you handle the journey.
+              Travel light, arrive smart.
             </p>
           </div>
 
@@ -169,9 +169,9 @@ export default function FlyerPage() {
                 style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
                 className="text-3xl font-bold leading-tight"
               >
-                travelyt
+                travelyt-psi
                 <br />
-                .com
+                .vercel.app
               </div>
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function FlyerPage() {
           {/* Bottom band */}
           <div className="bg-[#c41e2a] text-white px-12 py-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em]">
             <span>Doorstep · Airport · Destination</span>
-            <span>hello@travelyt.com</span>
+            <span>travelyt-psi.vercel.app</span>
           </div>
         </div>
       </div>

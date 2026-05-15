@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { CircleCheck } from "lucide-react";
+
 export default function Services() {
   const services = [
     {
@@ -57,7 +60,7 @@ export default function Services() {
           <h2 className="text-3xl md:text-5xl font-bold text-navy mt-3 mb-4">
             Every leg of your journey, covered
           </h2>
-          <p className="text-navy/60 max-w-2xl mx-auto">
+          <p className="text-navy/70 max-w-2xl mx-auto">
             From your front door to your final destination — we handle your
             luggage so you can focus on what matters.
           </p>
@@ -73,11 +76,13 @@ export default function Services() {
             >
               {/* Visual */}
               <div className="flex-1 w-full">
-                <div className="rounded-3xl overflow-hidden aspect-[4/3]">
-                  <img
+                <div className="relative rounded-3xl overflow-hidden aspect-[4/3]">
+                  <Image
                     src={service.image}
                     alt={service.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
                   />
                 </div>
               </div>
@@ -85,30 +90,24 @@ export default function Services() {
               {/* Content */}
               <div className="flex-1">
                 <span
-                  className="inline-block text-xs font-bold uppercase tracking-wider text-cyan mb-3"
+                  className="inline-block text-xs font-bold uppercase tracking-wider text-purple mb-3"
                 >
                   {service.label}
                 </span>
                 <h3 className="text-2xl md:text-4xl font-bold text-navy mb-4">
                   {service.title}
                 </h3>
-                <p className="text-navy/60 leading-relaxed mb-6">
+                <p className="text-navy/70 leading-relaxed mb-6">
                   {service.description}
                 </p>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {service.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-2 text-sm text-navy/70">
-                      <svg
-                        className="w-4 h-4 text-cyan flex-shrink-0"
+                      <CircleCheck
+                        className="w-4 h-4 text-purple flex-shrink-0"
                         fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                        strokeWidth={1.5}
+                      />
                       {feature}
                     </li>
                   ))}

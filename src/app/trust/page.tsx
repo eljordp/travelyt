@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import { ClipboardCheck, LockKeyhole, MapPin, Scale, ShieldCheck, UserCheck } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -23,55 +24,42 @@ const securityFeatures = [
     title: "Tamper-Evident Seals",
     desc: "Every bag is sealed with a unique, numbered tamper-evident seal at your door. If the seal is broken at any point before you or your recipient receive the bag, our system flags it and you're notified immediately.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
+      <LockKeyhole className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
     title: "Live GPS Tracking",
     desc: "From pickup to delivery, you can follow your bags on a live map and see status updates at every checkpoint. A tracking link goes to the traveler and, if you choose, to anyone meeting them at the other end.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
+      <MapPin className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
     title: "Chain of Custody Logging",
     desc: "Every handoff is logged — who handled your bag, where, and when. A full digital audit trail from your door through transport to final delivery.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
+      <ClipboardCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
     title: "Insurance Coverage",
     desc: "Every bag we pick up is insured from the moment we collect it until delivery. Standard coverage applies automatically; declared-value upgrades are available for high-value items. Full terms apply.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
+      <ShieldCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
     title: "Vetted Agents",
     desc: "Every Travelyt agent is ID-verified and trained on handling, sealing, and chain-of-custody procedures. You always know who's handling your bags.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
+      <UserCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
     title: "Operates Within the Rules",
     desc: "Travelyt is a federally registered motor carrier. We follow TSA guidance on restricted items, airport authority rules on landside pickup and delivery, and FMCSA requirements for property transport.",
     icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-      </svg>
+      <Scale className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
 ];

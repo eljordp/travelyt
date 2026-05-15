@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { CircleCheck } from "lucide-react";
+
 export default function Sustainability() {
   return (
     <section className="py-20 md:py-28 bg-gradient-to-br from-navy via-navy-light to-navy text-white relative overflow-hidden">
@@ -29,17 +32,11 @@ export default function Sustainability() {
                 "Working toward lower-emissions vehicles over time",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3">
-                  <svg
+                  <CircleCheck
                     className="w-5 h-5 text-cyan mt-0.5 flex-shrink-0"
                     fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                    strokeWidth={1.5}
+                  />
                   <span className="text-white/70 text-sm">{item}</span>
                 </div>
               ))}
@@ -48,11 +45,13 @@ export default function Sustainability() {
 
           {/* Visual */}
           <div className="relative">
-            <div className="rounded-3xl overflow-hidden aspect-square">
-              <img
+            <div className="relative rounded-3xl overflow-hidden aspect-square">
+              <Image
                 src="/sustainability.jpg"
                 alt="Sustainable travel logistics"
-                className="w-full h-full object-cover"
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-navy/40 flex items-center justify-center rounded-3xl">
                 <div className="text-center px-6">
