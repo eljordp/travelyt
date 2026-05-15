@@ -10,7 +10,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="inline-block">
-              <Image src="/logo.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto brightness-0 invert" />
+              <Image src="/logo-white.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto" />
             </Link>
             <p className="text-white/60 text-sm mt-4 leading-relaxed">
               Travel light, arrive smart. Door-to-door baggage solutions for the

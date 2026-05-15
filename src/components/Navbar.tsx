@@ -13,7 +13,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image src="/logo.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto brightness-0 invert" priority />
+          <Image src="/logo-white.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto" priority />
         </Link>
 
         {/* Desktop Links */}
