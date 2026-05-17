@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Travelyt</string>
+    <string name="title_activity_main">Travelyt</string>
+    <string name="package_name">app.travelyt.travelyt</string>
+    <string name="custom_url_scheme">app.travelyt.travelyt</string>
+</resources>

@@ -14,6 +14,7 @@ import {
   subscribe,
   updateBooking,
 } from "@/lib/bookings";
+import { captureProofPhoto, isNative } from "@/lib/native";
 
 const DRIVER_KEY = "travelyt:driver";
 
@@ -25,7 +26,17 @@ export default function DriverJobPage() {
   const [mounted, setMounted] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [photoNote, setPhotoNote] = useState("");
+  const [native, setNative] = useState(false);
   const fileInput = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setNative(isNative());
+  }, []);
+
+  async function captureNative() {
+    const dataUrl = await captureProofPhoto();
+    if (dataUrl) setPendingPhoto(dataUrl);
+  }
 
   useEffect(() => {
     const refresh = () => setBooking(getBooking(params.id));
@@ -230,23 +241,37 @@ export default function DriverJobPage() {
             </p>
 
             {!pendingPhoto ? (
-              <label className="block">
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={onFile}
-                  className="hidden"
-                />
-                <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer">
+              native ? (
+                <button
+                  type="button"
+                  onClick={captureNative}
+                  className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer"
+                >
                   <span className="text-3xl block mb-2">📷</span>
-                  <span className="text-sm font-semibold text-navy">Tap to capture</span>
+                  <span className="text-sm font-semibold text-navy">Open camera</span>
                   <span className="block text-xs text-navy/70 mt-1">
-                    Camera on mobile · File picker on desktop
+                    Native camera with auto-orientation
                   </span>
-                </span>
-              </label>
+                </button>
+              ) : (
+                <label className="block">
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={onFile}
+                    className="hidden"
+                  />
+                  <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer">
+                    <span className="text-3xl block mb-2">📷</span>
+                    <span className="text-sm font-semibold text-navy">Tap to capture</span>
+                    <span className="block text-xs text-navy/70 mt-1">
+                      Camera on mobile · File picker on desktop
+                    </span>
+                  </span>
+                </label>
+              )
             ) : (
               <div>
                 <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-gray-100 mb-4 bg-gray-100">

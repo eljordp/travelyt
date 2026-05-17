@@ -69,6 +69,7 @@ export default function QuotePage() {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -123,8 +124,10 @@ export default function QuotePage() {
   function next() { if (validate()) setStep((s) => s + 1); }
   function back() { setStep((s) => s - 1); setErrors({}); }
 
-  function submitBooking() {
-    if (!form.service) return;
+  async function submitBooking() {
+    if (!form.service || submitting) return;
+    setSubmitting(true);
+
     const b = createBooking({
       service: form.service as BookingServiceType,
       airport: form.airport,
@@ -137,6 +140,38 @@ export default function QuotePage() {
       phone: form.phone,
       notes: form.notes || undefined,
     });
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: b.id,
+          service: b.service,
+          airport: b.airport,
+          address: b.address,
+          date: b.date,
+          flight: b.flight,
+          bags: b.bags,
+          name: b.name,
+          email: b.email,
+          phone: b.phone,
+          notes: b.notes,
+          priceCents: b.priceCents,
+          source: "quote-form",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        console.error("Booking notification failed", data.error);
+      }
+    } catch (err) {
+      console.error("Booking submit network error", err);
+    }
+
     router.push(`/booking/${b.id}/pay`);
   }
 
@@ -374,8 +409,9 @@ export default function QuotePage() {
                   </button>
                 ) : (
                   <button type="button" onClick={submitBooking}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
-                    Continue to Payment →
+                    disabled={submitting}
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                    {submitting ? "Submitting…" : "Continue to Payment →"}
                   </button>
                 )}
               </div>
