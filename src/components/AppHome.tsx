@@ -14,7 +14,6 @@ import {
 import AppChrome from "@/components/AppChrome";
 import BagStatus from "@/components/BagStatus";
 import HeroCarousel from "@/components/HeroCarousel";
-import PromoPopup from "@/components/PromoPopup";
 
 const recentTrips = [
   {
@@ -153,7 +152,6 @@ export default function AppHome() {
           })}
         </section>
       </div>
-      <PromoPopup />
     </AppChrome>
   );
 }

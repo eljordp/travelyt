@@ -14,7 +14,6 @@ import {
 import Navbar from "@/components/Navbar";
 import HeroCarousel from "@/components/HeroCarousel";
 import BagStatus from "@/components/BagStatus";
-import PromoPopup from "@/components/PromoPopup";
 
 const services = [
   {
@@ -176,8 +175,6 @@ export default function WebsiteHome() {
           </div>
         </section>
       </main>
-
-      <PromoPopup />
     </div>
   );
 }
