@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import AppChrome from "@/components/AppChrome";
 import {
   type Booking,
   formatPrice,
@@ -25,18 +25,25 @@ export default function PayPage() {
 
   useEffect(() => {
     if (!params?.id) return;
+    let cancelled = false;
     const handle = window.setTimeout(() => {
-      setBooking(getBooking(params.id));
-      setLoading(false);
+      getBooking(params.id).then((result) => {
+        if (cancelled) return;
+        setBooking(result);
+        setLoading(false);
+      });
     }, 0);
-    return () => window.clearTimeout(handle);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
   }, [params?.id]);
 
   function pay() {
     if (!booking) return;
     setProcessing(true);
-    setTimeout(() => {
-      updateBooking(booking.id, {
+    setTimeout(async () => {
+      await updateBooking(booking.id, {
         status: "paid",
         paidAt: new Date().toISOString(),
       });
@@ -46,42 +53,38 @@ export default function PayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 pt-28 pb-16 text-center text-navy/70">
+      <AppChrome title="Payment">
+        <div className="rounded-2xl bg-white p-5 text-center text-navy/70 shadow-sm shadow-navy/5">
           Loading…
         </div>
-      </div>
+      </AppChrome>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 pt-28 pb-16 text-center">
+      <AppChrome title="Payment">
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm shadow-navy/5">
           <h1 className="text-2xl font-bold text-navy mb-3">Booking not found</h1>
-          <p className="text-navy/70 mb-8">We couldn&apos;t find that booking on this device.</p>
+          <p className="text-navy/70 mb-8">We couldn&apos;t find a booking you can access.</p>
           <Link href="/quote" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Start a new quote
           </Link>
         </div>
-      </div>
+      </AppChrome>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-2xl mx-auto px-4 pt-28 pb-16">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">Confirm &amp; Pay</h1>
+    <AppChrome title="Payment">
+      <div>
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-navy mb-1">Confirm &amp; Pay</h1>
           <p className="text-navy/70">Booking {booking.id}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 overflow-hidden mb-6">
-          <div className="px-8 py-6 border-b border-gray-100">
+        <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 overflow-hidden mb-5">
+          <div className="px-5 py-5 sm:px-8 sm:py-6 border-b border-gray-100">
             <h2 className="font-bold text-navy mb-4">Order summary</h2>
             <div className="space-y-3 text-sm">
               <Row label="Service" value={SERVICE_LABELS[booking.service]} />
@@ -99,7 +102,7 @@ export default function PayPage() {
             </div>
           </div>
 
-          <div className="px-8 py-6 space-y-5">
+          <div className="px-5 py-5 sm:px-8 sm:py-6 space-y-5">
             <div className="flex items-center gap-2 text-xs text-navy/70 uppercase font-semibold tracking-wider">
               <span className="w-2 h-2 rounded-full bg-yellow-400" />
               Demo checkout — no real charges
@@ -136,7 +139,7 @@ export default function PayPage() {
           This prototype uses a mock payment screen. No card is charged.
         </p>
       </div>
-    </div>
+    </AppChrome>
   );
 }
 

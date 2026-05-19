@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import { Check, Home, PlaneLanding, Repeat2 } from "lucide-react";
 import { calcPriceCents, createBooking, formatPrice, type ServiceType as BookingServiceType } from "@/lib/bookings";
+import AppChrome from "@/components/AppChrome";
 
 const AIRPORTS = [
   { code: "ATL", name: "Atlanta Hartsfield-Jackson" },
@@ -49,7 +49,31 @@ interface FormData {
   notes: string;
 }
 
+interface DateParts {
+  month: string;
+  day: string;
+  year: string;
+}
+
 const STEPS = ["Service", "Trip Details", "Contact", "Review"];
+const MONTHS = [
+  ["01", "Jan"],
+  ["02", "Feb"],
+  ["03", "Mar"],
+  ["04", "Apr"],
+  ["05", "May"],
+  ["06", "Jun"],
+  ["07", "Jul"],
+  ["08", "Aug"],
+  ["09", "Sep"],
+  ["10", "Oct"],
+  ["11", "Nov"],
+  ["12", "Dec"],
+];
+const YEARS = Array.from(
+  { length: 3 },
+  (_, i) => String(new Date().getFullYear() + i)
+);
 
 const emptyForm: FormData = {
   service: "",
@@ -69,6 +93,11 @@ export default function QuotePage() {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [dateParts, setDateParts] = useState<DateParts>({
+    month: "",
+    day: "",
+    year: "",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -84,6 +113,8 @@ export default function QuotePage() {
       }
       if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
         nextForm.date = date;
+        const [year, month, day] = date.split("-");
+        setDateParts({ month, day, year });
       }
       if (service === "departure" || service === "arrival" || service === "both") {
         nextForm.service = service;
@@ -101,6 +132,18 @@ export default function QuotePage() {
   function set(field: keyof FormData, value: string | number) {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+  }
+
+  function setDatePart(part: "month" | "day" | "year", value: string) {
+    setDateParts((current) => {
+      const next = { ...current, [part]: value };
+      const nextDate =
+        next.year && next.month && next.day
+          ? `${next.year}-${next.month}-${next.day}`
+          : "";
+      set("date", nextDate);
+      return next;
+    });
   }
 
   function validate(): boolean {
@@ -128,51 +171,24 @@ export default function QuotePage() {
     if (!form.service || submitting) return;
     setSubmitting(true);
 
-    const b = createBooking({
-      service: form.service as BookingServiceType,
-      airport: form.airport,
-      address: form.address,
-      date: form.date,
-      flight: form.flight || undefined,
-      bags: form.bags,
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      notes: form.notes || undefined,
-    });
-
     try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: b.id,
-          service: b.service,
-          airport: b.airport,
-          address: b.address,
-          date: b.date,
-          flight: b.flight,
-          bags: b.bags,
-          name: b.name,
-          email: b.email,
-          phone: b.phone,
-          notes: b.notes,
-          priceCents: b.priceCents,
-          source: "quote-form",
-        }),
+      const b = await createBooking({
+        service: form.service as BookingServiceType,
+        airport: form.airport,
+        address: form.address,
+        date: form.date,
+        flight: form.flight || undefined,
+        bags: form.bags,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        notes: form.notes || undefined,
       });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        console.error("Booking notification failed", data.error);
-      }
+      router.push(`/booking/${b.id}/pay`);
     } catch (err) {
       console.error("Booking submit network error", err);
+      setSubmitting(false);
     }
-
-    router.push(`/booking/${b.id}/pay`);
   }
 
   const serviceLabels: Record<string, string> = {
@@ -185,22 +201,22 @@ export default function QuotePage() {
       ? formatPrice(calcPriceCents(form.bags, form.service as BookingServiceType))
       : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
+  const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white text-navy`;
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-2xl mx-auto px-4 pt-28 pb-16">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">Request a Quote</h1>
-          <p className="text-navy/70">We&apos;ll get back to you within 2 hours.</p>
+    <AppChrome title="Book bags">
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold text-navy">Book your handoff</h1>
+          <p className="mt-1 text-sm text-navy/65">
+            Door pickup, arrival delivery, or both.
+          </p>
         </div>
 
         {(
-          <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 overflow-hidden">
+          <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-navy/5">
             {/* Progress Bar */}
-            <div className="px-8 pt-8 pb-6 border-b border-gray-100">
+            <div className="border-b border-gray-100 px-4 pb-5 pt-5 sm:px-8 sm:pt-8">
               <div className="flex items-center justify-between mb-3">
                 {STEPS.map((label, i) => (
                   <div key={label} className="flex items-center flex-1 last:flex-none">
@@ -224,7 +240,7 @@ export default function QuotePage() {
               </div>
             </div>
 
-            <div className="px-8 py-8">
+            <div className="px-4 py-6 sm:px-8 sm:py-8">
               {/* Step 0 — Service Type */}
               {step === 0 && (
                 <div>
@@ -232,20 +248,20 @@ export default function QuotePage() {
                   <p className="text-navy/70 text-sm mb-6">Select the baggage service that fits your trip.</p>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { value: "departure", icon: <Home className="h-6 w-6" strokeWidth={1.7} />, title: "Departure Pickup", desc: "We collect your bags at your door, weigh and seal them, and meet you curbside at the airport. You walk in hands-free." },
-                      { value: "arrival", icon: <PlaneLanding className="h-6 w-6" strokeWidth={1.7} />, title: "Arrival Delivery", desc: "After your flight lands, we pick up your bags and deliver them to your hotel, home, or any address." },
-                      { value: "both", icon: <Repeat2 className="h-6 w-6" strokeWidth={1.7} />, title: "Both Ways", desc: "Full round-trip baggage handling. We pick up before the flight and deliver after — no lifting in between." },
+                      { value: "departure", icon: <Home className="h-5 w-5" strokeWidth={1.8} />, title: "Departure Pickup", desc: "Door pickup, airport handoff." },
+                      { value: "arrival", icon: <PlaneLanding className="h-5 w-5" strokeWidth={1.8} />, title: "Arrival Delivery", desc: "Baggage claim to your address." },
+                      { value: "both", icon: <Repeat2 className="h-5 w-5" strokeWidth={1.8} />, title: "Both Ways", desc: "Round-trip bag handling." },
                     ].map((opt) => (
                       <button key={opt.value} type="button"
                         onClick={() => set("service", opt.value)}
                         aria-pressed={form.service === opt.value}
-                        className={`w-full text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer ${
                           form.service === opt.value
                             ? "border-[#c41e2a] bg-[#c41e2a]/5"
                             : "border-gray-100 hover:border-gray-200"
                         }`}>
                         <div className="flex items-start gap-4">
-                          <span className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${
+                          <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
                             form.service === opt.value ? "bg-[#c41e2a] text-white" : "bg-[#f5f0ee] text-navy"
                           }`}>
                             {opt.icon}
@@ -304,11 +320,53 @@ export default function QuotePage() {
                   </div>
 
                   {/* Date + Flight */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="quote-date" className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
-                      <input id="quote-date" name="date" required type="date" value={form.date} onChange={(e) => set("date", e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
+                      <label className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <select
+                          id="quote-date-month"
+                          aria-label="Travel month"
+                          value={dateParts.month}
+                          onChange={(e) => setDatePart("month", e.target.value)}
+                          className={dateSelectClass}
+                        >
+                          <option value="">Month</option>
+                          {MONTHS.map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          id="quote-date-day"
+                          aria-label="Travel day"
+                          value={dateParts.day}
+                          onChange={(e) => setDatePart("day", e.target.value)}
+                          className={dateSelectClass}
+                        >
+                          <option value="">Day</option>
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={String(d).padStart(2, "0")}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          id="quote-date-year"
+                          aria-label="Travel year"
+                          value={dateParts.year}
+                          onChange={(e) => setDatePart("year", e.target.value)}
+                          className={dateSelectClass}
+                        >
+                          <option value="">Year</option>
+                          {YEARS.map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
                     </div>
                     <div>
@@ -419,7 +477,7 @@ export default function QuotePage() {
           </div>
         )}
       </div>
-    </div>
+    </AppChrome>
   );
 }
 

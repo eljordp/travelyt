@@ -30,7 +30,8 @@ export default function DriverJobPage() {
   const fileInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    setNative(isNative());
+    const handle = window.setTimeout(() => setNative(isNative()), 0);
+    return () => window.clearTimeout(handle);
   }, []);
 
   async function captureNative() {
@@ -39,7 +40,11 @@ export default function DriverJobPage() {
   }
 
   useEffect(() => {
-    const refresh = () => setBooking(getBooking(params.id));
+    let cancelled = false;
+    const refresh = async () => {
+      const result = await getBooking(params.id);
+      if (!cancelled) setBooking(result);
+    };
     const handle = window.setTimeout(() => {
       setMounted(true);
       setDriver(localStorage.getItem(DRIVER_KEY));
@@ -50,6 +55,7 @@ export default function DriverJobPage() {
     }
     const unsub = subscribe(refresh);
     return () => {
+      cancelled = true;
       window.clearTimeout(handle);
       unsub();
     };
@@ -108,49 +114,53 @@ export default function DriverJobPage() {
     if (fileInput.current) fileInput.current.value = "";
   }
 
-  function claim() {
+  async function claim() {
     if (!booking) return;
-    updateBooking(booking.id, {
+    const updated = await updateBooking(booking.id, {
       status: "assigned",
       driverName: driver ?? undefined,
       assignedAt: new Date().toISOString(),
     });
+    if (updated) setBooking(updated);
   }
 
-  function markPickedUp() {
+  async function markPickedUp() {
     if (!booking || !pendingPhoto) return;
-    addProof(booking.id, {
+    await addProof(booking.id, {
       kind: "pickup",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
       driverName: driver ?? undefined,
       note: photoNote || undefined,
     });
-    updateBooking(booking.id, {
+    const updated = await updateBooking(booking.id, {
       status: "picked_up",
       pickedUpAt: new Date().toISOString(),
     });
+    if (updated) setBooking(updated);
     clearPhoto();
   }
 
-  function markInTransit() {
+  async function markInTransit() {
     if (!booking) return;
-    updateBooking(booking.id, { status: "in_transit" });
+    const updated = await updateBooking(booking.id, { status: "in_transit" });
+    if (updated) setBooking(updated);
   }
 
-  function markDelivered() {
+  async function markDelivered() {
     if (!booking || !pendingPhoto) return;
-    addProof(booking.id, {
+    await addProof(booking.id, {
       kind: "delivery",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
       driverName: driver ?? undefined,
       note: photoNote || undefined,
     });
-    updateBooking(booking.id, {
+    const updated = await updateBooking(booking.id, {
       status: "delivered",
       deliveredAt: new Date().toISOString(),
     });
+    if (updated) setBooking(updated);
     clearPhoto();
     setTimeout(() => router.push("/driver"), 800);
   }

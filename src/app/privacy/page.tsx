@@ -28,7 +28,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Who we share it with",
     body:
-      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, our shipping and carrier partners (including MEA-Ship and DHL when bags are tendered for air transport), our payment processor (Stripe), our communications providers (SMS and email delivery), our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
+      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, the airline carrying your flight (for bag identification and TSA security handoff at the airport), our payment processor (Stripe), our communications providers (SMS and email delivery), our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
   },
   {
     title: "Tracking and custody data",
@@ -84,7 +84,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Third-party services",
     body:
-      "Travelyt integrates with third-party services including Stripe (payments), our SMS and email providers, our hosting and analytics providers, MEA-Ship and DHL (carrier partners), and mobile platform services from Apple and Google when you use our app. These providers process information under their own privacy policies and our data-processing agreements with them.",
+      "Travelyt integrates with third-party services including Stripe (payments), our SMS and email providers, our hosting and analytics providers, the airlines we deliver bags to on your behalf, and mobile platform services from Apple and Google when you use our app. These providers process information under their own privacy policies and our data-processing agreements with them.",
   },
   {
     title: "Changes to this policy",

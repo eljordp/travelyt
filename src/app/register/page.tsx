@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getSupabaseBrowser } from "@/lib/supabase-client";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -13,6 +14,8 @@ export default function RegisterPage() {
     agreed: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState("");
 
   function validate() {
     const e: Record<string, string> = {};
@@ -26,12 +29,41 @@ export default function RegisterPage() {
     return e;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    // TODO: wire to Supabase auth
-    window.location.href = "/profile";
+
+    const supabase = getSupabaseBrowser();
+    if (!supabase) {
+      setErrors({ form: "Supabase auth is not configured yet." });
+      return;
+    }
+
+    setSubmitting(true);
+    setNotice("");
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+      options: {
+        data: {
+          full_name: form.name.trim(),
+        },
+      },
+    });
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ form: error.message });
+      return;
+    }
+
+    if (data.session) {
+      window.location.href = "/profile";
+      return;
+    }
+
+    setNotice("Check your email to confirm your Travelyt account.");
   }
 
   const field = (id: string) => ({
@@ -51,6 +83,16 @@ export default function RegisterPage() {
         <p className="text-sm text-navy/70 mb-8">Start traveling without the baggage stress.</p>
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {errors.form && (
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errors.form}
+            </p>
+          )}
+          {notice && (
+            <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+              {notice}
+            </p>
+          )}
           {/* Full Name */}
           <div>
             <label htmlFor="reg-name" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Full Name</label>
@@ -99,9 +141,9 @@ export default function RegisterPage() {
             {errors.agreed && <p className="text-xs text-red-500 mt-1">{errors.agreed}</p>}
           </div>
 
-          <button type="submit"
-            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer">
-            Create Account
+          <button type="submit" disabled={submitting}
+            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+            {submitting ? "Creating account…" : "Create Account"}
           </button>
         </form>
 

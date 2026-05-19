@@ -42,6 +42,30 @@ export interface PushHooks {
   onTap?: (a: ActionPerformed) => void;
 }
 
+function bookingIdFromNotification(action: ActionPerformed): string | null {
+  const bookingId = action.notification.data?.bookingId;
+  return typeof bookingId === "string" && bookingId.trim()
+    ? bookingId.trim()
+    : null;
+}
+
+function routeToBooking(bookingId: string) {
+  if (typeof window === "undefined") return;
+  window.location.href = `/booking/${bookingId}`;
+}
+
+export async function installPushNavigationHandlers(): Promise<void> {
+  if (!isNative()) return;
+
+  await PushNotifications.addListener(
+    "pushNotificationActionPerformed",
+    (action: ActionPerformed) => {
+      const bookingId = bookingIdFromNotification(action);
+      if (bookingId) routeToBooking(bookingId);
+    }
+  );
+}
+
 export async function registerPush(hooks: PushHooks = {}): Promise<boolean> {
   if (!isNative()) return false;
 
@@ -79,4 +103,34 @@ export async function registerPush(hooks: PushHooks = {}): Promise<boolean> {
 
   await PushNotifications.register();
   return true;
+}
+
+export async function enableBookingPush(bookingId: string): Promise<boolean> {
+  const trimmedBookingId = bookingId.trim();
+  if (!trimmedBookingId) return false;
+
+  return registerPush({
+    onToken: (token) => {
+      fetch("/api/push-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          platform: platform(),
+          bookingId: trimmedBookingId,
+        }),
+      }).catch((err) => console.warn("token register failed", err));
+    },
+    onNotification: (notification) => {
+      console.log(
+        "Push received in foreground",
+        notification.title,
+        notification.body
+      );
+    },
+    onTap: (action) => {
+      const tappedBookingId = bookingIdFromNotification(action);
+      routeToBooking(tappedBookingId ?? trimmedBookingId);
+    },
+  });
 }

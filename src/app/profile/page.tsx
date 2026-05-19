@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import {
+  CalendarDays,
+  CreditCard,
+  MapPin,
+  Package,
+  PlusCircle,
+  Settings,
+} from "lucide-react";
+import AppChrome from "@/components/AppChrome";
 
 type Tab = "overview" | "bookings" | "settings";
 
@@ -24,21 +32,20 @@ export default function ProfilePage() {
   const [settings, setSettings] = useState({ name: "Jordan Williams", email: "jordan@example.com", phone: "+1 (555) 012-3456", address: "123 Main St, Los Angeles, CA 90001" });
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-6xl mx-auto px-6 pt-28 pb-16">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy">Welcome back, Jordan</h1>
-          <p className="text-navy/70 mt-1">Manage your baggage pickups and account settings.</p>
+    <AppChrome title="Trips">
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold text-navy">Welcome back, Jordan</h1>
+          <p className="mt-1 text-sm text-navy/65">
+            Your bag handoffs, payments, and profile details.
+          </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm shadow-navy/5 w-fit mb-8">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1 shadow-sm shadow-navy/5">
           {(["overview", "bookings", "settings"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold capitalize transition-all cursor-pointer ${tab === t ? "bg-navy text-white shadow-sm" : "text-navy/70 hover:text-navy"}`}>
+              className={`rounded-lg px-3 py-2.5 text-sm font-semibold capitalize transition-all cursor-pointer ${tab === t ? "bg-navy text-white shadow-sm" : "text-navy/70 hover:text-navy"}`}>
               {t}
             </button>
           ))}
@@ -46,42 +53,49 @@ export default function ProfilePage() {
 
         {/* Overview */}
         {tab === "overview" && (
-          <div className="space-y-8">
+          <div className="space-y-5">
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Active Bookings", value: "2", icon: "📦" },
-                { label: "Bags Moved", value: "7", icon: "✈️" },
-                { label: "Next Pickup", value: "Apr 3", icon: "📅" },
-              ].map((s) => (
-                <div key={s.label} className="bg-white rounded-2xl p-6 shadow-sm shadow-navy/5">
-                  <div className="text-3xl mb-3">{s.icon}</div>
-                  <div className="text-3xl font-bold text-navy">{s.value}</div>
-                  <div className="text-sm text-navy/70 mt-1">{s.label}</div>
+                { label: "Active", value: "2", icon: Package },
+                { label: "Moved", value: "7", icon: MapPin },
+                { label: "Next", value: "Apr 3", icon: CalendarDays },
+              ].map((s) => {
+                const Icon = s.icon;
+                return (
+                <div key={s.label} className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5">
+                  <Icon className="mb-3 h-5 w-5 text-[#c41e2a]" strokeWidth={2} />
+                  <div className="text-2xl font-bold text-navy">{s.value}</div>
+                  <div className="mt-1 text-xs text-navy/60">{s.label}</div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Recent bookings */}
-            <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-navy/5">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
                 <h2 className="font-bold text-navy">Recent Bookings</h2>
                 <button onClick={() => setTab("bookings")} className="text-sm text-[#c41e2a] hover:underline cursor-pointer">View all</button>
               </div>
-              <BookingsTable bookings={mockBookings.slice(0, 2)} />
+              <BookingsList bookings={mockBookings.slice(0, 2)} />
             </div>
 
             {/* Quick actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link href="/quote" className="bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white rounded-2xl p-6 flex items-center gap-4 hover:opacity-90 transition-opacity">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-xl">📦</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/quote" className="flex items-center gap-3 rounded-2xl bg-[#c41e2a] p-4 text-white transition-opacity hover:opacity-90">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                  <PlusCircle className="h-5 w-5" strokeWidth={2} />
+                </div>
                 <div>
                   <div className="font-bold">Book a Pickup</div>
                   <div className="text-sm text-white/70">Get an instant quote</div>
                 </div>
               </Link>
-              <Link href="/booking/demo" className="bg-white text-navy rounded-2xl p-6 flex items-center gap-4 hover:shadow-md transition-shadow shadow-sm shadow-navy/5">
-                <div className="w-12 h-12 rounded-xl bg-[#f5f0ee] flex items-center justify-center text-xl">📍</div>
+              <Link href="/booking/demo" className="flex items-center gap-3 rounded-2xl bg-white p-4 text-navy shadow-sm shadow-navy/5 transition-shadow hover:shadow-md">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f6f7fb]">
+                  <MapPin className="h-5 w-5" strokeWidth={2} />
+                </div>
                 <div>
                   <div className="font-bold">Track My Bags</div>
                   <div className="text-sm text-navy/70">Live GPS tracking</div>
@@ -93,18 +107,23 @@ export default function ProfilePage() {
 
         {/* Bookings */}
         {tab === "bookings" && (
-          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
+          <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-navy/5">
+            <div className="border-b border-gray-100 px-4 py-4">
               <h2 className="font-bold text-navy">All Bookings</h2>
             </div>
-            <BookingsTable bookings={mockBookings} />
+            <BookingsList bookings={mockBookings} />
           </div>
         )}
 
         {/* Settings */}
         {tab === "settings" && (
-          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-8 max-w-xl">
-            <h2 className="font-bold text-navy text-lg mb-6">Profile Settings</h2>
+          <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
+            <div className="mb-6 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
+                <Settings className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <h2 className="text-lg font-bold text-navy">Profile Settings</h2>
+            </div>
             <div className="space-y-5">
               {(["name", "email", "phone", "address"] as const).map((field) => (
                 <div key={field}>
@@ -119,43 +138,42 @@ export default function ProfilePage() {
                   />
                 </div>
               ))}
-              <button className="bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white px-8 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer">
+              <button className="w-full rounded-xl bg-[#c41e2a] px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer">
                 Save Changes
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </AppChrome>
   );
 }
 
-function BookingsTable({ bookings }: { bookings: typeof mockBookings }) {
+function BookingsList({ bookings }: { bookings: typeof mockBookings }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-100">
-            {["Booking ID", "Date", "Service", "Airport", "Bags", "Status"].map((h) => (
-              <th key={h} className="text-left text-xs font-semibold text-navy/70 uppercase tracking-wider px-6 py-3">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {bookings.map((b) => (
-            <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
-              <td className="px-6 py-4 font-mono text-xs text-navy/70">{b.id}</td>
-              <td className="px-6 py-4 text-navy/70">{b.date}</td>
-              <td className="px-6 py-4 text-navy font-medium">{b.service}</td>
-              <td className="px-6 py-4 font-semibold text-navy">{b.airport}</td>
-              <td className="px-6 py-4 text-navy/70">{b.bags}</td>
-              <td className="px-6 py-4">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[b.status]}`}>{b.status}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="divide-y divide-gray-100">
+      {bookings.map((b) => (
+        <Link
+          key={b.id}
+          href="/profile"
+          className="flex items-center gap-3 p-4 transition-colors hover:bg-gray-50"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f6f7fb] text-navy">
+            <CreditCard className="h-5 w-5" strokeWidth={1.9} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold text-navy">
+              {b.service} · {b.airport}
+            </span>
+            <span className="mt-0.5 block text-xs text-navy/55">
+              {b.date} · {b.bags} bag{b.bags > 1 ? "s" : ""} · {b.id}
+            </span>
+          </span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusColors[b.status]}`}>
+            {b.status}
+          </span>
+        </Link>
+      ))}
     </div>
   );
 }

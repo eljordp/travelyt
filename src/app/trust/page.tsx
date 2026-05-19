@@ -67,7 +67,7 @@ const securityFeatures = [
 const process = [
   { title: "Pickup", desc: "Agent arrives at your door, verifies your ID, weighs each bag, and applies a uniquely numbered tamper-evident seal." },
   { title: "Transport", desc: "Bags are loaded into a GPS-tracked Travelyt vehicle. Live tracking is active from this moment on." },
-  { title: "Airport Meet-Up", desc: "For departures, we meet you curbside or at a designated point so you can walk your bags to the airline counter yourself — where the airline takes over." },
+  { title: "Airline Handoff", desc: "For departures, we drive your bags to the airport and deliver them to your airline for your flight. You walk in with nothing to carry." },
   { title: "Arrival Pickup", desc: "For arrivals service, our agent collects your bags from baggage claim using your bag tag receipt and flight info." },
   { title: "Delivery", desc: "Bags are delivered to your chosen address — hotel, home, office — within the agreed delivery window." },
 ];

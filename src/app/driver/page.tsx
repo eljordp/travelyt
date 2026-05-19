@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import AppChrome from "@/components/AppChrome";
 import {
   type Booking,
+  clearLocalBookings,
+  clearDriverAccessCode,
   formatPrice,
+  setDriverAccessCode,
   getBookings,
   subscribe,
   SERVICE_LABELS,
@@ -23,11 +26,16 @@ const DRIVER_OPTIONS = [
 
 export default function DriverDashboard() {
   const [driver, setDriver] = useState<string | null>(null);
+  const [accessCode, setAccessCode] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const refresh = () => setBookings(getBookings());
+    let cancelled = false;
+    const refresh = async () => {
+      const rows = await getBookings();
+      if (!cancelled) setBookings(rows);
+    };
     const handle = window.setTimeout(() => {
       setMounted(true);
       setDriver(localStorage.getItem(DRIVER_KEY));
@@ -35,46 +43,65 @@ export default function DriverDashboard() {
     }, 0);
     const unsub = subscribe(refresh);
     return () => {
+      cancelled = true;
       window.clearTimeout(handle);
       unsub();
     };
   }, []);
 
   function chooseDriver(name: string) {
+    if (accessCode.trim()) setDriverAccessCode(accessCode.trim());
     localStorage.setItem(DRIVER_KEY, name);
     setDriver(name);
   }
 
   function signOut() {
     localStorage.removeItem(DRIVER_KEY);
+    clearDriverAccessCode();
     setDriver(null);
   }
 
   function resetDemo() {
-    if (!confirm("Clear all demo bookings on this device?")) return;
-    localStorage.removeItem("travelyt:bookings");
+    if (!confirm("Clear local demo cache on this device? Backend bookings stay intact.")) return;
+    clearLocalBookings();
     localStorage.removeItem(DRIVER_KEY);
+    clearDriverAccessCode();
     window.location.reload();
   }
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-      </div>
+      <AppChrome title="Driver">
+        <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
+          <div className="h-4 w-32 rounded-full bg-navy/10" />
+          <div className="mt-4 h-20 rounded-xl bg-navy/5" />
+        </div>
+      </AppChrome>
     );
   }
 
   if (!driver) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-md mx-auto px-4 pt-28 pb-16">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold text-navy mb-2">Courier Login</h1>
-            <p className="text-navy/70 text-sm">Pick a driver to sign in as for the demo.</p>
+      <AppChrome title="Driver">
+        <div className="space-y-5">
+          <div>
+            <h1 className="text-2xl font-bold text-navy">Courier Login</h1>
+            <p className="mt-1 text-sm text-navy/65">Select a courier profile.</p>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 space-y-3">
+          <div className="space-y-3 rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
+            <div>
+              <label htmlFor="driver-access-code" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
+                Access code
+              </label>
+              <input
+                id="driver-access-code"
+                type="password"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="Required when production driver lock is enabled"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all"
+              />
+            </div>
             {DRIVER_OPTIONS.map((name) => (
               <button
                 key={name}
@@ -92,7 +119,7 @@ export default function DriverDashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </AppChrome>
     );
   }
 
@@ -108,11 +135,9 @@ export default function DriverDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-3xl mx-auto px-4 pt-28 pb-16">
-        <div className="flex items-center justify-between mb-10">
+    <AppChrome title="Driver">
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-1">
               Courier dashboard
@@ -151,7 +176,7 @@ export default function DriverDashboard() {
 
         {bookings.length === 0 && (
           <div className="bg-white/60 border border-dashed border-navy/15 rounded-2xl p-8 text-center text-sm text-navy/70">
-            No bookings yet on this device.{" "}
+            No bookings are available yet.{" "}
             <Link href="/quote" className="underline font-semibold">
               Create one as a customer
             </Link>{" "}
@@ -159,7 +184,7 @@ export default function DriverDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </AppChrome>
   );
 }
 

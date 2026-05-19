@@ -5,15 +5,15 @@ export default function Services() {
   const services = [
     {
       label: "Departures",
-      title: "Doorstep-to-Terminal",
+      title: "Doorstep-to-Airline",
       description:
-        "We pick up your luggage at your door, weigh and seal every bag, and transport it to the airport. You arrive hands-free — ready to breeze through the line with nothing to lug.",
+        "We pick up your luggage at your door, weigh and seal every bag, and deliver it straight to your airline at the airport. You arrive hands-free — ready to walk on with nothing to lug.",
       features: [
         "Scheduled doorstep pickup",
         "Weighing and tamper-proof sealing",
         "Airline-compliant bag prep",
+        "Direct delivery to your airline",
         "Live GPS tracking",
-        "Curbside or terminal meet-up",
         "Insurance on every bag",
       ],
       image: "/service-departures.jpg",

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -7,6 +8,9 @@ const leadFromEmail =
   process.env.LEAD_FROM_EMAIL || "Travelyt <onboarding@resend.dev>";
 
 export async function POST(request: Request) {
+  const limited = rateLimit(request, "leads:post", 10);
+  if (limited) return limited;
+
   try {
     const body = (await request.json()) as {
       email?: string;

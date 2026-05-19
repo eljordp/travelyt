@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Airline Baggage Prep",
   description:
-    "Travelyt weighs, seals, and prepares bags around airline baggage rules before curbside airport handoff.",
+    "Travelyt weighs, seals, and prepares bags around airline baggage rules, then delivers them straight to your airline at the airport.",
   alternates: {
     canonical: "/airlines",
   },
@@ -80,15 +80,15 @@ const airlines = [
 const features = [
   {
     title: "We know the rules for every airline",
-    desc: "Weight limits, size restrictions, and fee schedules vary by carrier. We prep each bag to match your airline's policy so nothing gets flagged at the counter.",
+    desc: "Weight limits, size restrictions, and fee schedules vary by carrier. We prep each bag to match your airline's policy so nothing gets flagged on arrival at the airport.",
   },
   {
     title: "Oversized and sports equipment",
     desc: "Golf clubs, skis, surfboards, strollers. We handle the odd-shaped stuff and route it with the same care as a regular suitcase — priced transparently up front.",
   },
   {
-    title: "Curbside meet-up",
-    desc: "When your bags arrive at the airport, we meet you at the curb or a designated spot so you can walk straight in and hand them to the airline agent yourself.",
+    title: "Direct delivery to your airline",
+    desc: "We drive your bags to the airport and hand them off to your airline for your flight. You walk in with nothing to carry.",
   },
   {
     title: "Digital bag receipts",
@@ -107,7 +107,7 @@ export default function AirlinesPage() {
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Baggage Rules</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — so when you walk into the terminal, everything&apos;s ready for the counter.
+            Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — then deliver it straight to your airline at the airport.
           </p>
           <p className="text-navy/70 max-w-2xl mx-auto text-sm mt-6">
             Travelyt is an independent baggage logistics service. We are not affiliated with, endorsed by, or partnered with any airline unless explicitly stated. Airline names and logos are used here only to describe their baggage policies.

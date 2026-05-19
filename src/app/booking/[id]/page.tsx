@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import AppChrome from "@/components/AppChrome";
+import { enableBookingPush, isNative } from "@/lib/native";
 import {
   type Booking,
   type BookingStatus,
@@ -24,18 +25,33 @@ export default function BookingPage() {
   const params = useParams<{ id: string }>();
   const [booking, setBooking] = useState<Booking | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [native, setNative] = useState(false);
+  const [pushState, setPushState] = useState<
+    "idle" | "working" | "enabled" | "denied"
+  >("idle");
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setNative(isNative()), 0);
+    return () => window.clearTimeout(handle);
+  }, []);
 
   useEffect(() => {
     if (!params?.id) return;
-    const refresh = () => setBooking(getBooking(params.id));
+    let cancelled = false;
+    const refresh = async () => {
+      const result = await getBooking(params.id);
+      if (!cancelled) setBooking(result);
+    };
     let interval: ReturnType<typeof setInterval> | undefined;
     const handle = window.setTimeout(() => {
-      refresh();
-      setLoading(false);
+      refresh().finally(() => {
+        if (!cancelled) setLoading(false);
+      });
       interval = setInterval(refresh, 1500);
     }, 0);
     const unsub = subscribe(refresh);
     return () => {
+      cancelled = true;
       window.clearTimeout(handle);
       unsub();
       if (interval) clearInterval(interval);
@@ -44,38 +60,39 @@ export default function BookingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-3xl mx-auto px-4 pt-28 pb-16 text-center text-navy/70">
+      <AppChrome title="Tracking">
+        <div className="rounded-2xl bg-white p-5 text-center text-navy/70 shadow-sm shadow-navy/5">
           Loading…
         </div>
-      </div>
+      </AppChrome>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-3xl mx-auto px-4 pt-28 pb-16 text-center">
+      <AppChrome title="Tracking">
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm shadow-navy/5">
           <h1 className="text-2xl font-bold text-navy mb-3">Booking not found</h1>
-          <p className="text-navy/70 mb-8">We couldn&apos;t find that booking on this device.</p>
+          <p className="text-navy/70 mb-8">We couldn&apos;t find a booking you can access.</p>
           <Link href="/quote" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Start a new quote
           </Link>
         </div>
-      </div>
+      </AppChrome>
     );
   }
 
   const current = statusIndex(booking.status);
+  const enableLiveUpdates = async () => {
+    setPushState("working");
+    const ok = await enableBookingPush(booking.id);
+    setPushState(ok ? "enabled" : "denied");
+  };
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-3xl mx-auto px-4 pt-28 pb-16">
-        <div className="mb-10">
+    <AppChrome title="Tracking">
+      <div>
+        <div className="mb-5">
           <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-2">
             Booking {booking.id}
           </p>
@@ -89,7 +106,7 @@ export default function BookingPage() {
         </div>
 
         {/* Status timeline */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
           <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
             Live status
           </h2>
@@ -122,9 +139,36 @@ export default function BookingPage() {
           </div>
         </div>
 
+        {native && (
+          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-6 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1">
+                Live app updates
+              </h2>
+              <p className="text-sm text-navy/70">
+                Send status alerts on this device for this booking.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={enableLiveUpdates}
+              disabled={pushState === "working" || pushState === "enabled"}
+              className="px-5 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {pushState === "working"
+                ? "Enabling..."
+                : pushState === "enabled"
+                  ? "Updates on"
+                  : pushState === "denied"
+                    ? "Try again"
+                    : "Notify me"}
+            </button>
+          </div>
+        )}
+
         {/* Photo proofs */}
         {booking.proofs.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
               Chain of custody
             </h2>
@@ -158,7 +202,7 @@ export default function BookingPage() {
         )}
 
         {/* Trip details */}
-        <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
           <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
             Trip details
           </h2>
@@ -183,7 +227,7 @@ export default function BookingPage() {
           Open <Link href="/driver" className="underline font-semibold">/driver</Link> in another tab to play the courier flow. Photos uploaded there will appear here in real time.
         </div>
       </div>
-    </div>
+    </AppChrome>
   );
 }
 

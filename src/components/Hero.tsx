@@ -72,7 +72,7 @@ export default function Hero() {
             <span className="text-cyan">You move freely.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We pick up your luggage at your door, transport it to the airport, and deliver it to your destination. Travel hands-free — without ever lugging a suitcase through a terminal.
+            We pick up your luggage at your door and deliver it straight to your airline at the airport — and to your destination on arrival. Travel hands-free, without ever lugging a suitcase through a terminal.
           </p>
           <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
             Travel light, arrive smart.
@@ -143,7 +143,7 @@ export default function Hero() {
                 <Package className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Doorstep Pickup",
-              desc: "We come to your door, weigh and tag your bags, and drive them to the airport. You arrive hands-free.",
+              desc: "We come to your door, weigh and tag your bags, and deliver them to your airline at the airport. You arrive hands-free.",
             },
             {
               icon: (

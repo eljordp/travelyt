@@ -22,9 +22,9 @@ export default function HowItWorks() {
     },
     {
       step: "03",
-      title: "Track Live",
+      title: "We Deliver to Your Airline",
       description:
-        "Follow your bags in real-time from pickup to delivery. GPS tracking and status updates at every checkpoint.",
+        "Your bag is driven straight to the airport and handed to TSA security for your flight. No counter, no shipping — your luggage goes on your plane.",
       icon: (
         <Map className="w-8 h-8" strokeWidth={1.5} />
       ),
@@ -33,7 +33,7 @@ export default function HowItWorks() {
       step: "04",
       title: "Arrive Free",
       description:
-        "Walk through the airport hands-free. We meet you curbside to hand off — or for arrivals, your bags are already on their way to your address.",
+        "Walk through the airport hands-free. Your bag is already on your flight — or for arrivals, already on its way to your address.",
       icon: (
         <Check className="w-8 h-8" strokeWidth={1.5} />
       ),

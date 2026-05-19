@@ -13,8 +13,8 @@ const faqs = [
     a: "We're rolling out service market by market. Check our booking tool for availability in your area — and if we're not in your city yet, sign up and we'll let you know when we launch there.",
   },
   {
-    q: "Do you check my bags in for me at the airline counter?",
-    a: "No — and nobody legally can. After 9/11, only the ticketed passenger can hand a bag to the airline at the counter (you have to show ID). What we do is remove the lugging: we pick up your bags at your door, drive them to the airport, and meet you curbside so you walk in with nothing to carry. For arrivals, we pick up from baggage claim and deliver to your address.",
+    q: "How does the handoff to my airline work?",
+    a: "We're not a ticketed-passenger counter check-in — after 9/11, only you can do that. What we do is take the lugging out: we pick up your bags at your door and deliver them straight to your airline at the airport on your behalf, so they fly with you. You walk in with nothing to carry. For arrivals, we pick up from baggage claim and deliver to your address.",
   },
   {
     q: "Is my luggage insured?",

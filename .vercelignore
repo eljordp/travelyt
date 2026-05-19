@@ -1,0 +1,12 @@
+ios
+android
+build
+assets
+icons
+supabase
+docs
+.next
+coverage
+*.xcarchive
+*.ipa
+*.dSYM

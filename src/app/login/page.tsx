@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getSupabaseBrowser } from "@/lib/supabase-client";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -15,10 +17,29 @@ export default function LoginPage() {
     return e;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    const supabase = getSupabaseBrowser();
+    if (!supabase) {
+      setErrors({ form: "Supabase auth is not configured yet." });
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+    });
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ form: error.message });
+      return;
+    }
+
     window.location.href = "/profile";
   }
 
@@ -39,6 +60,11 @@ export default function LoginPage() {
         <p className="text-sm text-navy/70 mb-8">Sign in to manage your baggage pickups.</p>
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {errors.form && (
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              {errors.form}
+            </p>
+          )}
           <div>
             <label htmlFor="login-email" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Email</label>
             <input id="login-email" type="email" placeholder="you@example.com" {...field("email")}
@@ -56,9 +82,9 @@ export default function LoginPage() {
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
 
-          <button type="submit"
-            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer">
-            Sign In
+          <button type="submit" disabled={submitting}
+            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+            {submitting ? "Signing in…" : "Sign In"}
           </button>
         </form>
 

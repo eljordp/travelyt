@@ -8,6 +8,7 @@ const config: CapacitorConfig = {
     url: "https://travelyt-psi.vercel.app",
     cleartext: false,
     androidScheme: "https",
+    errorPath: "offline.html",
   },
   ios: {
     contentInset: "always",
