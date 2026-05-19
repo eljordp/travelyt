@@ -32,6 +32,8 @@ export interface Booking {
   notes?: string;
   status: BookingStatus;
   priceCents: number;
+  promoCode?: string;
+  discountCents?: number;
   createdAt: string;
   paidAt?: string;
   assignedAt?: string;
@@ -175,17 +177,43 @@ export function calcPriceCents(bags: number, service: ServiceType): number {
   return base + perBag * bags;
 }
 
+export const PROMO_CODES: Record<string, { percentOff: number; label: string }> = {
+  TRAVELYT30: { percentOff: 30, label: "Launch offer — 30% off" },
+};
+
+export function normalizePromoCode(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  const code = input.trim().toUpperCase();
+  return PROMO_CODES[code] ? code : undefined;
+}
+
+export function getPromoDiscountCents(
+  subtotalCents: number,
+  code?: string | null
+): number {
+  const normalized = normalizePromoCode(code);
+  if (!normalized) return 0;
+  const promo = PROMO_CODES[normalized];
+  return Math.round((subtotalCents * promo.percentOff) / 100);
+}
+
 export async function createBooking(
   data: Omit<
     Booking,
-    "id" | "status" | "createdAt" | "proofs" | "priceCents"
-  >
+    "id" | "status" | "createdAt" | "proofs" | "priceCents" | "discountCents"
+  > & { promoCode?: string }
 ): Promise<Booking> {
+  const subtotal = calcPriceCents(data.bags, data.service);
+  const promoCode = normalizePromoCode(data.promoCode);
+  const discountCents = getPromoDiscountCents(subtotal, promoCode);
+
   const booking: Booking = {
     ...data,
+    promoCode,
+    discountCents: discountCents || undefined,
     id: `TVT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
     status: "pending",
-    priceCents: calcPriceCents(data.bags, data.service),
+    priceCents: subtotal - discountCents,
     proofs: [],
     createdAt: new Date().toISOString(),
   };

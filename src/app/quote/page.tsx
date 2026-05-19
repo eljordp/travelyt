@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Home, PlaneLanding, Repeat2 } from "lucide-react";
-import { calcPriceCents, createBooking, formatPrice, type ServiceType as BookingServiceType } from "@/lib/bookings";
+import { Check, Home, PlaneLanding, Repeat2, Tag, X } from "lucide-react";
+import {
+  calcPriceCents,
+  createBooking,
+  formatPrice,
+  getPromoDiscountCents,
+  normalizePromoCode,
+  PROMO_CODES,
+  type ServiceType as BookingServiceType,
+} from "@/lib/bookings";
 import AppChrome from "@/components/AppChrome";
 
 const AIRPORTS = [
@@ -99,6 +107,9 @@ export default function QuotePage() {
     year: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [promoCode, setPromoCode] = useState<string | undefined>(undefined);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoError, setPromoError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -106,6 +117,7 @@ export default function QuotePage() {
       const airport = params.get("airport");
       const date = params.get("date");
       const service = params.get("service");
+      const promo = normalizePromoCode(params.get("promo"));
       const nextForm: Partial<FormData> = {};
 
       if (airport && AIRPORTS.some((a) => a.code === airport)) {
@@ -120,6 +132,10 @@ export default function QuotePage() {
         nextForm.service = service;
         setStep(1);
       }
+      if (promo) {
+        setPromoCode(promo);
+        setPromoInput(promo);
+      }
 
       if (Object.keys(nextForm).length > 0) {
         setForm((f) => ({ ...f, ...nextForm }));
@@ -128,6 +144,23 @@ export default function QuotePage() {
 
     return () => window.clearTimeout(handle);
   }, []);
+
+  function applyPromo() {
+    const normalized = normalizePromoCode(promoInput);
+    if (!normalized) {
+      setPromoError("Code not recognized");
+      return;
+    }
+    setPromoCode(normalized);
+    setPromoInput(normalized);
+    setPromoError(undefined);
+  }
+
+  function clearPromo() {
+    setPromoCode(undefined);
+    setPromoInput("");
+    setPromoError(undefined);
+  }
 
   function set(field: keyof FormData, value: string | number) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -183,6 +216,7 @@ export default function QuotePage() {
         email: form.email,
         phone: form.phone,
         notes: form.notes || undefined,
+        promoCode,
       });
       router.push(`/booking/${b.id}/pay`);
     } catch (err) {
@@ -196,10 +230,16 @@ export default function QuotePage() {
     arrival: "Arrival Delivery",
     both: "Both Ways",
   };
-  const estimate =
+  const subtotalCents =
     form.service && form.bags
-      ? formatPrice(calcPriceCents(form.bags, form.service as BookingServiceType))
-      : "";
+      ? calcPriceCents(form.bags, form.service as BookingServiceType)
+      : 0;
+  const discountCents = subtotalCents
+    ? getPromoDiscountCents(subtotalCents, promoCode)
+    : 0;
+  const totalCents = subtotalCents - discountCents;
+  const promoMeta = promoCode ? PROMO_CODES[promoCode] : undefined;
+  const estimate = subtotalCents ? formatPrice(totalCents) : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
   const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white text-navy`;
 
@@ -212,6 +252,30 @@ export default function QuotePage() {
             Door pickup, arrival delivery, or both.
           </p>
         </div>
+
+        {promoCode && promoMeta && (
+          <div className="flex items-center gap-3 rounded-2xl border border-[#c41e2a]/30 bg-[#c41e2a]/5 px-4 py-3 text-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/15 text-[#c41e2a]">
+              <Tag className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <div className="flex-1">
+              <p className="font-bold text-[#c41e2a]">
+                {promoMeta.label}
+              </p>
+              <p className="text-xs text-navy/65">
+                Code <span className="font-semibold">{promoCode}</span> applied. {promoMeta.percentOff}% off at checkout.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={clearPromo}
+              aria-label="Remove promo code"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-navy/50 hover:bg-white hover:text-navy"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {(
           <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-navy/5">
@@ -436,7 +500,25 @@ export default function QuotePage() {
                     <Row label="Travel Date" value={form.date} />
                     {form.flight && <Row label="Flight" value={form.flight} />}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
-                    {estimate && <Row label="Estimated Total" value={estimate} />}
+                    {subtotalCents > 0 && (
+                      <>
+                        <Row label="Subtotal" value={formatPrice(subtotalCents)} />
+                        {discountCents > 0 && promoMeta ? (
+                          <div className="flex justify-between gap-4 text-[#c41e2a]">
+                            <span className="font-medium shrink-0">
+                              {promoMeta.label} ({promoCode})
+                            </span>
+                            <span className="font-semibold text-right">
+                              −{formatPrice(discountCents)}
+                            </span>
+                          </div>
+                        ) : null}
+                        <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-base">
+                          <span className="font-bold text-navy">Total</span>
+                          <span className="font-bold text-navy">{estimate}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
                       <Row label="Name" value={form.name} />
                       <Row label="Email" value={form.email} />
@@ -444,6 +526,36 @@ export default function QuotePage() {
                       {form.notes && <Row label="Notes" value={form.notes} />}
                     </div>
                   </div>
+
+                  {!promoCode && (
+                    <div className="mt-4 rounded-xl border border-dashed border-navy/15 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-navy/55">
+                        Have a code?
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="text"
+                          value={promoInput}
+                          onChange={(e) => {
+                            setPromoInput(e.target.value.toUpperCase());
+                            setPromoError(undefined);
+                          }}
+                          placeholder="Enter promo code"
+                          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm tracking-wide outline-none focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyPromo}
+                          className="rounded-xl bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                      {promoError && (
+                        <p className="mt-2 text-xs text-red-500">{promoError}</p>
+                      )}
+                    </div>
+                  )}
                   <p className="mt-4 text-xs leading-relaxed text-navy/70">
                     Estimate includes pickup or delivery, sealing, tracking, and
                     standard coverage. Airline baggage fees, if any, are paid

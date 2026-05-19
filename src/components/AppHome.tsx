@@ -3,16 +3,17 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Bell,
   CalendarDays,
   CarFront,
   MapPin,
   PackageCheck,
   Plane,
   ShieldCheck,
+  Tag,
 } from "lucide-react";
 import AppChrome from "@/components/AppChrome";
 import BagStatus from "@/components/BagStatus";
+import HeroCarousel from "@/components/HeroCarousel";
 import PromoPopup from "@/components/PromoPopup";
 
 const recentTrips = [
@@ -36,36 +37,28 @@ export default function AppHome() {
   return (
     <AppChrome title="Travel light">
       <div className="space-y-5">
-        <section className="rounded-2xl bg-navy p-5 text-white shadow-lg shadow-navy/15">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                Next handoff
-              </p>
-              <h1 className="mt-2 text-2xl font-bold leading-tight">
-                Move your bags without the airport drag.
-              </h1>
-            </div>
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
-              <Bell className="h-5 w-5" strokeWidth={1.8} />
-            </span>
-          </div>
+        <HeroCarousel />
 
-          <Link
-            href="/quote?promo=TRAVELYT30"
-            className="block rounded-xl bg-gradient-to-br from-[#c41e2a] to-[#e63946] p-4"
-          >
+        <Link
+          href="/quote?promo=TRAVELYT30"
+          className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[#c41e2a] to-[#e63946] p-5 text-white shadow-lg shadow-[#c41e2a]/20"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <Tag className="h-5 w-5" strokeWidth={2} />
+          </span>
+          <span className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/85">
-              Launch offer
+              Launch offer · 2 hours left
             </p>
-            <p className="mt-1 text-base font-bold">
+            <p className="mt-0.5 text-base font-bold leading-tight">
               30% off your first booking
             </p>
-            <p className="mt-1 text-xs text-white/85">
-              Tap to claim with code TRAVELYT30.
+            <p className="mt-0.5 text-xs text-white/80">
+              Tap to claim — code TRAVELYT30
             </p>
-          </Link>
-        </section>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0 text-white/90" />
+        </Link>
 
         <BagStatus
           current="checked_in"
