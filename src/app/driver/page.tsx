@@ -99,14 +99,14 @@ export default function DriverDashboard() {
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
                 placeholder="Required when production driver lock is enabled"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all"
               />
             </div>
             {DRIVER_OPTIONS.map((name) => (
               <button
                 key={name}
                 onClick={() => chooseDriver(name)}
-                className="w-full text-left px-5 py-4 rounded-xl border border-gray-100 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer flex items-center gap-3"
+                className="w-full text-left px-5 py-4 rounded-xl border border-gray-100 hover:border-[#ff6b6b] hover:bg-[#ff6b6b]/5 transition-all cursor-pointer flex items-center gap-3"
               >
                 <div className="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center font-bold text-sm">
                   {name.split(" ").map((p) => p[0]).join("")}
@@ -219,14 +219,14 @@ function JobCard({ booking, muted = false }: { booking: Booking; muted?: boolean
   return (
     <Link
       href={`/driver/job/${booking.id}`}
-      className={`block bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-transparent hover:border-[#c41e2a]/30 ${muted ? "opacity-60" : ""}`}
+      className={`block bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border border-transparent hover:border-[#ff6b6b]/30 ${muted ? "opacity-60" : ""}`}
     >
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <div className="font-semibold text-navy">{booking.name}</div>
           <div className="text-xs text-navy/70 mt-0.5">{booking.id}</div>
         </div>
-        <span className="text-xs font-semibold text-[#c41e2a] bg-[#c41e2a]/10 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-[#ff6b6b] bg-[#ff6b6b]/10 px-2.5 py-1 rounded-full">
           {STATUS_LABELS[booking.status]}
         </span>
       </div>

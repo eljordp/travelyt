@@ -104,7 +104,7 @@ export default function AirlinesPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airline Baggage Rules</span>
+          <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Airline Baggage Rules</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
             Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — then deliver it straight to your airline at the airport.
@@ -170,7 +170,7 @@ export default function AirlinesPage() {
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">Flying soon?</h2>
           <p className="text-white/60 mb-8">Tell us your airline and we&apos;ll prep your bags to match.</p>
-          <Link href="/quote" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#e63946] transition-colors">
+          <Link href="/quote" className="inline-block bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6b6b] transition-colors">
             Get Your Quote
           </Link>
         </div>

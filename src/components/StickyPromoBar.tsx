@@ -19,7 +19,7 @@ const PROMOS: Promo[] = [
   {
     icon: Tag,
     eyebrow: "Launch offer",
-    text: "30% off your first booking with code TRAVELYT30.",
+    text: "30% off first booking.",
     cta: "Claim 30%",
     href: "/quote?promo=TRAVELYT30",
   },
@@ -52,11 +52,13 @@ export default function StickyPromoBar() {
   const [native, setNative] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    setNative(isNative());
-    if (typeof window !== "undefined") {
+    const id = window.setTimeout(() => {
+      setMounted(true);
+      setNative(isNative());
       setDismissed(sessionStorage.getItem(STORAGE_KEY) === "1");
-    }
+    }, 0);
+
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -87,12 +89,12 @@ export default function StickyPromoBar() {
       aria-label="Current Travelyt offers"
     >
       <div className="mx-auto flex max-w-5xl items-center gap-3 rounded-2xl bg-navy/95 px-4 py-3 text-white shadow-2xl shadow-navy/40 backdrop-blur sm:px-5 sm:py-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/20 text-[#ff747d]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b]/20 text-[#ff6b6b]">
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff747d]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
             {promo.eyebrow}
           </p>
           <p className="mt-0.5 truncate text-sm font-semibold sm:text-base">
@@ -102,7 +104,7 @@ export default function StickyPromoBar() {
 
         <Link
           href={promo.href}
-          className="hidden items-center gap-2 whitespace-nowrap rounded-xl bg-[#c41e2a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#e63946] sm:inline-flex"
+          className="hidden items-center gap-2 whitespace-nowrap rounded-xl bg-[#ff6b6b] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b] sm:inline-flex"
         >
           {promo.cta}
           <ArrowRight className="h-4 w-4" />
@@ -111,7 +113,7 @@ export default function StickyPromoBar() {
         <Link
           href={promo.href}
           aria-label={promo.cta}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a] text-white hover:bg-[#e63946] sm:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b] text-white hover:bg-[#ff6b6b] sm:hidden"
         >
           <ArrowRight className="h-5 w-5" />
         </Link>

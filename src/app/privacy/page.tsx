@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-const LAST_UPDATED = "May 15, 2026";
+const LAST_UPDATED = "May 21, 2026";
 const CONTACT_EMAIL = "privacy@travelyt.app";
 
 const sections: { title: string; body: string }[] = [
@@ -82,6 +82,13 @@ const sections: { title: string; body: string }[] = [
       "Travelyt is operated from the United States. If you use Travelyt from outside the US, your information may be transferred to, stored, and processed in the US and other countries where our service providers operate. Where required, we rely on appropriate safeguards such as Standard Contractual Clauses.",
   },
   {
+    title: "AI and automated systems",
+    body:
+      "Travelyt uses artificial intelligence and automated processing in two distinct ways. (1) Internal operations: an in-house system supports dispatch routing, anomaly detection on seal scans and bag photos, chain-of-custody reporting, and aggregate service analytics. It runs on booking and operational data only and is restricted to authorized Travelyt staff. (2) Customer-facing assistants: if we offer an AI chat or support assistant, it runs on a separate, scoped system that can only see the minimum context needed for your request — not full account history, payment details, or other customers' data. We do not use your trip, location, or chain-of-custody data to train third-party AI models, and we do not sell or share AI-derived insights about you. Automated outputs (estimated windows, status summaries, suggestions) may contain errors; binding service details come from confirmed booking records and Travelyt staff. You can request human review of any decision that materially affects your booking by contacting " +
+      CONTACT_EMAIL +
+      ".",
+  },
+  {
     title: "Third-party services",
     body:
       "Travelyt integrates with third-party services including Stripe (payments), our SMS and email providers, our hosting and analytics providers, the airlines we deliver bags to on your behalf, and mobile platform services from Apple and Google when you use our app. These providers process information under their own privacy policies and our data-processing agreements with them.",
@@ -106,7 +113,7 @@ export default function PrivacyPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider mb-3">
             Legal
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">

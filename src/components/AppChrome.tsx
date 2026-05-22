@@ -84,7 +84,7 @@ export default function AppChrome({
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold transition-colors ${
                   active
-                    ? "bg-[#c41e2a]/10 text-[#c41e2a]"
+                    ? "bg-[#ff6b6b]/10 text-[#ff6b6b]"
                     : "text-navy/55 hover:bg-navy/5 hover:text-navy"
                 }`}
               >

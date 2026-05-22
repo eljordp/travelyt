@@ -186,11 +186,11 @@ export default function DriverJobPage() {
                 {booking.id}
               </p>
               <h1 className="text-2xl font-bold text-navy">{booking.name}</h1>
-              <a href={`tel:${booking.phone}`} className="text-sm text-[#c41e2a] font-semibold hover:underline">
+              <a href={`tel:${booking.phone}`} className="text-sm text-[#ff6b6b] font-semibold hover:underline">
                 {booking.phone}
               </a>
             </div>
-            <span className="text-xs font-semibold text-[#c41e2a] bg-[#c41e2a]/10 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-semibold text-[#ff6b6b] bg-[#ff6b6b]/10 px-2.5 py-1 rounded-full">
               {STATUS_LABELS[booking.status]}
             </span>
           </div>
@@ -217,7 +217,7 @@ export default function DriverJobPage() {
         {booking.status === "paid" && (
           <button
             onClick={claim}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
           >
             Claim this job
           </button>
@@ -232,7 +232,7 @@ export default function DriverJobPage() {
         {isMine && booking.status === "picked_up" && (
           <button
             onClick={markInTransit}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
           >
             Mark in transit →
           </button>
@@ -255,7 +255,7 @@ export default function DriverJobPage() {
                 <button
                   type="button"
                   onClick={captureNative}
-                  className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer"
+                  className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#ff6b6b] hover:bg-[#ff6b6b]/5 transition-all cursor-pointer"
                 >
                   <span className="text-3xl block mb-2">📷</span>
                   <span className="text-sm font-semibold text-navy">Open camera</span>
@@ -273,7 +273,7 @@ export default function DriverJobPage() {
                     onChange={onFile}
                     className="hidden"
                   />
-                  <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#c41e2a] hover:bg-[#c41e2a]/5 transition-all cursor-pointer">
+                  <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#ff6b6b] hover:bg-[#ff6b6b]/5 transition-all cursor-pointer">
                     <span className="text-3xl block mb-2">📷</span>
                     <span className="text-sm font-semibold text-navy">Tap to capture</span>
                     <span className="block text-xs text-navy/70 mt-1">
@@ -293,7 +293,7 @@ export default function DriverJobPage() {
                   placeholder="Optional note: seal numbers, bag descriptions, condition…"
                   value={photoNote}
                   onChange={(e) => setPhotoNote(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none mb-4"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all resize-none mb-4"
                 />
                 <div className="flex gap-2">
                   <button
@@ -304,7 +304,7 @@ export default function DriverJobPage() {
                   </button>
                   <button
                     onClick={needsPickupPhoto ? markPickedUp : markDelivered}
-                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
+                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
                   >
                     {needsPickupPhoto ? "Confirm pickup" : "Confirm delivery"}
                   </button>

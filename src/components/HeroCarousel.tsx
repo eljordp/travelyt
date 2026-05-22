@@ -12,32 +12,36 @@ type Slide = {
   headline: string;
   body: string;
   cta: { href: string; label: string };
+  objectPosition?: string;
 };
 
 const slides: Slide[] = [
   {
-    src: "/carousel/slide-1-door.jpg",
-    alt: "Concierge collecting a guest's luggage at a hotel lobby",
-    eyebrow: "Door to gate",
-    headline: "We move your bags. You move freely.",
-    body: "A Travelyt courier picks up at your door, seals your bag, and hands it off at the airport for your flight.",
+    src: "/carousel/pexels-business-traveler.jpg",
+    alt: "Businessman in a tailored coat walking through an airport corridor with rolling luggage",
+    eyebrow: "Built for business",
+    headline: "Walk in. Board the plane. Move on.",
+    body: "Your bags meet you at the airport — already weighed, sealed, and accounted for. No counter line. No hauling. Just travel.",
     cta: { href: "/quote", label: "Book bags" },
+    objectPosition: "center 30%",
   },
   {
-    src: "/carousel/slide-2-airport.jpg",
-    alt: "Sealed Travelyt suitcase at an airline acceptance counter",
-    eyebrow: "Sealed + tracked",
-    headline: "Every bag, every hop, fully accounted for.",
-    body: "Tamper-evident seal, weighed at pickup, scanned at the airport, status live in your app the whole way.",
+    src: "/carousel/pexels-door-family.jpg",
+    alt: "Father and children packing a suitcase at home before a family trip",
+    eyebrow: "Made for families",
+    headline: "Handle the kids. We'll handle the bags.",
+    body: "Doorstep pickup, sealed in transit, delivered to your destination — so you can travel with everyone without dragging six suitcases.",
     cta: { href: "/trust", label: "How it works" },
+    objectPosition: "center 38%",
   },
   {
-    src: "/carousel/slide-3-arrival.jpg",
-    alt: "Traveler arriving empty-handed at a boutique hotel",
-    eyebrow: "Arrive empty-handed",
-    headline: "Skip the carousel. We meet your bags.",
-    body: "Land, leave the airport, walk into your hotel. Your bags are already there.",
+    src: "/carousel/pexels-frequent-flyer.jpg",
+    alt: "Solo traveler in a camel coat walking through a modern airport with a white carry-on",
+    eyebrow: "For the frequent flyer",
+    headline: "You've done this a hundred times. Now do it without baggage claim.",
+    body: "Door pickup at home, sealed in transit, delivered to your hotel on arrival. The trip starts when you land — not at the carousel.",
     cta: { href: "/pricing", label: "See pricing" },
+    objectPosition: "center 35%",
   },
 ];
 
@@ -81,10 +85,11 @@ export default function HeroCarousel() {
             priority={i === 0}
             sizes="100vw"
             className="object-cover"
+            style={{ objectPosition: slide.objectPosition }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/45 to-navy/20" />
           <div className="relative flex h-full flex-col justify-end p-6 sm:p-10 lg:p-12">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#ff747d]">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
               {slide.eyebrow}
             </p>
             <h1 className="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
@@ -96,7 +101,7 @@ export default function HeroCarousel() {
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={slide.cta.href}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#e63946]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#ff6b6b] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b]"
               >
                 {slide.cta.label} <ArrowRight className="h-4 w-4" />
               </Link>

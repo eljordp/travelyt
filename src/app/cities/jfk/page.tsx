@@ -32,14 +32,14 @@ export default function JFKPage() {
       <section className="pt-28 pb-20 bg-gradient-to-b from-navy to-navy/90 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/hero-travel.jpg')] bg-cover bg-center opacity-20" />
         <div className="relative max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#e63946] uppercase tracking-wider">New York</span>
+          <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">New York</span>
           <h1 className="text-4xl md:text-6xl font-bold mt-3 mb-4">
-            Travelyt <span className="text-[#e63946]">JFK</span>
+            Travelyt <span className="text-[#ff6b6b]">JFK</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
             Door-to-door baggage service for JFK International Airport. We collect your bags anywhere in the NYC metro area.
           </p>
-          <Link href="/quote?airport=JFK" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#e63946] transition-colors">
+          <Link href="/quote?airport=JFK" className="inline-block bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6b6b] transition-colors">
             Get a Quote for JFK
           </Link>
         </div>
@@ -55,7 +55,7 @@ export default function JFKPage() {
               { step: "03", title: "You skip the chaos", desc: "Take the AirTrain or your car hands-free — we meet you curbside at JFK with your bags ready for the counter." },
             ].map((s) => (
               <div key={s.step} className="text-center">
-                <div className="text-4xl font-bold text-[#c41e2a]/20 mb-3">{s.step}</div>
+                <div className="text-4xl font-bold text-[#ff6b6b]/20 mb-3">{s.step}</div>
                 <h3 className="text-lg font-bold text-navy mb-2">{s.title}</h3>
                 <p className="text-sm text-navy/70 leading-relaxed">{s.desc}</p>
               </div>
@@ -68,7 +68,7 @@ export default function JFKPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12">
             <div>
-              <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Coverage Area</span>
+              <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Coverage Area</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">50-mile radius from JFK</h2>
               <p className="text-navy/70 mb-6">All five boroughs, Long Island, Westchester, Northern New Jersey, and Southern Connecticut.</p>
               <div className="flex flex-wrap gap-2">
@@ -78,13 +78,13 @@ export default function JFKPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airlines at JFK</span>
+              <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Airlines at JFK</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">All major carriers</h2>
               <p className="text-navy/70 mb-6">We handle baggage for flights on all major US airlines departing from JFK.</p>
               <div className="space-y-2">
                 {AIRLINES.map((a) => (
                   <div key={a} className="flex items-center gap-2 text-sm text-navy/70">
-                    <CircleCheck className="w-4 h-4 text-[#c41e2a] flex-shrink-0" fill="currentColor" strokeWidth={1.5} />
+                    <CircleCheck className="w-4 h-4 text-[#ff6b6b] flex-shrink-0" fill="currentColor" strokeWidth={1.5} />
                     {a}
                   </div>
                 ))}
@@ -110,7 +110,7 @@ export default function JFKPage() {
               </div>
             ))}
           </div>
-          <Link href="/quote?airport=JFK" className="inline-block mt-10 bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#e63946] transition-colors">
+          <Link href="/quote?airport=JFK" className="inline-block mt-10 bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6b6b] transition-colors">
             Get Your JFK Quote
           </Link>
         </div>
@@ -126,7 +126,7 @@ export default function JFKPage() {
               { num: "4hr", label: "Max delivery window" },
             ].map((s) => (
               <div key={s.label}>
-                <div className="text-3xl font-bold text-[#e63946]">{s.num}</div>
+                <div className="text-3xl font-bold text-[#ff6b6b]">{s.num}</div>
                 <div className="text-sm text-white/70 mt-1">{s.label}</div>
               </div>
             ))}

@@ -42,7 +42,7 @@ export default function DemoPage() {
       <main className="pt-28">
         <section className="px-6 pb-16 pt-10">
           <div className="mx-auto max-w-5xl text-center">
-            <span className="text-sm font-semibold uppercase tracking-wider text-[#c41e2a]">
+            <span className="text-sm font-semibold uppercase tracking-wider text-[#ff6b6b]">
               Prototype Demo
             </span>
             <h1 className="mt-3 text-4xl font-bold text-navy md:text-6xl">
@@ -64,14 +64,14 @@ export default function DemoPage() {
                 href={step.href}
                 className="group rounded-2xl border border-gray-100 bg-white p-7 shadow-sm shadow-navy/5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-navy/10"
               >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#ff6b6b]/10 text-[#ff6b6b]">
                   {step.icon}
                 </div>
                 <h2 className="text-xl font-bold text-navy">{step.title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-navy/70">
                   {step.body}
                 </p>
-                <div className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#c41e2a]">
+                <div className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#ff6b6b]">
                   {step.cta}
                   <Route className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>

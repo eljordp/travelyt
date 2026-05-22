@@ -1,7 +1,13 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, ShieldCheck, Tag } from "lucide-react";
+import {
+  EXPRESS_PICKUP_CENTS,
+  FAMILY_BUNDLE_MIN_BAGS,
+  FAMILY_BUNDLE_PERCENT,
+  SERVICE_PRICES_CENTS,
+} from "@/lib/pricing";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,7 +28,7 @@ export const metadata: Metadata = {
 const plans = [
   {
     name: "Departure",
-    price: 49,
+    price: SERVICE_PRICES_CENTS.departure / 100,
     unit: "per bag",
     description: "We collect your bags at your door and move them to the airport. You arrive hands-free.",
     features: [
@@ -38,25 +44,8 @@ const plans = [
     popular: false,
   },
   {
-    name: "Both Ways",
-    price: 69,
-    unit: "per bag",
-    description: "Full round-trip. Your bags leave and come back without you lifting a finger.",
-    features: [
-      "Everything in Departure",
-      "Everything in Arrival",
-      "Priority scheduling",
-      "Dedicated agent both ways",
-      "Save $9 per bag vs. booking separately",
-      "Best value for round trips",
-    ],
-    cta: "Book Both Ways",
-    href: "/quote?service=both",
-    popular: true,
-  },
-  {
     name: "Arrival",
-    price: 29,
+    price: SERVICE_PRICES_CENTS.arrival / 100,
     unit: "per bag",
     description: "We collect your bags after your flight lands and deliver them to your address.",
     features: [
@@ -71,21 +60,38 @@ const plans = [
     href: "/quote?service=arrival",
     popular: false,
   },
+  {
+    name: "Both Ways",
+    price: SERVICE_PRICES_CENTS.both / 100,
+    unit: "per bag",
+    description: "Full round-trip. Your bags leave and come back without you lifting a finger.",
+    features: [
+      "Everything in Departure",
+      "Everything in Arrival",
+      "Priority scheduling",
+      "Dedicated agent both ways",
+      "Save $9 per bag vs. booking separately",
+      "Best value for round trips",
+    ],
+    cta: "Book Both Ways",
+    href: "/quote?service=both",
+    popular: true,
+  },
 ];
 
 const addons = [
-  { name: "Extra Bag Discount", detail: "$10 off each additional bag on same booking" },
+  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — 2-hour pickup window instead of 4-hour` },
+  { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
+  { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
-  { name: "Express Pickup", detail: "+$20 — 2-hour pickup window instead of 4-hour" },
-  { name: "Family Bundle", detail: "4+ bags: 15% off entire booking" },
 ];
 
 const competitors = [
   { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: true },
-  { name: "Bags VIP", departure: "—", arrival: "$29", sameDay: "4-6 hrs", tracking: "No", curbside: "No", highlight: false },
-  { name: "LugLess", departure: "$35+", arrival: "$35+", sameDay: "2-5 days", tracking: "Limited", curbside: "No", highlight: false },
-  { name: "Luggage Forward", departure: "$99+", arrival: "$99+", sameDay: "1-3 days", tracking: "Yes", curbside: "No", highlight: false },
-  { name: "AirPortr (UK)", departure: "$45-95", arrival: "$45-95", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: false },
+  { name: "Bags VIP", departure: "—", arrival: "$49.95+", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
+  { name: "LugLess", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
+  { name: "Luggage Forward", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
+  { name: "AirPortr (UK/EU)", departure: "Quote based", arrival: "Quote based", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: false },
 ];
 
 export default function PricingPage() {
@@ -96,10 +102,10 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Pricing</span>
+          <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Pricing</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            No hidden fees. No surge pricing. Just straightforward per-bag rates.
+            No hidden fees. No surge pricing. Just straightforward per-bag rates with discounts calculated automatically at booking.
           </p>
         </div>
       </section>
@@ -109,9 +115,9 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => (
-              <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#c41e2a]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
+              <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#ff6b6b]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#c41e2a] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#ff6b6b] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
                     Most Popular
                   </div>
                 )}
@@ -127,7 +133,7 @@ export default function PricingPage() {
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
                       <CircleCheck
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#e63946]" : "text-[#c41e2a]"}`}
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#ff6b6b]" : "text-[#ff6b6b]"}`}
                         fill="currentColor"
                         strokeWidth={1.5}
                       />
@@ -136,14 +142,14 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 <Link href={plan.href}
-                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#c41e2a] text-white hover:bg-[#e63946]" : "bg-navy text-white hover:bg-navy/90"}`}>
+                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#ff6b6b] text-white hover:bg-[#ff6b6b]" : "bg-navy text-white hover:bg-navy/90"}`}>
                   {plan.cta}
                 </Link>
               </div>
             ))}
           </div>
           <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
-            Airline baggage fees are paid separately to the airline at check-in. Travelyt fees cover pickup, transport, sealing, tracking, and insurance only.
+            Airline baggage fees are paid separately to the airline at check-in. Travelyt fees cover pickup, transport, sealing, tracking, and standard coverage only.
           </p>
         </div>
       </section>
@@ -151,12 +157,84 @@ export default function PricingPage() {
       {/* Add-ons */}
       <section className="py-16 bg-[#f5f0ee]">
         <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-2xl font-bold text-navy text-center mb-8">Add-ons & Discounts</h2>
+          <h2 className="text-2xl font-bold text-navy text-center mb-3">Add-ons & automatic discounts</h2>
+          <p className="mx-auto mb-8 max-w-2xl text-center text-sm text-navy/65">
+            Express pickup is a single booking add-on, not a per-bag charge. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {addons.map((a) => (
               <div key={a.name} className="bg-white rounded-xl p-5 shadow-sm">
                 <div className="font-bold text-navy text-sm mb-1">{a.name}</div>
                 <div className="text-navy/70 text-sm">{a.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Promo example */}
+      <section className="py-16">
+        <div className="max-w-5xl mx-auto grid gap-6 px-6 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+          <div>
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6b6b]/10 text-[#ff6b6b]">
+              <Tag className="h-5 w-5" strokeWidth={2} />
+            </span>
+            <h2 className="mt-4 text-2xl font-bold text-navy">Discounts show before you pay</h2>
+            <p className="mt-3 text-sm leading-relaxed text-navy/70">
+              Enter a promo code or open a launch-offer link and Travelyt recalculates the booking total automatically. The review screen shows service subtotal, express pickup, automatic bag discount, promo discount, and final total.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-navy/10 bg-[#f6f7fb] p-5 shadow-sm shadow-navy/5">
+            <div className="space-y-3 rounded-xl bg-white p-5 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-navy/65">Departure pickup · 4 bags</span>
+                <span className="font-semibold text-navy">$196.00</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-navy/65">Express pickup</span>
+                <span className="font-semibold text-navy">$20.00</span>
+              </div>
+              <div className="flex justify-between gap-4 text-[#ff6b6b]">
+                <span>Family bundle discount</span>
+                <span className="font-semibold">−$29.40</span>
+              </div>
+              <div className="flex justify-between gap-4 text-[#ff6b6b]">
+                <span>Launch offer (TRAVELYT30)</span>
+                <span className="font-semibold">−$55.98</span>
+              </div>
+              <div className="flex justify-between gap-4 border-t border-navy/10 pt-3 text-base">
+                <span className="font-bold text-navy">Estimated total</span>
+                <span className="font-bold text-navy">$130.62</span>
+              </div>
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-navy/60">
+              Example only. Promo availability, eligibility, service areas, timing, and coverage terms may vary. Discounts do not apply to airline baggage fees, oversized-item fees, declared-value upgrades, taxes, or third-party charges unless stated.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Insurance */}
+      <section className="bg-navy py-16 text-white">
+        <div className="mx-auto grid max-w-5xl gap-8 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#ff6b6b]">
+              <ShieldCheck className="h-6 w-6" strokeWidth={2} />
+            </span>
+            <h2 className="mt-4 text-3xl font-bold">Insurance is included on every eligible bag</h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/70">
+              Travelyt coverage starts when we collect your bag and ends when it is delivered or accepted at the agreed handoff point. You can add declared-value coverage for higher-value items before pickup.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              ["Standard coverage", "Included in every eligible booking"],
+              ["Chain of custody", "Photos, seals, timestamps, and handoff logs"],
+              ["Claims support", "Documented claim process if something goes wrong"],
+            ].map(([title, body]) => (
+              <div key={title} className="rounded-2xl bg-white/[0.06] p-5">
+                <p className="font-bold text-white">{title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-white/65">{body}</p>
               </div>
             ))}
           </div>
@@ -179,8 +257,8 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {competitors.map((c) => (
-                  <tr key={c.name} className={c.highlight ? "bg-[#c41e2a]/5" : "hover:bg-gray-50/50"}>
-                    <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#c41e2a]" : "text-navy"}`}>{c.name}</td>
+                  <tr key={c.name} className={c.highlight ? "bg-[#ff6b6b]/5" : "hover:bg-gray-50/50"}>
+                    <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#ff6b6b]" : "text-navy"}`}>{c.name}</td>
                     <td className="px-4 py-4 text-navy/70">{c.departure}</td>
                     <td className="px-4 py-4 text-navy/70">{c.arrival}</td>
                     <td className="px-4 py-4 text-navy/70">{c.sameDay}</td>
@@ -195,7 +273,9 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-navy/70 mt-6 text-center">Competitor pricing is approximate and gathered from public sources. No endorsement or affiliation implied.</p>
+          <p className="text-xs text-navy/70 mt-6 text-center">
+            Competitor notes are approximate from public information and quote-flow behavior as of May 2026. No endorsement, affiliation, or partnership is implied.
+          </p>
         </div>
       </section>
 
@@ -204,7 +284,7 @@ export default function PricingPage() {
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">Ready to travel hands-free?</h2>
           <p className="text-white/60 mb-8">Get a free quote in under 60 seconds.</p>
-          <Link href="/quote" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#e63946] transition-colors">
+          <Link href="/quote" className="inline-block bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#ff6b6b] transition-colors">
             Get Your Quote
           </Link>
         </div>

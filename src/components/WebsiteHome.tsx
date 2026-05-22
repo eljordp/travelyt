@@ -18,13 +18,13 @@ import BagStatus from "@/components/BagStatus";
 const services = [
   {
     title: "Departure Pickup",
-    text: "Door to airport handoff.",
+    text: "Door to gate, sealed and tracked.",
     href: "/quote?service=departure",
     icon: PackageCheck,
   },
   {
     title: "Arrival Delivery",
-    text: "Baggage claim to address.",
+    text: "Arrive empty handed.",
     href: "/quote?service=arrival",
     icon: PlaneLanding,
   },
@@ -61,7 +61,7 @@ export default function WebsiteHome() {
                   href={service.href}
                   className="group flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 transition-transform hover:-translate-y-0.5"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b]/10 text-[#ff6b6b]">
                     <Icon className="h-5 w-5" strokeWidth={2} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ export default function WebsiteHome() {
                       {service.text}
                     </span>
                   </span>
-                  <ArrowRight className="h-4 w-4 text-navy/35 transition-transform group-hover:translate-x-0.5 group-hover:text-[#c41e2a]" />
+                  <ArrowRight className="h-4 w-4 text-navy/35 transition-transform group-hover:translate-x-0.5 group-hover:text-[#ff6b6b]" />
                 </Link>
               );
             })}
@@ -79,11 +79,11 @@ export default function WebsiteHome() {
 
         <section className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
               Live tracking
             </p>
-            <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
-              You&apos;ll see your bag get on the plane.
+              <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
+              Sealed and tracked from door to gate.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-navy/65">
               Every Travelyt booking moves through a chain of custody you can
@@ -92,22 +92,22 @@ export default function WebsiteHome() {
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6b6b]" />
                 Tamper-evident seal and weight on file at pickup.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6b6b]" />
                 Live status as your bag clears the airport and boards your flight.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6b6b]" />
                 Photo proof when it&apos;s handed off to the airline and delivered.
               </li>
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 href="/quote"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#e63946]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#ff6b6b] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b]"
               >
                 Book your first bag <ArrowRight className="h-4 w-4" />
               </Link>
@@ -133,7 +133,7 @@ export default function WebsiteHome() {
         >
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff747d]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
                 Where to start
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
@@ -146,7 +146,7 @@ export default function WebsiteHome() {
 
             <Link
               href="/quote"
-              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#c41e2a] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#e63946]"
+              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#ff6b6b] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b]"
             >
               Get your quote <ArrowRight className="h-4 w-4" />
             </Link>
@@ -162,7 +162,7 @@ export default function WebsiteHome() {
                   className="group flex items-center gap-3 rounded-xl bg-white/[0.06] px-4 py-3.5 transition-colors hover:bg-white/[0.12]"
                 >
                   <Icon
-                    className="h-5 w-5 shrink-0 text-[#ff747d]"
+                    className="h-5 w-5 shrink-0 text-[#ff6b6b]"
                     strokeWidth={2}
                   />
                   <span className="flex-1 text-sm font-semibold text-white">

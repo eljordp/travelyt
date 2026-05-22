@@ -8,6 +8,7 @@ import {
 import { queueBookingNotification } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
+import { calcPriceCents } from "@/lib/pricing";
 import type { Booking, ServiceType } from "@/lib/bookings";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,12 +28,6 @@ const serviceLabels: Record<ServiceType, string> = {
 
 function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
-}
-
-function calcPriceCents(bags: number, service: ServiceType): number {
-  const base = service === "both" ? 9000 : 5500;
-  const perBag = 2500;
-  return base + perBag * bags;
 }
 
 function bad(error: string, status = 400) {

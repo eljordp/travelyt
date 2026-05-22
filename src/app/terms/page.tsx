@@ -33,6 +33,14 @@ const sections = [
     body: "Standard coverage is included on eligible bags while in Travelyt custody. Declared-value upgrades, claim limits, exclusions, documentation requirements, and timelines may apply.",
   },
   {
+    title: "AI and automated processing",
+    body: "Travelyt uses automated systems and artificial intelligence to support internal operations — including booking triage, chain-of-custody reporting, route and dispatch optimization, anomaly detection on bag photos and seal scans, and aggregate service analytics. These systems operate on booking and operational data described in our Privacy Policy and are restricted to internal use. Travelyt does not use customer trip data to train third-party AI models, and any AI features that interact directly with customers (such as a support assistant) are clearly identified and run on a separate, scoped system without access to full account or payment records.",
+  },
+  {
+    title: "Limitations of AI outputs",
+    body: "Automated outputs — including estimated arrival windows, suggested routes, dispatch decisions, status summaries, and reporting — are provided for operational convenience and may contain errors. Travelyt does not warrant that automated outputs are complete, accurate, or current, and customers should rely on confirmed booking records, chain-of-custody scans, and direct communications from Travelyt staff for binding service details. Travelyt's liability for any AI-generated output is limited to the same caps that apply to the underlying service under these terms.",
+  },
+  {
     title: "Pre-launch status",
     body: "Travelyt is onboarding early customers, partners, and launch markets. Availability, timing, pricing, coverage, and service areas may change as operations are finalized.",
   },
@@ -44,7 +52,7 @@ export default function TermsPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider mb-3">
             Legal
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">

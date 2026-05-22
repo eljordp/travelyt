@@ -40,14 +40,14 @@ export default function AppHome() {
 
         <Link
           href="/quote?promo=TRAVELYT30"
-          className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[#c41e2a] to-[#e63946] p-5 text-white shadow-lg shadow-[#c41e2a]/20"
+          className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[#ff6b6b] to-[#ff6b6b] p-5 text-white shadow-lg shadow-[#ff6b6b]/20"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
             <Tag className="h-5 w-5" strokeWidth={2} />
           </span>
           <span className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/85">
-              Launch offer · 2 hours left
+              Launch offer · 1 hour left
             </p>
             <p className="mt-0.5 text-base font-bold leading-tight">
               30% off your first booking
@@ -71,12 +71,12 @@ export default function AppHome() {
             href="/quote?service=departure"
             className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5"
           >
-            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6b6b]/10 text-[#ff6b6b]">
               <PackageCheck className="h-5 w-5" strokeWidth={2} />
             </span>
             <p className="font-bold text-navy">Book pickup</p>
             <p className="mt-1 text-xs leading-relaxed text-navy/60">
-              Door to airline.
+              Door to gate.
             </p>
           </Link>
 
@@ -89,7 +89,7 @@ export default function AppHome() {
             </span>
             <p className="font-bold text-navy">Arrival drop</p>
             <p className="mt-1 text-xs leading-relaxed text-navy/60">
-              Airport to address.
+              Arrive empty handed.
             </p>
           </Link>
         </section>
@@ -99,7 +99,7 @@ export default function AppHome() {
             <h2 className="text-base font-bold text-navy">Trip activity</h2>
             <Link
               href="/profile"
-              className="flex items-center gap-1 text-xs font-semibold text-[#c41e2a]"
+              className="flex items-center gap-1 text-xs font-semibold text-[#ff6b6b]"
             >
               View all <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -134,7 +134,7 @@ export default function AppHome() {
         <section className="grid grid-cols-3 gap-3">
           {[
             { label: "Insured", icon: ShieldCheck },
-            { label: "Tracked", icon: MapPin },
+            { label: "Sealed + tracked", icon: MapPin },
             { label: "Courier", icon: CarFront },
           ].map((item) => {
             const Icon = item.icon;
@@ -143,7 +143,7 @@ export default function AppHome() {
                 key={item.label}
                 className="rounded-2xl bg-white p-3 text-center shadow-sm shadow-navy/5"
               >
-                <Icon className="mx-auto h-5 w-5 text-[#c41e2a]" strokeWidth={2} />
+                <Icon className="mx-auto h-5 w-5 text-[#ff6b6b]" strokeWidth={2} />
                 <p className="mt-2 text-xs font-semibold text-navy/70">
                   {item.label}
                 </p>

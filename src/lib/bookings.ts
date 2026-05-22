@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  calcPriceBreakdown,
+  calcPriceCents,
+} from "@/lib/pricing";
+
+export { calcPriceBreakdown, calcPriceCents };
+
 export type BookingStatus =
   | "pending"
   | "paid"
@@ -171,12 +178,6 @@ export async function getBooking(id: string): Promise<Booking | undefined> {
   return readLocal().find((b) => b.id === id);
 }
 
-export function calcPriceCents(bags: number, service: ServiceType): number {
-  const base = service === "both" ? 9000 : 5500;
-  const perBag = 2500;
-  return base + perBag * bags;
-}
-
 export const PROMO_CODES: Record<string, { percentOff: number; label: string }> = {
   TRAVELYT30: { percentOff: 30, label: "Launch offer — 30% off" },
 };
@@ -201,14 +202,22 @@ export async function createBooking(
   data: Omit<
     Booking,
     "id" | "status" | "createdAt" | "proofs" | "priceCents" | "discountCents"
-  > & { promoCode?: string }
+  > & { promoCode?: string; expressPickup?: boolean }
 ): Promise<Booking> {
-  const subtotal = calcPriceCents(data.bags, data.service);
+  const { expressPickup, ...bookingData } = data;
+  const subtotal = calcPriceCents(data.bags, data.service, expressPickup);
   const promoCode = normalizePromoCode(data.promoCode);
   const discountCents = getPromoDiscountCents(subtotal, promoCode);
+  const notes = [
+    expressPickup ? "Express pickup requested." : "",
+    bookingData.notes,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const booking: Booking = {
-    ...data,
+    ...bookingData,
+    notes: notes || undefined,
     promoCode,
     discountCents: discountCents || undefined,
     id: `TVT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,

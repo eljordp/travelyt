@@ -120,7 +120,7 @@ export default function BookingPage() {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0 ${
                       isCurrent
-                        ? "bg-[#c41e2a] text-white ring-4 ring-[#c41e2a]/20 animate-pulse"
+                        ? "bg-[#ff6b6b] text-white ring-4 ring-[#ff6b6b]/20 animate-pulse"
                         : isDone
                           ? "bg-navy text-white"
                           : "bg-gray-100 text-navy/30"

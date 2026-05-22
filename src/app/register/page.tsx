@@ -97,7 +97,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-name" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Full Name</label>
             <input id="reg-name" type="text" placeholder="Jordan Williams" {...field("name")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all`} />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
@@ -105,7 +105,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-email" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Email</label>
             <input id="reg-email" type="email" placeholder="you@example.com" {...field("email")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all`} />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
@@ -113,7 +113,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-password" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Password</label>
             <input id="reg-password" type="password" placeholder="At least 8 characters" {...field("password")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all`} />
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
 
@@ -121,7 +121,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-confirm" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Confirm Password</label>
             <input id="reg-confirm" type="password" placeholder="Repeat password" {...field("confirm")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.confirm ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.confirm ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all`} />
             {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm}</p>}
           </div>
 
@@ -130,26 +130,26 @@ export default function RegisterPage() {
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.agreed}
                 onChange={(e) => setForm((f) => ({ ...f, agreed: e.target.checked }))}
-                className="mt-0.5 accent-[#c41e2a]" />
+                className="mt-0.5 accent-[#ff6b6b]" />
               <span className="text-sm text-navy/70">
                 I agree to the{" "}
-                <Link href="/terms" className="text-[#c41e2a] hover:underline">Terms of Service</Link>{" "}
+                <Link href="/terms" className="text-[#ff6b6b] hover:underline">Terms of Service</Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-[#c41e2a] hover:underline">Privacy Policy</Link>
+                <Link href="/privacy" className="text-[#ff6b6b] hover:underline">Privacy Policy</Link>
               </span>
             </label>
             {errors.agreed && <p className="text-xs text-red-500 mt-1">{errors.agreed}</p>}
           </div>
 
           <button type="submit" disabled={submitting}
-            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#e63946] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+            className="w-full bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
             {submitting ? "Creating account…" : "Create Account"}
           </button>
         </form>
 
         <p className="text-center text-sm text-navy/70 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#c41e2a] font-semibold hover:underline">Sign in</Link>
+          <Link href="/login" className="text-[#ff6b6b] font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
     </div>
