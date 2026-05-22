@@ -102,7 +102,7 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Pricing</span>
+          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Pricing</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
             No hidden fees. No surge pricing. Just straightforward per-bag rates with discounts calculated automatically at booking.
@@ -115,9 +115,9 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => (
-              <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#ff6b6b]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
+              <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#c41e2a]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#ff6b6b] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#c41e2a] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
                     Most Popular
                   </div>
                 )}
@@ -133,7 +133,7 @@ export default function PricingPage() {
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
                       <CircleCheck
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#ff6b6b]" : "text-[#ff6b6b]"}`}
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#c41e2a]" : "text-[#c41e2a]"}`}
                         fill="currentColor"
                         strokeWidth={1.5}
                       />
@@ -142,7 +142,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 <Link href={plan.href}
-                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#ff6b6b] text-white hover:bg-[#ff6b6b]" : "bg-navy text-white hover:bg-navy/90"}`}>
+                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#c41e2a] text-white hover:bg-[#c41e2a]" : "bg-navy text-white hover:bg-navy/90"}`}>
                   {plan.cta}
                 </Link>
               </div>
@@ -176,7 +176,7 @@ export default function PricingPage() {
       <section className="py-16">
         <div className="max-w-5xl mx-auto grid gap-6 px-6 lg:grid-cols-[1fr_1.2fr] lg:items-center">
           <div>
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6b6b]/10 text-[#ff6b6b]">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
               <Tag className="h-5 w-5" strokeWidth={2} />
             </span>
             <h2 className="mt-4 text-2xl font-bold text-navy">Discounts show before you pay</h2>
@@ -194,11 +194,11 @@ export default function PricingPage() {
                 <span className="text-navy/65">Express pickup</span>
                 <span className="font-semibold text-navy">$20.00</span>
               </div>
-              <div className="flex justify-between gap-4 text-[#ff6b6b]">
+              <div className="flex justify-between gap-4 text-[#c41e2a]">
                 <span>Family bundle discount</span>
                 <span className="font-semibold">−$29.40</span>
               </div>
-              <div className="flex justify-between gap-4 text-[#ff6b6b]">
+              <div className="flex justify-between gap-4 text-[#c41e2a]">
                 <span>Launch offer (TRAVELYT30)</span>
                 <span className="font-semibold">−$55.98</span>
               </div>
@@ -218,7 +218,7 @@ export default function PricingPage() {
       <section className="bg-navy py-16 text-white">
         <div className="mx-auto grid max-w-5xl gap-8 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#ff6b6b]">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#c41e2a]">
               <ShieldCheck className="h-6 w-6" strokeWidth={2} />
             </span>
             <h2 className="mt-4 text-3xl font-bold">Insurance is included on every eligible bag</h2>
@@ -257,8 +257,8 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {competitors.map((c) => (
-                  <tr key={c.name} className={c.highlight ? "bg-[#ff6b6b]/5" : "hover:bg-gray-50/50"}>
-                    <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#ff6b6b]" : "text-navy"}`}>{c.name}</td>
+                  <tr key={c.name} className={c.highlight ? "bg-[#c41e2a]/5" : "hover:bg-gray-50/50"}>
+                    <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#c41e2a]" : "text-navy"}`}>{c.name}</td>
                     <td className="px-4 py-4 text-navy/70">{c.departure}</td>
                     <td className="px-4 py-4 text-navy/70">{c.arrival}</td>
                     <td className="px-4 py-4 text-navy/70">{c.sameDay}</td>
@@ -284,7 +284,7 @@ export default function PricingPage() {
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">Ready to travel hands-free?</h2>
           <p className="text-white/60 mb-8">Get a free quote in under 60 seconds.</p>
-          <Link href="/quote" className="inline-block bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#ff6b6b] transition-colors">
+          <Link href="/quote" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#c41e2a] transition-colors">
             Get Your Quote
           </Link>
         </div>

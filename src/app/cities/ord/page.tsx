@@ -32,14 +32,14 @@ export default function ORDPage() {
       <section className="pt-28 pb-20 bg-gradient-to-b from-navy to-navy/90 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/hero-travel.jpg')] bg-cover bg-center opacity-20" />
         <div className="relative max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Chicago</span>
+          <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Chicago</span>
           <h1 className="text-4xl md:text-6xl font-bold mt-3 mb-4">
-            Travelyt <span className="text-[#ff6b6b]">ORD</span>
+            Travelyt <span className="text-[#c41e2a]">ORD</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
             Door-to-door baggage service for Chicago O&apos;Hare International Airport. We collect your bags across Chicagoland.
           </p>
-          <Link href="/quote?airport=ORD" className="inline-block bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6b6b] transition-colors">
+          <Link href="/quote?airport=ORD" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#c41e2a] transition-colors">
             Get a Quote for ORD
           </Link>
         </div>
@@ -55,7 +55,7 @@ export default function ORDPage() {
               { step: "03", title: "You skip the drag", desc: "Take the Blue Line or ride to O'Hare hands-free — we meet you curbside with your bags ready for the counter." },
             ].map((s) => (
               <div key={s.step} className="text-center">
-                <div className="text-4xl font-bold text-[#ff6b6b]/20 mb-3">{s.step}</div>
+                <div className="text-4xl font-bold text-[#c41e2a]/20 mb-3">{s.step}</div>
                 <h3 className="text-lg font-bold text-navy mb-2">{s.title}</h3>
                 <p className="text-sm text-navy/70 leading-relaxed">{s.desc}</p>
               </div>
@@ -68,7 +68,7 @@ export default function ORDPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12">
             <div>
-              <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Coverage Area</span>
+              <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Coverage Area</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">50-mile radius from ORD</h2>
               <p className="text-navy/70 mb-6">We serve greater Chicagoland — city, north shore, western suburbs, and south suburbs.</p>
               <div className="flex flex-wrap gap-2">
@@ -78,13 +78,13 @@ export default function ORDPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider">Airlines at ORD</span>
+              <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Airlines at ORD</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">All major carriers</h2>
               <p className="text-navy/70 mb-6">O&apos;Hare is a major hub for American and United. We handle bags for all carriers.</p>
               <div className="space-y-2">
                 {AIRLINES.map((a) => (
                   <div key={a} className="flex items-center gap-2 text-sm text-navy/70">
-                    <CircleCheck className="w-4 h-4 text-[#ff6b6b] flex-shrink-0" fill="currentColor" strokeWidth={1.5} />
+                    <CircleCheck className="w-4 h-4 text-[#c41e2a] flex-shrink-0" fill="currentColor" strokeWidth={1.5} />
                     {a}
                   </div>
                 ))}
@@ -110,7 +110,7 @@ export default function ORDPage() {
               </div>
             ))}
           </div>
-          <Link href="/quote?airport=ORD" className="inline-block mt-10 bg-[#ff6b6b] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6b6b] transition-colors">
+          <Link href="/quote?airport=ORD" className="inline-block mt-10 bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#c41e2a] transition-colors">
             Get Your ORD Quote
           </Link>
         </div>
@@ -126,7 +126,7 @@ export default function ORDPage() {
               { num: "4hr", label: "Max delivery window" },
             ].map((s) => (
               <div key={s.label}>
-                <div className="text-3xl font-bold text-[#ff6b6b]">{s.num}</div>
+                <div className="text-3xl font-bold text-[#c41e2a]">{s.num}</div>
                 <div className="text-sm text-white/70 mt-1">{s.label}</div>
               </div>
             ))}

@@ -89,12 +89,12 @@ export default function StickyPromoBar() {
       aria-label="Current Travelyt offers"
     >
       <div className="mx-auto flex max-w-5xl items-center gap-3 rounded-2xl bg-navy/95 px-4 py-3 text-white shadow-2xl shadow-navy/40 backdrop-blur sm:px-5 sm:py-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b]/20 text-[#ff6b6b]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/20 text-[#c41e2a]">
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
             {promo.eyebrow}
           </p>
           <p className="mt-0.5 truncate text-sm font-semibold sm:text-base">
@@ -104,7 +104,7 @@ export default function StickyPromoBar() {
 
         <Link
           href={promo.href}
-          className="hidden items-center gap-2 whitespace-nowrap rounded-xl bg-[#ff6b6b] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b] sm:inline-flex"
+          className="hidden items-center gap-2 whitespace-nowrap rounded-xl bg-[#c41e2a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#c41e2a] sm:inline-flex"
         >
           {promo.cta}
           <ArrowRight className="h-4 w-4" />
@@ -113,7 +113,7 @@ export default function StickyPromoBar() {
         <Link
           href={promo.href}
           aria-label={promo.cta}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b] text-white hover:bg-[#ff6b6b] sm:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a] text-white hover:bg-[#c41e2a] sm:hidden"
         >
           <ArrowRight className="h-5 w-5" />
         </Link>

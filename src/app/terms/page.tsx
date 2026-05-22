@@ -52,7 +52,7 @@ export default function TermsPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-sm font-semibold text-[#ff6b6b] uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider mb-3">
             Legal
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">

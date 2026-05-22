@@ -86,11 +86,11 @@ export default function MarketingPopup() {
 
         <div className="bg-navy px-6 py-6 text-white">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b]/20 text-[#ff6b6b]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/20 text-[#c41e2a]">
               <Gift className="h-5 w-5" strokeWidth={2} />
             </span>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
                 Limited launch offer
               </p>
               <h2
@@ -110,12 +110,12 @@ export default function MarketingPopup() {
             door-to-gate luggage pickup.
           </p>
 
-          <div className="flex items-center justify-between rounded-xl border border-[#ff6b6b]/15 bg-[#ff6b6b]/5 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-[#c41e2a]/15 bg-[#c41e2a]/5 px-4 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold text-navy">
-              <Clock3 className="h-4 w-4 text-[#ff6b6b]" strokeWidth={2} />
+              <Clock3 className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
               Offer ends in
             </span>
-            <span className="font-mono text-lg font-bold tabular-nums text-[#ff6b6b]">
+            <span className="font-mono text-lg font-bold tabular-nums text-[#c41e2a]">
               {formatRemaining(remaining)}
             </span>
           </div>
@@ -124,7 +124,7 @@ export default function MarketingPopup() {
             <Link
               href="/quote?promo=TRAVELYT30"
               onClick={dismiss}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff6b6b] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b]"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#c41e2a]"
             >
               Claim 30% off <ArrowRight className="h-4 w-4" />
             </Link>

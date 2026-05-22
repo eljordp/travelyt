@@ -89,7 +89,7 @@ export default function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/45 to-navy/20" />
           <div className="relative flex h-full flex-col justify-end p-6 sm:p-10 lg:p-12">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b6b]">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
               {slide.eyebrow}
             </p>
             <h1 className="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
@@ -101,7 +101,7 @@ export default function HeroCarousel() {
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href={slide.cta.href}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#ff6b6b] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#ff6b6b]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#c41e2a]"
               >
                 {slide.cta.label} <ArrowRight className="h-4 w-4" />
               </Link>

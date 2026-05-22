@@ -64,7 +64,7 @@ export default function ProfilePage() {
                 const Icon = s.icon;
                 return (
                 <div key={s.label} className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5">
-                  <Icon className="mb-3 h-5 w-5 text-[#ff6b6b]" strokeWidth={2} />
+                  <Icon className="mb-3 h-5 w-5 text-[#c41e2a]" strokeWidth={2} />
                   <div className="text-2xl font-bold text-navy">{s.value}</div>
                   <div className="mt-1 text-xs text-navy/60">{s.label}</div>
                 </div>
@@ -76,14 +76,14 @@ export default function ProfilePage() {
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-navy/5">
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
                 <h2 className="font-bold text-navy">Recent Bookings</h2>
-                <button onClick={() => setTab("bookings")} className="text-sm text-[#ff6b6b] hover:underline cursor-pointer">View all</button>
+                <button onClick={() => setTab("bookings")} className="text-sm text-[#c41e2a] hover:underline cursor-pointer">View all</button>
               </div>
               <BookingsList bookings={mockBookings.slice(0, 2)} />
             </div>
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
-              <Link href="/quote" className="flex items-center gap-3 rounded-2xl bg-[#ff6b6b] p-4 text-white transition-opacity hover:opacity-90">
+              <Link href="/quote" className="flex items-center gap-3 rounded-2xl bg-[#c41e2a] p-4 text-white transition-opacity hover:opacity-90">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
                   <PlusCircle className="h-5 w-5" strokeWidth={2} />
                 </div>
@@ -134,11 +134,11 @@ export default function ProfilePage() {
                     type={field === "email" ? "email" : "text"}
                     value={settings[field]}
                     onChange={(e) => setSettings((s) => ({ ...s, [field]: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all"
                   />
                 </div>
               ))}
-              <button className="w-full rounded-xl bg-[#ff6b6b] px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer">
+              <button className="w-full rounded-xl bg-[#c41e2a] px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer">
                 Save Changes
               </button>
             </div>

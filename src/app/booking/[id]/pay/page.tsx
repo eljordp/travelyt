@@ -96,7 +96,7 @@ export default function PayPage() {
             </div>
             <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between items-baseline">
               <span className="text-navy font-bold">Total</span>
-              <span className="text-2xl font-bold text-[#ff6b6b]">
+              <span className="text-2xl font-bold text-[#c41e2a]">
                 {formatPrice(booking.priceCents)}
               </span>
             </div>
@@ -110,26 +110,26 @@ export default function PayPage() {
 
             <Field label="Card number">
               <input value={card} onChange={(e) => setCard(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all font-mono" />
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all font-mono" />
             </Field>
 
             <div className="grid grid-cols-3 gap-3">
               <Field label="Expiry">
                 <input value={exp} onChange={(e) => setExp(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all font-mono" />
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all font-mono" />
               </Field>
               <Field label="CVC">
                 <input value={cvc} onChange={(e) => setCvc(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all font-mono" />
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all font-mono" />
               </Field>
               <Field label="Zip">
                 <input value={zip} onChange={(e) => setZip(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all font-mono" />
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all font-mono" />
               </Field>
             </div>
 
             <button onClick={pay} disabled={processing}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
               {processing ? "Processing…" : `Pay ${formatPrice(booking.priceCents)}`}
             </button>
           </div>

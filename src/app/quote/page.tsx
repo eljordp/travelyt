@@ -257,7 +257,7 @@ export default function QuotePage() {
   const promoMeta = promoCode ? PROMO_CODES[promoCode] : undefined;
   const estimate = subtotalCents ? formatPrice(totalCents) : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
-  const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all bg-white text-navy`;
+  const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white text-navy`;
 
   return (
     <AppChrome title="Book bags">
@@ -270,12 +270,12 @@ export default function QuotePage() {
         </div>
 
         {promoCode && promoMeta && (
-          <div className="flex items-center gap-3 rounded-2xl border border-[#ff6b6b]/30 bg-[#ff6b6b]/5 px-4 py-3 text-sm">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#ff6b6b]/15 text-[#ff6b6b]">
+          <div className="flex items-center gap-3 rounded-2xl border border-[#c41e2a]/30 bg-[#c41e2a]/5 px-4 py-3 text-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/15 text-[#c41e2a]">
               <Tag className="h-4 w-4" strokeWidth={2} />
             </span>
             <div className="flex-1">
-              <p className="font-bold text-[#ff6b6b]">
+              <p className="font-bold text-[#c41e2a]">
                 {promoMeta.label}
               </p>
               <p className="text-xs text-navy/65">
@@ -302,7 +302,7 @@ export default function QuotePage() {
                   <div key={label} className="flex items-center flex-1 last:flex-none">
                     <div className="flex flex-col items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                        i < step ? "bg-[#ff6b6b] text-white" :
+                        i < step ? "bg-[#c41e2a] text-white" :
                         i === step ? "bg-navy text-white" :
                         "bg-gray-100 text-navy/30"
                       }`}>
@@ -313,7 +313,7 @@ export default function QuotePage() {
                       <span className={`text-xs mt-1 font-medium hidden sm:block ${i === step ? "text-navy" : "text-navy/30"}`}>{label}</span>
                     </div>
                     {i < STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all ${i < step ? "bg-[#ff6b6b]" : "bg-gray-100"}`} />
+                      <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all ${i < step ? "bg-[#c41e2a]" : "bg-gray-100"}`} />
                     )}
                   </div>
                 ))}
@@ -337,21 +337,21 @@ export default function QuotePage() {
                         aria-pressed={form.service === opt.value}
                         className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer ${
                           form.service === opt.value
-                            ? "border-[#ff6b6b] bg-[#ff6b6b]/5"
+                            ? "border-[#c41e2a] bg-[#c41e2a]/5"
                             : "border-gray-100 hover:border-gray-200"
                         }`}>
                         <div className="flex items-start gap-4">
                           <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-                            form.service === opt.value ? "bg-[#ff6b6b] text-white" : "bg-[#f5f0ee] text-navy"
+                            form.service === opt.value ? "bg-[#c41e2a] text-white" : "bg-[#f5f0ee] text-navy"
                           }`}>
                             {opt.icon}
                           </span>
                           <div>
-                            <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#ff6b6b]" : "text-navy"}`}>{opt.title}</div>
+                            <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#c41e2a]" : "text-navy"}`}>{opt.title}</div>
                             <div className="text-sm text-navy/70">{opt.desc}</div>
                           </div>
                           <div className={`ml-auto w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
-                            form.service === opt.value ? "border-[#ff6b6b] bg-[#ff6b6b]" : "border-gray-200"
+                            form.service === opt.value ? "border-[#c41e2a] bg-[#c41e2a]" : "border-gray-200"
                           }`}>
                             {form.service === opt.value && (
                               <Check className="w-full h-full p-0.5 text-white" strokeWidth={3} />
@@ -375,9 +375,9 @@ export default function QuotePage() {
 
                   {/* Airport */}
                   <div>
-                    <label htmlFor="quote-airport" className={labelClass}>Airport <span className="text-[#ff6b6b]">*</span></label>
+                    <label htmlFor="quote-airport" className={labelClass}>Airport <span className="text-[#c41e2a]">*</span></label>
                     <select id="quote-airport" name="airport" required value={form.airport} onChange={(e) => set("airport", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all bg-white appearance-none text-navy`}>
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white appearance-none text-navy`}>
                       <option value="">Select airport...</option>
                       {AIRPORTS.map((a) => (
                         <option key={a.code} value={a.code}>{a.name} ({a.code})</option>
@@ -390,19 +390,19 @@ export default function QuotePage() {
                   {/* Address */}
                   <div>
                     <label htmlFor="quote-address" className={labelClass}>
-                      {form.service === "arrival" ? "Delivery Address" : "Pickup Address"} <span className="text-[#ff6b6b]">*</span>
+                      {form.service === "arrival" ? "Delivery Address" : "Pickup Address"} <span className="text-[#c41e2a]">*</span>
                     </label>
                     <input id="quote-address" name="address" required type="text"
                       placeholder={form.service === "arrival" ? "Where should we deliver your bags?" : "Where should we collect your bags?"}
                       value={form.address} onChange={(e) => set("address", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all text-navy`} />
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
                     {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
                   </div>
 
                   {/* Date + Flight */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className={labelClass}>Travel Date <span className="text-[#ff6b6b]">*</span></label>
+                      <label className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
                       <div className="grid grid-cols-3 gap-2">
                         <select
                           id="quote-date-month"
@@ -452,7 +452,7 @@ export default function QuotePage() {
                     <div>
                       <label htmlFor="quote-flight" className={labelClass}>Flight Number <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
                       <input id="quote-flight" name="flight" type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all text-navy" />
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy" />
                     </div>
                   </div>
 
@@ -476,13 +476,13 @@ export default function QuotePage() {
                       aria-pressed={form.expressPickup}
                       className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                         form.expressPickup
-                          ? "border-[#ff6b6b] bg-[#ff6b6b]/5"
+                          ? "border-[#c41e2a] bg-[#c41e2a]/5"
                           : "border-gray-100 hover:border-gray-200"
                       }`}
                     >
                       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${
                         form.expressPickup
-                          ? "border-[#ff6b6b] bg-[#ff6b6b] text-white"
+                          ? "border-[#c41e2a] bg-[#c41e2a] text-white"
                           : "border-gray-200"
                       }`}>
                         {form.expressPickup && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -514,11 +514,11 @@ export default function QuotePage() {
                     { id: "phone", label: "Phone Number", type: "tel", placeholder: "+1 (555) 000-0000" },
                   ].map((f) => (
                     <div key={f.id}>
-                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#ff6b6b]">*</span></label>
+                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#c41e2a]">*</span></label>
                       <input id={`quote-${f.id}`} name={f.id} required type={f.type} placeholder={f.placeholder}
                         value={form[f.id as keyof FormData] as string}
                         onChange={(e) => set(f.id as keyof FormData, e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all text-navy`} />
+                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
                       {errors[f.id] && <p className="text-xs text-red-500 mt-1">{errors[f.id]}</p>}
                     </div>
                   ))}
@@ -527,7 +527,7 @@ export default function QuotePage() {
                     <label htmlFor="quote-notes" className={labelClass}>Special Instructions <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
                     <textarea id="quote-notes" name="notes" rows={3} placeholder="Fragile items, oversized bags, gate code, etc."
                       value={form.notes} onChange={(e) => set("notes", e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10 outline-none text-sm transition-all resize-none text-navy" />
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none text-navy" />
                   </div>
                 </div>
               )}
@@ -558,7 +558,7 @@ export default function QuotePage() {
                           />
                         )}
                         {priceBreakdown.automaticDiscountCents > 0 && (
-                          <div className="flex justify-between gap-4 text-[#ff6b6b]">
+                          <div className="flex justify-between gap-4 text-[#c41e2a]">
                             <span className="min-w-0 flex-1 font-medium">
                               {priceBreakdown.automaticDiscountLabel}
                             </span>
@@ -568,7 +568,7 @@ export default function QuotePage() {
                           </div>
                         )}
                         {discountCents > 0 && promoMeta ? (
-                          <div className="flex justify-between gap-4 text-[#ff6b6b]">
+                          <div className="flex justify-between gap-4 text-[#c41e2a]">
                             <span className="min-w-0 flex-1 font-medium">
                               {promoMeta.label} ({promoCode})
                             </span>
@@ -605,7 +605,7 @@ export default function QuotePage() {
                             setPromoError(undefined);
                           }}
                           placeholder="Enter promo code"
-                          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm tracking-wide outline-none focus:border-[#ff6b6b] focus:ring-2 focus:ring-[#ff6b6b]/10"
+                          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm tracking-wide outline-none focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10"
                         />
                         <button
                           type="button"
@@ -639,13 +639,13 @@ export default function QuotePage() {
                 )}
                 {step < 3 ? (
                   <button type="button" onClick={next}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
                     Continue →
                   </button>
                 ) : (
                   <button type="button" onClick={submitBooking}
                     disabled={submitting}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ff6b6b] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                     {submitting ? "Submitting…" : "Continue to Payment →"}
                   </button>
                 )}
