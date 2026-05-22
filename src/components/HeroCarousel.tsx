@@ -29,7 +29,7 @@ const slides: Slide[] = [
     src: "/carousel/pexels-door-family.jpg",
     alt: "Father and children packing a suitcase at home before a family trip",
     eyebrow: "Made for families",
-    headline: "Handle the kids. We'll handle the bags.",
+    headline: "You handle the kids. We'll handle the bags.",
     body: "Doorstep pickup, sealed in transit, delivered to your destination — so you can travel with everyone without dragging six suitcases.",
     cta: { href: "/trust", label: "How it works" },
     objectPosition: "center 38%",
