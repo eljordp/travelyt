@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import NativeBoot from "@/components/NativeBoot";
-import MarketingPopup from "@/components/MarketingPopup";
 import StickyPromoBar from "@/components/StickyPromoBar";
 
 const siteUrl = "https://travelyt-psi.vercel.app";
@@ -57,7 +56,6 @@ export default function RootLayout({
         <NativeBoot />
         {children}
         <StickyPromoBar />
-        <MarketingPopup />
       </body>
     </html>
   );

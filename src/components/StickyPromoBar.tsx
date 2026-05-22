@@ -18,9 +18,9 @@ type Promo = {
 const PROMOS: Promo[] = [
   {
     icon: Tag,
-    eyebrow: "Launch offer",
-    text: "30% off first booking.",
-    cta: "Claim 30%",
+    eyebrow: "Early access pricing",
+    text: "30% off your first booking — code TRAVELYT30.",
+    cta: "Claim discount",
     href: "/quote?promo=TRAVELYT30",
   },
   {
