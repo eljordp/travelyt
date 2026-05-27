@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_HOST } from "@/lib/site";
 
 export const alt = "Travelyt — Travel light, arrive smart.";
 export const size = { width: 1200, height: 630 };
@@ -12,7 +13,7 @@ export default function OpengraphImage() {
           width: "100%",
           height: "100%",
           background:
-            "linear-gradient(135deg, #0a1f5c 0%, #0a1f5c 60%, #1a2f7c 100%)",
+            "linear-gradient(135deg, #081546 0%, #081546 60%, #1a2f7c 100%)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
@@ -100,7 +101,7 @@ export default function OpengraphImage() {
             <span>·</span>
             <span>Fully insured</span>
           </div>
-          <div style={{ color: "white", fontWeight: 700 }}>travelyt-psi.vercel.app</div>
+          <div style={{ color: "white", fontWeight: 700 }}>{SITE_HOST}</div>
         </div>
       </div>
     ),

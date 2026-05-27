@@ -22,7 +22,7 @@ export default function Services() {
       label: "Arrivals",
       title: "Land & Leave",
       description:
-        "Skip baggage claim. After your flight lands, our team collects your bags and delivers them to your hotel, home, or any address. You walk off the plane and go.",
+        "After your flight lands, our team coordinates post-flight bag delivery to your hotel, home, or any address. You walk off the plane and keep moving.",
       features: [
         "Post-flight bag collection",
         "Door-to-door delivery",
@@ -61,8 +61,8 @@ export default function Services() {
             Every leg of your journey, covered
           </h2>
           <p className="text-navy/70 max-w-2xl mx-auto">
-            From your front door to your final destination — we handle your
-            luggage so you can focus on what matters.
+            From your front door to airline handoff and post-flight delivery,
+            we handle the luggage moments that slow travel down.
           </p>
         </div>
 

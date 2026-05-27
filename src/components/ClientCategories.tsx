@@ -5,7 +5,7 @@ export default function ClientCategories() {
     {
       title: "Business Travelers",
       description:
-        "Your time is money. We collect your bags at your door and move them to the airport — you arrive hands-free and head straight for the line with nothing to drag.",
+        "Your time is money. We collect your bags at your door and move them to the airport, so you arrive hands-free with nothing to drag.",
       icon: (
         <BriefcaseBusiness className="w-8 h-8" strokeWidth={1.5} />
       ),
@@ -21,7 +21,7 @@ export default function ClientCategories() {
     {
       title: "Frequent Flyers",
       description:
-        "You've done this a hundred times. Now do it without ever dragging a suitcase through a terminal or waiting at baggage claim.",
+        "You already know the airport routine. Travelyt takes the suitcase drag out of it, from pickup to airline handoff.",
       icon: (
         <Plane className="w-8 h-8" strokeWidth={1.5} />
       ),
@@ -39,7 +39,7 @@ export default function ClientCategories() {
             Built for how you travel
           </h2>
           <p className="text-navy/70 max-w-2xl mx-auto">
-            Whether it&apos;s a quick business trip or a family vacation, your bags are in good hands.
+            Whether it&apos;s a quick business trip or a family vacation, your travel day starts lighter.
           </p>
         </div>
 

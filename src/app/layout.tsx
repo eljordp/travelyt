@@ -3,10 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import NativeBoot from "@/components/NativeBoot";
 import StickyPromoBar from "@/components/StickyPromoBar";
-
-const siteUrl = "https://travelyt-psi.vercel.app";
-const siteDescription =
-  "Travelyt picks up, seals, tracks, and transports your luggage so you can travel through the airport hands-free.";
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -19,22 +16,26 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Travelyt — Travel Light, Arrive Smart",
     template: "%s | Travelyt",
   },
-  description: siteDescription,
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
+    url: "/",
     siteName: "Travelyt",
     title: "Travelyt — Travel Light, Arrive Smart",
-    description: siteDescription,
+    description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
     title: "Travelyt — Travel Light, Arrive Smart",
-    description: siteDescription,
+    description: SITE_DESCRIPTION,
   },
   robots: {
     index: true,

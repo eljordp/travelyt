@@ -33,8 +33,8 @@ const personas = [
   },
   {
     eyebrow: "Frequent flyer",
-    headline: "Skip the carousel for good",
-    body: "Round-trip handling so your bag is waiting at your hotel on arrival and back at your door when you land home.",
+    headline: "Move through the airport lighter",
+    body: "Trip handling built around less dragging, fewer bag moments, and a cleaner path from door to airline handoff.",
     href: "/quote?service=both&persona=frequent",
     cta: "Set up round-trip",
   },
@@ -49,7 +49,7 @@ const services = [
   },
   {
     title: "Arrival Delivery",
-    text: "Arrive empty handed.",
+    text: "Post-flight delivery support.",
     href: "/quote?service=arrival",
     icon: PlaneLanding,
   },
@@ -198,9 +198,9 @@ export default function WebsiteHome() {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
                   3
                 </span>
-                <p className="mt-3 font-bold text-navy">It meets you on the other side</p>
+                <p className="mt-3 font-bold text-navy">You arrive lighter</p>
                 <p className="mt-1 text-sm leading-relaxed text-navy/65">
-                  Walk through the airport hands free. Your bag is waiting at your hotel, home, or pickup point on arrival.
+                  Walk through the airport hands-free. Your bag is already handled for the trip ahead.
                 </p>
               </li>
             </ol>

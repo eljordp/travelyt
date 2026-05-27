@@ -1,6 +1,7 @@
 "use client";
 
 import { Send } from "lucide-react";
+import { SITE_HOST } from "@/lib/site";
 
 export default function FlyerPage() {
   return (
@@ -17,7 +18,7 @@ export default function FlyerPage() {
           width: 8.5in;
           min-height: 11in;
           background: #fdfbf7;
-          color: #0a1f5c;
+          color: #081546;
           position: relative;
           overflow: hidden;
         }
@@ -37,7 +38,7 @@ export default function FlyerPage() {
 
         <div className="flyer-page mx-auto shadow-2xl">
           {/* Top navy band */}
-          <div className="bg-[#0a1f5c] text-white px-12 py-8 flex items-center justify-between">
+          <div className="bg-[#081546] text-white px-12 py-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Send className="w-[34px] h-[34px] text-[#c41e2a]" fill="currentColor" strokeWidth={1.2} />
               <div className="text-2xl font-bold tracking-tight">Travelyt</div>
@@ -62,24 +63,24 @@ export default function FlyerPage() {
               <br />
               <span className="text-[#c41e2a]">You move freely.</span>
             </h1>
-            <p className="text-lg leading-relaxed max-w-[5.5in] text-[#0a1f5c]/75">
+            <p className="text-lg leading-relaxed max-w-[5.5in] text-[#081546]/75">
               Travelyt picks up your luggage at home, transports it to the
               airport, and delivers it to your destination — so you never lug a
               suitcase through a terminal again.
             </p>
-            <p className="italic text-[#0a1f5c]/55 mt-5 text-base">
+            <p className="italic text-[#081546]/55 mt-5 text-base">
               Travel light, arrive smart.
             </p>
           </div>
 
           {/* Divider */}
           <div className="px-12">
-            <div className="h-px bg-[#0a1f5c]/15" />
+            <div className="h-px bg-[#081546]/15" />
           </div>
 
           {/* How it works */}
           <div className="px-12 py-10">
-            <div className="text-xs uppercase tracking-[0.3em] text-[#0a1f5c]/50 font-bold mb-6">
+            <div className="text-xs uppercase tracking-[0.3em] text-[#081546]/50 font-bold mb-6">
               How it works
             </div>
             <div className="grid grid-cols-3 gap-6">
@@ -108,7 +109,7 @@ export default function FlyerPage() {
                     {step.n}
                   </div>
                   <div className="font-bold text-base mb-1.5">{step.title}</div>
-                  <p className="text-sm leading-relaxed text-[#0a1f5c]/65">
+                  <p className="text-sm leading-relaxed text-[#081546]/65">
                     {step.body}
                   </p>
                 </div>
@@ -117,7 +118,7 @@ export default function FlyerPage() {
           </div>
 
           {/* Built for */}
-          <div className="bg-[#0a1f5c] text-white px-12 py-9">
+          <div className="bg-[#081546] text-white px-12 py-9">
             <div className="text-xs uppercase tracking-[0.3em] text-white/50 font-bold mb-5">
               Built for
             </div>
@@ -152,10 +153,10 @@ export default function FlyerPage() {
           {/* Promise + CTA */}
           <div className="px-12 py-10 flex items-end justify-between gap-12">
             <div className="max-w-[4.5in]">
-              <div className="text-xs uppercase tracking-[0.3em] text-[#0a1f5c]/50 font-bold mb-3">
+              <div className="text-xs uppercase tracking-[0.3em] text-[#081546]/50 font-bold mb-3">
                 Our promise
               </div>
-              <p className="text-base leading-relaxed text-[#0a1f5c]/80">
+              <p className="text-base leading-relaxed text-[#081546]/80">
                 One job, done well. We pick up your bags. We move them with
                 care. We deliver them where you&apos;re going. Tracked at every
                 step. Sealed in transit. Fully insured.
@@ -169,9 +170,9 @@ export default function FlyerPage() {
                 style={{ fontFamily: "var(--font-playfair), Georgia, serif" }}
                 className="text-3xl font-bold leading-tight"
               >
-                travelyt-psi
+                travelyt
                 <br />
-                .vercel.app
+                .us
               </div>
             </div>
           </div>
@@ -179,7 +180,7 @@ export default function FlyerPage() {
           {/* Bottom band */}
           <div className="bg-[#c41e2a] text-white px-12 py-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em]">
             <span>Doorstep · Airport · Destination</span>
-            <span>travelyt-psi.vercel.app</span>
+            <span>{SITE_HOST}</span>
           </div>
         </div>
       </div>
