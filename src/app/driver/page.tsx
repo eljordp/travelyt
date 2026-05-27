@@ -118,6 +118,15 @@ export default function DriverDashboard() {
               </button>
             ))}
           </div>
+          <div className="rounded-2xl border border-dashed border-navy/15 bg-white/60 p-5 text-center text-sm text-navy/70">
+            Not a courier yet?{" "}
+            <Link
+              href="/driver/apply"
+              className="font-semibold text-[#c41e2a] underline"
+            >
+              Apply to drive with Travelyt
+            </Link>
+          </div>
         </div>
       </AppChrome>
     );

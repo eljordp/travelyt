@@ -92,9 +92,9 @@ export default function HeroCarousel() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
               {slide.eyebrow}
             </p>
-            <h1 className="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+            <h2 className="max-w-2xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
               {slide.headline}
-            </h1>
+            </h2>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
               {slide.body}
             </p>

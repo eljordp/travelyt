@@ -5,30 +5,30 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Travelyt privacy policy covering quote requests, booking information, tracking updates, payments, and customer communications.",
+    "Travelyt privacy policy covering quote requests, booking information, tracking updates, and customer communications.",
   alternates: {
     canonical: "/privacy",
   },
 };
 
-const LAST_UPDATED = "May 21, 2026";
+const LAST_UPDATED = "May 26, 2026";
 const CONTACT_EMAIL = "privacy@travelyt.app";
 
 const sections: { title: string; body: string }[] = [
   {
     title: "Information we collect",
     body:
-      "When you request a quote, create a booking, or contact support, we collect identifiers and trip details you provide directly: full name, email address, phone number, pickup and delivery addresses, travel dates, flight numbers, number and description of bags, and any handling notes. When you pay, our payment processor collects card or wallet details on our behalf — we do not store full card numbers on our systems. For active bookings, we also generate operational records (timestamps, location checkpoints, seal IDs, bag photos, signatures, and proof-of-service images) needed to maintain chain of custody. If you create an account, we store your login credentials and account preferences. We may also collect basic device information (browser type, IP address, app version, crash logs) for security, fraud prevention, and product improvement.",
+      "When you request a quote, create a booking request, or contact support, we collect identifiers and trip details you provide directly: full name, email address, phone number, pickup and delivery addresses, travel dates, flight numbers, number and description of bags, and any handling notes. The current launch version does not collect payment card details in the app. When online checkout launches, our payment processor will collect card or wallet details on our behalf — we will not store full card numbers on our systems. For active bookings, we may also generate operational records (timestamps, location checkpoints, seal IDs, bag photos, signatures, and proof-of-service images) needed to maintain chain of custody. If you create an account, we store your login credentials and account preferences. We may also collect basic device information (browser type, IP address, app version, crash logs) for security, fraud prevention, and product improvement.",
   },
   {
     title: "How we use it",
     body:
-      "We use your information to respond to quotes, coordinate pickups and deliveries, complete payments, send service updates (SMS, email, and push notifications), maintain chain-of-custody and insurance records, support claims and disputes, prevent misuse and fraud, comply with legal obligations, and improve Travelyt operations. We do not sell your personal information, and we do not use it for cross-context behavioral advertising.",
+      "We use your information to respond to quote requests, coordinate pickups and deliveries where available, send service updates (SMS, email, and push notifications), maintain chain-of-custody and insurance records, support claims and disputes, prevent misuse and fraud, comply with legal obligations, and improve Travelyt operations. We do not sell your personal information, and we do not use it for cross-context behavioral advertising.",
   },
   {
     title: "Who we share it with",
     body:
-      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, the airline carrying your flight (for bag identification and TSA security handoff at the airport), our payment processor (Stripe), our communications providers (SMS and email delivery), our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
+      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, airport or airline contacts when needed for bag identification and authorized handoff, our communications providers (SMS and email delivery), our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. When online payments launch, we will also share the information needed to process payment with our payment processor. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
   },
   {
     title: "Tracking and custody data",
@@ -48,12 +48,19 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Data retention",
     body:
-      "We retain quote requests for up to 24 months. We retain completed booking records, chain-of-custody data, and payment records for as long as needed to provide service, handle claims, comply with tax and accounting laws, and resolve disputes — typically 7 years for financial records and 3 years for operational records, unless a longer period is required by law. Account data is retained while your account is active and deleted on request as described below.",
+      "We retain quote requests for up to 24 months. We retain completed booking records and chain-of-custody data for as long as needed to provide service, handle claims, comply with laws, and resolve disputes — typically 3 years for operational records, unless a longer period is required by law. When online payments launch, financial records may be retained for up to 7 years as required for tax, accounting, and dispute purposes. Account data is retained while your account is active and deleted on request as described below.",
   },
   {
     title: "Security",
     body:
       "We protect personal information using HTTPS in transit, encrypted databases at rest, access controls on internal systems, role-based permissions, audit logs, and vetted handlers with background checks. No system is perfectly secure; if a breach affects you, we will notify you and the relevant authorities as required by law.",
+  },
+  {
+    title: "Automated processing and AI",
+    body:
+      "Travelyt uses automated systems and in-house AI to process booking and operational data. This includes chain-of-custody reporting, anomaly detection on bag photos and tamper-evident seal scans, dispatch and route optimization, and aggregate service analytics. These systems run on booking and operational data only and are restricted to authorized Travelyt staff. We do not use your trip, location, account, or chain-of-custody data to train third-party AI models, and we do not sell or share AI-derived insights about you. If we offer an AI-assisted customer support experience, it runs on a separate, scoped system that can only see the minimum context needed to help with your request. That assistant does not have access to full account history, payment records, or other customers' data. Automated outputs such as estimated windows, status summaries, and routing suggestions may contain errors; binding service details come from confirmed booking records and Travelyt staff. You can request information about, or human review of, any automated decision that materially affects your booking by contacting " +
+      CONTACT_EMAIL +
+      ".",
   },
   {
     title: "Your rights",
@@ -82,16 +89,9 @@ const sections: { title: string; body: string }[] = [
       "Travelyt is operated from the United States. If you use Travelyt from outside the US, your information may be transferred to, stored, and processed in the US and other countries where our service providers operate. Where required, we rely on appropriate safeguards such as Standard Contractual Clauses.",
   },
   {
-    title: "AI and automated systems",
-    body:
-      "Travelyt uses artificial intelligence and automated processing in two distinct ways. (1) Internal operations: an in-house system supports dispatch routing, anomaly detection on seal scans and bag photos, chain-of-custody reporting, and aggregate service analytics. It runs on booking and operational data only and is restricted to authorized Travelyt staff. (2) Customer-facing assistants: if we offer an AI chat or support assistant, it runs on a separate, scoped system that can only see the minimum context needed for your request — not full account history, payment details, or other customers' data. We do not use your trip, location, or chain-of-custody data to train third-party AI models, and we do not sell or share AI-derived insights about you. Automated outputs (estimated windows, status summaries, suggestions) may contain errors; binding service details come from confirmed booking records and Travelyt staff. You can request human review of any decision that materially affects your booking by contacting " +
-      CONTACT_EMAIL +
-      ".",
-  },
-  {
     title: "Third-party services",
     body:
-      "Travelyt integrates with third-party services including Stripe (payments), our SMS and email providers, our hosting and analytics providers, the airlines we deliver bags to on your behalf, and mobile platform services from Apple and Google when you use our app. These providers process information under their own privacy policies and our data-processing agreements with them.",
+      "Travelyt integrates with third-party services including our SMS and email providers, hosting and analytics providers, operational partners needed to coordinate authorized handoff, and mobile platform services from Apple and Google when you use our app. When online checkout launches, Travelyt may also integrate Stripe or another payment processor. These providers process information under their own privacy policies and our data-processing agreements with them.",
   },
   {
     title: "Changes to this policy",

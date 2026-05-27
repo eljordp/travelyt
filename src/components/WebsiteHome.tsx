@@ -14,6 +14,31 @@ import {
 import Navbar from "@/components/Navbar";
 import HeroCarousel from "@/components/HeroCarousel";
 import BagStatus from "@/components/BagStatus";
+import Footer from "@/components/Footer";
+
+const personas = [
+  {
+    eyebrow: "Business traveler",
+    headline: "Move at meeting speed",
+    body: "We collect your bag from your office or hotel and meet you at the airport. Walk in, board, fly out.",
+    href: "/quote?service=departure&persona=business",
+    cta: "Book a business pickup",
+  },
+  {
+    eyebrow: "Family trip",
+    headline: "One less thing to carry",
+    body: "Doorstep pickup so you can travel with kids, strollers, and gear without dragging six suitcases through the terminal.",
+    href: "/quote?service=both&persona=family",
+    cta: "Book a family trip",
+  },
+  {
+    eyebrow: "Frequent flyer",
+    headline: "Skip the carousel for good",
+    body: "Round-trip handling so your bag is waiting at your hotel on arrival and back at your door when you land home.",
+    href: "/quote?service=both&persona=frequent",
+    cta: "Set up round-trip",
+  },
+];
 
 const services = [
   {
@@ -40,7 +65,7 @@ const shortcuts = [
   { label: "Pricing", href: "/pricing", icon: CircleDollarSign },
   { label: "Trust", href: "/trust", icon: ShieldCheck },
   { label: "Airlines", href: "/airlines", icon: ClipboardCheck },
-  { label: "Track demo", href: "/profile", icon: MapPinned },
+  { label: "Customer login", href: "/login?next=%2Fprofile", icon: MapPinned },
 ];
 
 export default function WebsiteHome() {
@@ -49,6 +74,15 @@ export default function WebsiteHome() {
       <Navbar />
 
       <main className="mx-auto max-w-7xl space-y-12 px-6 pb-16 pt-24">
+        <section className="text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#c41e2a]">
+            Travel light, arrive smart
+          </p>
+          <h1 className="mt-3 text-4xl font-bold leading-[1.05] text-navy sm:text-5xl lg:text-6xl">
+            We move your bags, you move freely.
+          </h1>
+        </section>
+
         <HeroCarousel />
 
         <section>
@@ -127,6 +161,104 @@ export default function WebsiteHome() {
           />
         </section>
 
+        <section aria-label="First time here">
+          <div className="rounded-3xl border border-navy/8 bg-white p-6 shadow-sm shadow-navy/5 sm:p-10">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+                First time? Here&apos;s the idea.
+              </p>
+              <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
+                You pack the bag. We do everything in between.
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-navy/65">
+                Most travelers in the US have never used a baggage service before. It&apos;s simple: we collect your luggage at home, move it through the airport on your flight, and meet you at your destination. You travel without the bags.
+              </p>
+            </div>
+
+            <ol className="mt-8 grid gap-5 sm:grid-cols-3">
+              <li className="rounded-2xl bg-[#f6f7fb] p-5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                  1
+                </span>
+                <p className="mt-3 font-bold text-navy">Book a pickup</p>
+                <p className="mt-1 text-sm leading-relaxed text-navy/65">
+                  Tell us your flight, your address, and when you want the bag picked up. Takes a minute.
+                </p>
+              </li>
+              <li className="rounded-2xl bg-[#f6f7fb] p-5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                  2
+                </span>
+                <p className="mt-3 font-bold text-navy">We collect at your door</p>
+                <p className="mt-1 text-sm leading-relaxed text-navy/65">
+                  Your bag is weighed, sealed, and photographed before it leaves. You get tracking the whole way.
+                </p>
+              </li>
+              <li className="rounded-2xl bg-[#f6f7fb] p-5">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                  3
+                </span>
+                <p className="mt-3 font-bold text-navy">It meets you on the other side</p>
+                <p className="mt-1 text-sm leading-relaxed text-navy/65">
+                  Walk through the airport hands free. Your bag is waiting at your hotel, home, or pickup point on arrival.
+                </p>
+              </li>
+            </ol>
+
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy/65">
+              <span className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                Sealed and insured
+              </span>
+              <span className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                Background-checked handlers
+              </span>
+              <span className="flex items-center gap-2">
+                <BadgeCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                Photo proof at every step
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-label="Which traveler are you">
+          <div className="mb-6 max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+              Which traveler are you
+            </p>
+            <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
+              Pick the trip that sounds like yours.
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-navy/65 sm:text-base">
+              Each one starts the same way: tell us where to pick up, where it&apos;s going, and when. We do the rest.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {personas.map((persona) => (
+              <Link
+                key={persona.eyebrow}
+                href={persona.href}
+                className="group flex h-full flex-col rounded-2xl border border-navy/8 bg-white p-6 shadow-sm shadow-navy/5 transition-transform hover:-translate-y-0.5"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+                  {persona.eyebrow}
+                </p>
+                <p className="mt-3 text-xl font-bold leading-tight text-navy">
+                  {persona.headline}
+                </p>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-navy/65">
+                  {persona.body}
+                </p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-navy group-hover:text-[#c41e2a]">
+                  {persona.cta}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         <section
           className="rounded-3xl bg-navy px-6 py-10 text-white sm:px-10 lg:px-14"
           aria-label="Where to start"
@@ -175,6 +307,8 @@ export default function WebsiteHome() {
           </div>
         </section>
       </main>
+
+      <Footer />
     </div>
   );
 }

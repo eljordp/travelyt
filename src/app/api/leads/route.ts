@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { rateLimit } from "@/lib/rate-limit";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const resendApiKey = process.env.RESEND_API_KEY;
-const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
-const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <onboarding@resend.dev>";
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, "leads:post", 10);
@@ -29,53 +27,39 @@ export async function POST(request: Request) {
       );
     }
 
-    const lead = {
-      email,
-      interest,
-      source,
-      createdAt: new Date().toISOString(),
-    };
-
-    if (!resendApiKey || !leadNotifyEmail) {
-      console.warn("Travelyt lead captured without email provider", lead);
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      console.warn("Travelyt lead captured without Supabase configured", {
+        email,
+        interest,
+        source,
+      });
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Lead notifications are not configured yet. Set RESEND_API_KEY and LEAD_NOTIFY_EMAIL.",
-        },
+        { ok: false, error: "Lead capture is not configured yet." },
         { status: 503 }
       );
     }
 
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: leadFromEmail,
-        to: leadNotifyEmail,
-        subject: `New Travelyt lead: ${interest}`,
-        reply_to: email,
-        text: [
-          "New Travelyt lead",
-          "",
-          `Email: ${email}`,
-          `Interest: ${interest}`,
-          `Source: ${source}`,
-          `Created: ${lead.createdAt}`,
-        ].join("\n"),
-      }),
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "";
+    const ipHash = ip ? createHash("sha256").update(ip).digest("hex") : null;
+    const userAgent = request.headers.get("user-agent") || null;
+
+    const { error } = await supabase.from("leads").insert({
+      email,
+      interest,
+      source,
+      user_agent: userAgent,
+      ip_hash: ipHash,
     });
 
-    if (!resendResponse.ok) {
-      const message = await resendResponse.text();
-      console.error("Resend lead notification failed", message);
+    if (error) {
+      console.error("Supabase lead insert failed", error);
       return NextResponse.json(
-        { ok: false, error: "Lead notification failed." },
-        { status: 502 }
+        { ok: false, error: "We could not save that request." },
+        { status: 500 }
       );
     }
 

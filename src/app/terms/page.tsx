@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: "What Travelyt does",
-    body: "Travelyt provides baggage logistics services including doorstep pickup, weighing, sealing, tracking, airport curbside or designated-area handoff, arrival delivery, and city-to-city baggage transfers where available.",
+    body: "Travelyt provides quote requests and launch-market coordination for baggage logistics services including doorstep pickup, weighing, sealing, tracking, airport curbside or designated-area handoff, and arrival delivery where available.",
   },
   {
     title: "What Travelyt does not do",
@@ -30,7 +30,7 @@ const sections = [
   },
   {
     title: "Insurance and claims",
-    body: "Standard coverage is included on eligible bags while in Travelyt custody. Declared-value upgrades, claim limits, exclusions, documentation requirements, and timelines may apply.",
+    body: "Standard coverage is capped at $500 per bag while in Travelyt custody and requires the tamper-evident seal to be intact at delivery. Higher coverage is available through a declared-value upsell at booking, with pricing and caps confirmed before pickup. Claims must be filed within 7 days of delivery with photos, receipts, and the original chain-of-custody record. Items listed under Restricted items remain excluded, along with cash, jewelry, electronics over $500, fragile valuables, and irreplaceable documents.",
   },
   {
     title: "AI and automated processing",
@@ -42,7 +42,7 @@ const sections = [
   },
   {
     title: "Pre-launch status",
-    body: "Travelyt is onboarding early customers, partners, and launch markets. Availability, timing, pricing, coverage, and service areas may change as operations are finalized.",
+    body: "Travelyt is onboarding early customers, partners, and launch markets. In this launch version, users can request service and receive confirmation before any payment is collected. Availability, timing, pricing, coverage, and service areas may change as operations are finalized.",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function TermsPage() {
           <p className="text-navy/70 leading-relaxed mb-10">
             These terms provide a plain-language operating baseline for the
             current Travelyt site. They should be reviewed and finalized by
-            counsel before paid public launch.
+            counsel before broad paid public launch.
           </p>
 
           <div className="space-y-8">
