@@ -26,11 +26,11 @@ const sections = [
   },
   {
     title: "Restricted items",
-    body: "Do not pack prohibited items, loose lithium batteries, firearms, explosives, flammable liquids, cash, critical documents, medical necessities, or fragile valuables unless Travelyt has explicitly agreed in writing.",
+    body: "Travelyt follows the same restricted-item baseline used across the luggage shipping industry (Luggage Forward, Send My Bag, My Baggage). Do not pack: firearms, explosives, ammunition, flammable liquids, aerosols and pressurized containers (deodorant, hairspray, spray paint), loose batteries and power banks, perishable food (produce, dairy, meat, fish, nuts, seeds), cash, money orders, irreplaceable documents, medications, tobacco, alcohol, jewelry, precious metals, artwork, musical instruments, or fragile valuables. Lithium batteries are accepted only when installed in a working device and limited to one such device per shipment, consistent with unaccompanied baggage air security regulations. Items shipped against this list move at the customer's own risk and are excluded from coverage.",
   },
   {
     title: "Insurance and claims",
-    body: "Standard coverage is capped at $500 per bag while in Travelyt custody and requires the tamper-evident seal to be intact at delivery. Higher coverage is available through a declared-value upsell at booking, with pricing and caps confirmed before pickup. Claims must be filed within 7 days of delivery with photos, receipts, and the original chain-of-custody record. Items listed under Restricted items remain excluded, along with cash, jewelry, electronics over $500, fragile valuables, and irreplaceable documents.",
+    body: "Standard coverage is capped at $500 per bag while in Travelyt custody, requires the tamper-evident seal to be intact at delivery, and applies only to adequately packaged contents. This cap mirrors industry practice for door-to-airport baggage couriers (for example, Luggage Forward also caps at $500 per item). Higher coverage is available through a declared-value upsell at booking; the upsell cap, premium, and required documentation are confirmed before pickup. Damage claims must be filed within 15 days of the actual delivery date and lost-item claims within 30 days of the expected delivery date, both with photos, receipts, and the chain-of-custody record. The following are excluded from coverage regardless of declared value: damage to protruding or external parts of luggage (wheels, handles, straps, pockets), damage caused by inadequate packaging, normal wear and tear, cosmetic damage (scratches, dents, scuffs, stains, residue from tape or labels), and any item category listed under Restricted items.",
   },
   {
     title: "AI and automated processing",

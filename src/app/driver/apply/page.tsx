@@ -129,12 +129,12 @@ export default function DriverApplyPage() {
           <Perk
             icon={DollarSign}
             title="Per-job pay"
-            body="Earn 65% of the booking fee. Higher payouts on round-trip and express jobs."
+            body="Flat base per job set by distance, bag count, and service type, same gig model used by Roadie. You see the payout before claiming the job."
           />
           <Perk
             icon={ShieldCheck}
             title="Background check"
-            body="Standard third-party check covering driving record and identity. Travelyt pays the fee."
+            body="Third-party check (industry-standard provider such as Checkr) covering motor vehicle records, identity, and criminal history. Travelyt pays the fee."
           />
           <Perk
             icon={CheckCircle2}
@@ -295,7 +295,7 @@ export default function DriverApplyPage() {
               checked={form.backgroundCheckConsent}
               onChange={(v) => set("backgroundCheckConsent", v)}
             >
-              I consent to a third-party background check covering identity, driving record, and criminal history.
+              I consent to a third-party background check (industry-standard provider such as Checkr, which also screens drivers for Uber, Lyft, DoorDash, and Roadie) covering motor vehicle records (MVR), Social Security Number verification, and criminal history focused on violent offenses, theft, and fraud. I understand a separate identity step (photo of my driver&apos;s license and a live selfie) will be required before approval.
             </Checkbox>
           </Section>
 
