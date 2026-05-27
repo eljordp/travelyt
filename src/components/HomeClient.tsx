@@ -9,7 +9,10 @@ export default function HomeClient() {
   const [native, setNative] = useState(false);
 
   useEffect(() => {
-    const handle = window.setTimeout(() => setNative(isNative()), 0);
+    const handle = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setNative(isNative() || params.has("app"));
+    }, 0);
     return () => window.clearTimeout(handle);
   }, []);
 

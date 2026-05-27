@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CircleCheck, Globe2, Package, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 
 const AIRPORTS = [
   ["ATL","Atlanta (ATL)"],["BOS","Boston (BOS)"],["BWI","Baltimore/Washington (BWI)"],
@@ -72,7 +73,7 @@ export default function Hero() {
             <span className="text-cyan">You move freely.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We pick up your luggage at your door and deliver it straight to your airline at the airport — and to your destination on arrival. Travel hands-free, without ever lugging a suitcase through a terminal.
+            We pick up your luggage at your door and deliver it straight to your airline at the airport. Travel hands-free before you even reach the terminal.
           </p>
           <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
             Travel light, arrive smart.
@@ -94,7 +95,9 @@ export default function Hero() {
                   <option key={code} value={code}>{label}</option>
                 ))}
               </select>
-              <p className="text-xs text-navy/70 mt-1.5">Within 50 miles</p>
+              <p className="text-xs text-navy/70 mt-1.5">
+                {INCLUDED_DISTANCE_MILES} miles included
+              </p>
             </div>
 
             {/* Travel Date — 3 dropdowns */}
@@ -157,7 +160,7 @@ export default function Hero() {
                 <ShieldCheck className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Fully Secured",
-              desc: "Real-time GPS tracking, tamper-proof seals, and full insurance coverage.",
+              desc: "Real-time GPS tracking, tamper-evident seals, and secure luggage handling from pickup to handoff.",
             },
           ].map((card) => (
             <div key={card.title} className="bg-white rounded-2xl p-6 shadow-lg shadow-navy/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">

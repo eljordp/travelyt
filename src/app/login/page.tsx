@@ -5,6 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 
+function nextPath() {
+  if (typeof window === "undefined") return "/profile";
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+}
+
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,7 +46,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = "/profile";
+    window.location.href = nextPath();
   }
 
   const field = (id: string) => ({

@@ -23,20 +23,28 @@ export default function Navbar() {
           <Link href="/trust" className="hover:text-cyan transition-colors">Trust</Link>
           <Link href="/demo" className="hover:text-cyan transition-colors">Demo</Link>
           <Link href="/#faq" className="hover:text-cyan transition-colors">FAQ</Link>
-          <Link href="/login" className="text-white/70 hover:text-white transition-colors">Sign In</Link>
+          <Link href="/login?next=%2Fprofile" className="text-white/90 hover:text-white transition-colors">Customer Login</Link>
           <Link href="/quote" className="bg-gradient-to-r from-purple to-purple-light text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
             Get a Quote
           </Link>
         </div>
 
-        {/* Mobile Toggle */}
-        <button
-          className="md:hidden text-white"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile Actions */}
+        <div className="md:hidden flex items-center gap-3">
+          <Link
+            href="/login?next=%2Fprofile"
+            className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white"
+          >
+            Login
+          </Link>
+          <button
+            className="text-white"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -47,7 +55,7 @@ export default function Navbar() {
           <Link href="/trust" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Trust</Link>
           <Link href="/demo" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Demo</Link>
           <Link href="/#faq" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>FAQ</Link>
-          <Link href="/login" className="block py-2 text-white/70 hover:text-white" onClick={() => setOpen(false)}>Sign In</Link>
+          <Link href="/login?next=%2Fprofile" className="block py-2 text-white/90 hover:text-white" onClick={() => setOpen(false)}>Customer Login</Link>
           <Link href="/quote" className="block bg-gradient-to-r from-purple to-purple-light text-white px-6 py-3 rounded-full text-center font-semibold" onClick={() => setOpen(false)}>
             Get a Quote
           </Link>

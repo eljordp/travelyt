@@ -9,6 +9,7 @@ import { queueBookingNotification } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { calcPriceCents } from "@/lib/pricing";
+import { getAdminSession } from "@/lib/admin-auth";
 import type { Booking, ServiceType } from "@/lib/bookings";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,8 +41,18 @@ function newAccessToken() {
 
 function driverAuthorized(request: Request) {
   const expected = process.env.TRAVELYT_DRIVER_ACCESS_CODE;
-  if (!expected) return true;
-  return request.headers.get("x-travelyt-driver-code") === expected;
+  return Boolean(expected && request.headers.get("x-travelyt-driver-code") === expected);
+}
+
+function adminAuthorized(request: Request) {
+  const expected =
+    process.env.TRAVELYT_ADMIN_ACCESS_CODE ||
+    process.env.TRAVELYT_DRIVER_ACCESS_CODE;
+  return Boolean(getAdminSession(request)) || Boolean(expected && request.headers.get("x-travelyt-admin-code") === expected);
+}
+
+function privilegedAuthorized(request: Request) {
+  return adminAuthorized(request) || driverAuthorized(request);
 }
 
 function tokenMatches(row: BookingRow, token?: string | null) {
@@ -58,7 +69,7 @@ function canReadBooking(
   userId?: string | null,
   token?: string | null
 ) {
-  return driverAuthorized(request) || userOwns(row, userId) || tokenMatches(row, token);
+  return privilegedAuthorized(request) || userOwns(row, userId) || tokenMatches(row, token);
 }
 
 function responseBooking(row: BookingRow, includeAccessToken: boolean) {
@@ -201,7 +212,9 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (!driverAuthorized(request)) {
+  const isPrivileged = privilegedAuthorized(request);
+
+  if (!isPrivileged) {
     if (!user) return bad("Sign in or provide driver access.", 401);
     query = query.eq("customer_user_id", user.id);
   }
@@ -212,7 +225,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     bookings: ((data ?? []) as BookingRow[]).map((row) =>
-      responseBooking(row, userOwns(row, user?.id))
+      responseBooking(row, isPrivileged || userOwns(row, user?.id))
     ),
   });
 }
@@ -287,7 +300,7 @@ export async function PATCH(request: Request) {
       Boolean(patch.status && driverStatus.includes(patch.status));
 
     if (requiresDriver) {
-      if (!driverAuthorized(request)) {
+      if (!privilegedAuthorized(request)) {
         return bad("Driver access is required for this update.", 403);
       }
     } else if (!canReadBooking(request, existing, user?.id, body.accessToken)) {

@@ -53,8 +53,9 @@ export default function StickyPromoBar() {
 
   useEffect(() => {
     const id = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
       setMounted(true);
-      setNative(isNative());
+      setNative(isNative() || params.has("app"));
       setDismissed(sessionStorage.getItem(STORAGE_KEY) === "1");
     }, 0);
 

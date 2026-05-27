@@ -4,6 +4,13 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
+import { SITE_URL } from "@/lib/site";
+
+function nextPath() {
+  if (typeof window === "undefined") return "/profile";
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+}
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -46,6 +53,7 @@ export default function RegisterPage() {
       email: form.email.trim().toLowerCase(),
       password: form.password,
       options: {
+        emailRedirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath())}`,
         data: {
           full_name: form.name.trim(),
         },
@@ -59,7 +67,7 @@ export default function RegisterPage() {
     }
 
     if (data.session) {
-      window.location.href = "/profile";
+      window.location.href = nextPath();
       return;
     }
 

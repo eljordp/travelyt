@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const baseUrl = "https://travelyt-psi.vercel.app";
+import { SITE_URL } from "@/lib/site";
 
 const routes = [
   "",
@@ -15,6 +14,7 @@ const routes = [
   "/flyer",
   "/privacy",
   "/terms",
+  "/support",
   "/cities/jfk",
   "/cities/lax",
   "/cities/ord",
@@ -22,7 +22,7 @@ const routes = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return routes.map((route) => ({
-    url: `${baseUrl}${route}`,
+    url: `${SITE_URL}${route}`,
     lastModified: new Date(),
     changeFrequency: route === "" ? "weekly" : "monthly",
     priority: route === "" ? 1 : route === "/quote" ? 0.9 : 0.7,

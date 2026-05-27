@@ -100,6 +100,9 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-cyan transition-colors">
               Terms
             </Link>
+            <Link href="/support" className="hover:text-cyan transition-colors">
+              Support
+            </Link>
             <Link href="/privacy#cookies" className="hover:text-cyan transition-colors">
               Cookies
             </Link>

@@ -18,11 +18,14 @@ export type BookingStatus =
 export type ServiceType = "departure" | "arrival" | "both";
 
 export interface PhotoProof {
-  kind: "pickup" | "delivery";
+  kind: "seal" | "pickup" | "delivery";
   dataUrl: string;
   timestamp: string;
+  sealId?: string;
   driverName?: string;
   note?: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface Booking {
@@ -37,6 +40,7 @@ export interface Booking {
   email: string;
   phone: string;
   notes?: string;
+  distanceMiles?: number;
   status: BookingStatus;
   priceCents: number;
   promoCode?: string;
@@ -205,11 +209,25 @@ export async function createBooking(
   > & { promoCode?: string; expressPickup?: boolean }
 ): Promise<Booking> {
   const { expressPickup, ...bookingData } = data;
-  const subtotal = calcPriceCents(data.bags, data.service, expressPickup);
+  const priceBreakdown = calcPriceBreakdown(
+    data.bags,
+    data.service,
+    expressPickup,
+    data.distanceMiles
+  );
   const promoCode = normalizePromoCode(data.promoCode);
-  const discountCents = getPromoDiscountCents(subtotal, promoCode);
+  const discountCents = getPromoDiscountCents(
+    priceBreakdown.promoEligibleCents,
+    promoCode
+  );
   const notes = [
     expressPickup ? "Express pickup requested." : "",
+    typeof data.distanceMiles === "number"
+      ? `Estimated airport distance: ${data.distanceMiles} miles.`
+      : "",
+    priceBreakdown.distanceSurchargeCents > 0
+      ? `Distance surcharge: ${formatPrice(priceBreakdown.distanceSurchargeCents)} for ${priceBreakdown.extraDistanceMiles} miles beyond ${priceBreakdown.includedDistanceMiles} at ${formatPrice(priceBreakdown.distanceRateCents)}/mi.`
+      : "",
     bookingData.notes,
   ]
     .filter(Boolean)
@@ -222,7 +240,7 @@ export async function createBooking(
     discountCents: discountCents || undefined,
     id: `TVT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
     status: "pending",
-    priceCents: subtotal - discountCents,
+    priceCents: priceBreakdown.totalBeforePromoCents - discountCents,
     proofs: [],
     createdAt: new Date().toISOString(),
   };
@@ -287,6 +305,27 @@ export async function addProof(
   return all[i];
 }
 
+export async function approveProof(
+  id: string,
+  proofIndex: number,
+  approvedBy?: string
+): Promise<Booking | undefined> {
+  const current = await getBooking(id);
+  if (!current || !current.proofs[proofIndex]) return;
+
+  const proofs = current.proofs.map((proof, index) =>
+    index === proofIndex
+      ? {
+          ...proof,
+          approvedAt: new Date().toISOString(),
+          approvedBy,
+        }
+      : proof
+  );
+
+  return updateBooking(id, { proofs });
+}
+
 export function clearLocalBookings() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY);
@@ -309,8 +348,8 @@ export function formatPrice(cents: number): string {
 }
 
 export const STATUS_LABELS: Record<BookingStatus, string> = {
-  pending: "Awaiting Payment",
-  paid: "Confirmed — Awaiting Driver",
+  pending: "Quote Request Received",
+  paid: "Confirmed — Coordination Started",
   assigned: "Driver Assigned",
   picked_up: "Bags Picked Up",
   in_transit: "In Transit",

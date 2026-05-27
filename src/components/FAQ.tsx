@@ -2,11 +2,12 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { AIRLINE_BAG_CUTOFF_MINUTES } from "@/lib/service-rules";
 
 const faqs = [
   {
     q: "How far in advance do I need to book?",
-    a: "We recommend booking at least 24 hours before your flight. Same-day bookings may be available depending on your location and availability.",
+    a: `We recommend booking at least 24 hours before your flight. Same-day bookings may be available depending on your distance from the airport, driver availability, traffic, and airline baggage cutoff rules. For departures, Travelyt targets bag acceptance at least ${AIRLINE_BAG_CUTOFF_MINUTES} minutes before departure unless an airline or airport approves a shorter Travelyt-specific cutoff.`,
   },
   {
     q: "What airports and cities do you serve?",
@@ -14,7 +15,7 @@ const faqs = [
   },
   {
     q: "How does the handoff to my airline work?",
-    a: "We're not a ticketed-passenger counter check-in — after 9/11, only you can do that. What we do is take the lugging out: we pick up your bags at your door and deliver them straight to your airline at the airport on your behalf, so they fly with you. You walk in with nothing to carry. For arrivals, we pick up from baggage claim and deliver to your address.",
+    a: "We're not a ticketed-passenger counter check-in — after 9/11, only you can do that. What we do is take the lugging out: we pick up your bags at your door and deliver them straight to your airline at the airport on your behalf, so they fly with you. You walk in with nothing to carry.",
   },
   {
     q: "Is my luggage insured?",

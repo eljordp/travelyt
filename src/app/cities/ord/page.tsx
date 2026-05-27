@@ -2,6 +2,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { CircleCheck } from "lucide-react";
+import {
+  EXPRESS_DISTANCE_RATE_CENTS,
+  INCLUDED_DISTANCE_MILES,
+  STANDARD_DISTANCE_RATE_CENTS,
+} from "@/lib/pricing";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -69,8 +74,8 @@ export default function ORDPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Coverage Area</span>
-              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">50-mile radius from ORD</h2>
-              <p className="text-navy/70 mb-6">We serve greater Chicagoland — city, north shore, western suburbs, and south suburbs.</p>
+              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">{INCLUDED_DISTANCE_MILES}-mile base radius from ORD</h2>
+              <p className="text-navy/70 mb-6">The first {INCLUDED_DISTANCE_MILES} miles from ORD are included. Routes beyond that add ${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or ${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express.</p>
               <div className="flex flex-wrap gap-2">
                 {NEARBY.map((city) => (
                   <span key={city} className="bg-white px-3 py-1.5 rounded-full text-xs font-medium text-navy/70 border border-gray-100">{city}</span>
@@ -97,7 +102,7 @@ export default function ORDPage() {
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-navy mb-4">ORD Pricing</h2>
-          <p className="text-navy/70 mb-10">Same transparent pricing everywhere we operate.</p>
+          <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               { name: "Departure", price: "$49", unit: "/bag" },

@@ -6,6 +6,7 @@ import Link from "next/link";
 import AppChrome from "@/components/AppChrome";
 import { enableBookingPush, isNative } from "@/lib/native";
 import {
+  approveProof,
   type Booking,
   type BookingStatus,
   formatPrice,
@@ -16,10 +17,9 @@ import {
   STATUS_ORDER,
   statusIndex,
 } from "@/lib/bookings";
+import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 
-const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER.filter(
-  (s) => s !== "pending"
-);
+const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
 
 export default function BookingPage() {
   const params = useParams<{ id: string }>();
@@ -29,6 +29,7 @@ export default function BookingPage() {
   const [pushState, setPushState] = useState<
     "idle" | "working" | "enabled" | "denied"
   >("idle");
+  const [approvingProof, setApprovingProof] = useState<number | null>(null);
 
   useEffect(() => {
     const handle = window.setTimeout(() => setNative(isNative()), 0);
@@ -87,6 +88,12 @@ export default function BookingPage() {
     setPushState("working");
     const ok = await enableBookingPush(booking.id);
     setPushState(ok ? "enabled" : "denied");
+  };
+  const approveCustodyProof = async (proofIndex: number) => {
+    setApprovingProof(proofIndex);
+    const updated = await approveProof(booking.id, proofIndex, booking.email);
+    if (updated) setBooking(updated);
+    setApprovingProof(null);
   };
 
   return (
@@ -173,7 +180,9 @@ export default function BookingPage() {
               Chain of custody
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {booking.proofs.map((p, i) => (
+              {booking.proofs.map((p, i) => {
+                const needsApproval = p.kind === "seal" && !p.approvedAt;
+                return (
                 <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
                   <div className="relative w-full aspect-[4/3] bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -185,8 +194,13 @@ export default function BookingPage() {
                   </div>
                   <div className="px-4 py-3">
                     <div className="font-semibold text-sm text-navy capitalize">
-                      {p.kind === "pickup" ? "Picked up" : "Delivered"}
+                      {proofTitle(p.kind)}
                     </div>
+                    {p.sealId && (
+                      <div className="mt-1 inline-flex rounded-full bg-navy/5 px-2.5 py-1 text-xs font-semibold text-navy">
+                        Seal {p.sealId}
+                      </div>
+                    )}
                     <div className="text-xs text-navy/70 mt-0.5">
                       {new Date(p.timestamp).toLocaleString()}
                       {p.driverName ? ` · ${p.driverName}` : ""}
@@ -194,9 +208,24 @@ export default function BookingPage() {
                     {p.note && (
                       <div className="text-xs text-navy/70 mt-2">{p.note}</div>
                     )}
+                    {p.approvedAt ? (
+                      <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">
+                        Approved by customer · {new Date(p.approvedAt).toLocaleString()}
+                      </div>
+                    ) : needsApproval ? (
+                      <button
+                        type="button"
+                        onClick={() => approveCustodyProof(i)}
+                        disabled={approvingProof === i}
+                        className="mt-3 w-full rounded-lg bg-[#c41e2a] px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {approvingProof === i ? "Approving..." : "Approve seal proof"}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -216,19 +245,30 @@ export default function BookingPage() {
             {booking.driverName && <Row label="Driver" value={booking.driverName} />}
           </div>
           <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between">
-            <span className="text-navy/70 font-medium">Total paid</span>
+            <span className="text-navy/70 font-medium">Base estimate</span>
             <span className="font-bold text-navy">{formatPrice(booking.priceCents)}</span>
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-navy/60">
+            Includes service within {INCLUDED_DISTANCE_MILES} miles of the
+            airport. Routes beyond {INCLUDED_DISTANCE_MILES} miles may include a
+            per-mile surcharge before payment is collected.
+          </p>
         </div>
 
-        {/* Demo helper */}
         <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70">
-          <div className="font-semibold text-navy mb-1">Demo tip</div>
-          Open <Link href="/driver" className="underline font-semibold">/driver</Link> in another tab to play the courier flow. Photos uploaded there will appear here in real time.
+          <div className="font-semibold text-navy mb-1">What happens next</div>
+          A Travelyt coordinator will review your request, confirm service
+          availability, and send the next step before any payment is collected.
         </div>
       </div>
     </AppChrome>
   );
+}
+
+function proofTitle(kind: Booking["proofs"][number]["kind"]) {
+  if (kind === "seal") return "Seal applied";
+  if (kind === "pickup") return "Picked up";
+  return "Delivered";
 }
 
 function Row({ label, value }: { label: string; value: string }) {

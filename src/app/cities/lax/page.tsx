@@ -2,6 +2,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { CircleCheck } from "lucide-react";
+import {
+  EXPRESS_DISTANCE_RATE_CENTS,
+  INCLUDED_DISTANCE_MILES,
+  STANDARD_DISTANCE_RATE_CENTS,
+} from "@/lib/pricing";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -38,7 +43,7 @@ export default function LAXPage() {
             Travelyt <span className="text-[#c41e2a]">LAX</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
-            Door-to-door baggage service for Los Angeles International Airport. We collect your bags anywhere within 50 miles of LAX.
+            Door-to-door baggage service for Los Angeles International Airport. Base pricing includes the first {INCLUDED_DISTANCE_MILES} miles from LAX.
           </p>
           <Link href="/quote?airport=LAX" className="inline-block bg-[#c41e2a] text-white px-8 py-4 rounded-full font-bold hover:bg-[#c41e2a] transition-colors">
             Get a Quote for LAX
@@ -72,8 +77,8 @@ export default function LAXPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Coverage Area</span>
-              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">50-mile radius from LAX</h2>
-              <p className="text-navy/70 mb-6">We serve the entire greater Los Angeles metro area, Orange County, and surrounding communities.</p>
+              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">{INCLUDED_DISTANCE_MILES}-mile base radius from LAX</h2>
+              <p className="text-navy/70 mb-6">The first {INCLUDED_DISTANCE_MILES} miles from LAX are included. Routes beyond that add ${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or ${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express.</p>
               <div className="flex flex-wrap gap-2">
                 {NEARBY.map((city) => (
                   <span key={city} className="bg-white px-3 py-1.5 rounded-full text-xs font-medium text-navy/70 border border-gray-100">{city}</span>
@@ -101,7 +106,7 @@ export default function LAXPage() {
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-navy mb-4">LAX Pricing</h2>
-          <p className="text-navy/70 mb-10">Same transparent pricing everywhere we operate.</p>
+          <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               { name: "Departure", price: "$49", unit: "/bag" },

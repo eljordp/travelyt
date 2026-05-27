@@ -4,23 +4,27 @@ import Link from "next/link";
 import { CircleCheck, ShieldCheck, Tag } from "lucide-react";
 import {
   EXPRESS_PICKUP_CENTS,
+  EXPRESS_DISTANCE_RATE_CENTS,
   FAMILY_BUNDLE_MIN_BAGS,
   FAMILY_BUNDLE_PERCENT,
+  INCLUDED_DISTANCE_MILES,
   SERVICE_PRICES_CENTS,
+  STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
+import { AIRLINE_BAG_CUTOFF_MINUTES } from "@/lib/service-rules";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Transparent Travelyt per-bag pricing for departure pickup, arrival delivery, and round-trip baggage handling.",
+    "Travelyt base pricing for departure pickup, arrival delivery, round-trip baggage handling, and distance-based route surcharges.",
   alternates: {
     canonical: "/pricing",
   },
   openGraph: {
     title: "Travelyt Pricing",
     description:
-      "See per-bag rates for Travelyt pickup, delivery, tracking, sealing, and insured baggage transport.",
+      "See base per-bag rates for Travelyt pickup, delivery, tracking, sealing, insured baggage transport, and distance-based route surcharges.",
     url: "/pricing",
   },
 };
@@ -80,11 +84,16 @@ const plans = [
 ];
 
 const addons = [
-  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — 2-hour pickup window instead of 4-hour` },
+  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance and airline cutoff` },
+  { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
   { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
   { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
+  { name: "Airline Cutoff", detail: `Departure handoff targets airline bag acceptance at least ${AIRLINE_BAG_CUTOFF_MINUTES} minutes before departure unless a specific airport or airline approves a shorter Travelyt cutoff` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
 ];
+
+const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
+const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
 
 const competitors = [
   { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: true },
@@ -105,7 +114,7 @@ export default function PricingPage() {
           <span className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider">Pricing</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            No hidden fees. No surge pricing. Just straightforward per-bag rates with discounts calculated automatically at booking.
+            Straightforward base per-bag rates, with discounts calculated automatically. Routes beyond {INCLUDED_DISTANCE_MILES} miles from the airport add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi with express.
           </p>
         </div>
       </section>
@@ -149,7 +158,12 @@ export default function PricingPage() {
             ))}
           </div>
           <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
-            Airline baggage fees are paid separately to the airline at check-in. Travelyt fees cover pickup, transport, sealing, tracking, and standard coverage only.
+            Airline baggage fees are paid separately to the airline at check-in.
+            Travelyt base fees cover pickup, transport, sealing, tracking, and
+            standard coverage within {INCLUDED_DISTANCE_MILES} miles of the
+            airport. Addresses farther than {INCLUDED_DISTANCE_MILES} miles
+            add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi
+            with express.
           </p>
         </div>
       </section>
@@ -159,7 +173,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">Add-ons & automatic discounts</h2>
           <p className="mx-auto mb-8 max-w-2xl text-center text-sm text-navy/65">
-            Express pickup is a single booking add-on, not a per-bag charge. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
+            Express pickup is a single booking add-on, not a per-bag charge. Pickup timing is confirmed from route distance, traffic, and airline baggage cutoff rules. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {addons.map((a) => (
@@ -181,7 +195,7 @@ export default function PricingPage() {
             </span>
             <h2 className="mt-4 text-2xl font-bold text-navy">Discounts show before you pay</h2>
             <p className="mt-3 text-sm leading-relaxed text-navy/70">
-              Enter a promo code or open a launch-offer link and Travelyt recalculates the booking total automatically. The review screen shows service subtotal, express pickup, automatic bag discount, promo discount, and final total.
+              Enter a promo code or open a launch-offer link and Travelyt recalculates the booking total automatically. The review screen shows service subtotal, express pickup, distance surcharge, automatic bag discount, promo discount, and estimated total.
             </p>
           </div>
           <div className="rounded-2xl border border-navy/10 bg-[#f6f7fb] p-5 shadow-sm shadow-navy/5">
@@ -194,21 +208,29 @@ export default function PricingPage() {
                 <span className="text-navy/65">Express pickup</span>
                 <span className="font-semibold text-navy">$20.00</span>
               </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-navy/65">Distance surcharge · 7 mi express</span>
+                <span className="font-semibold text-navy">$31.50</span>
+              </div>
               <div className="flex justify-between gap-4 text-[#c41e2a]">
-                <span>Family bundle discount</span>
-                <span className="font-semibold">−$29.40</span>
+                <span>Extra bag discount</span>
+                <span className="font-semibold">−$30.00</span>
               </div>
               <div className="flex justify-between gap-4 text-[#c41e2a]">
                 <span>Launch offer (TRAVELYT30)</span>
-                <span className="font-semibold">−$55.98</span>
+                <span className="font-semibold">−$55.80</span>
               </div>
               <div className="flex justify-between gap-4 border-t border-navy/10 pt-3 text-base">
-                <span className="font-bold text-navy">Estimated total</span>
-                <span className="font-bold text-navy">$130.62</span>
+                <span className="font-bold text-navy">Base estimate</span>
+                <span className="font-bold text-navy">$161.70</span>
               </div>
             </div>
             <p className="mt-4 text-xs leading-relaxed text-navy/60">
-              Example only. Promo availability, eligibility, service areas, timing, and coverage terms may vary. Discounts do not apply to airline baggage fees, oversized-item fees, declared-value upgrades, taxes, or third-party charges unless stated.
+              Example only. Promo availability, eligibility, service areas,
+              timing, distance surcharges, and coverage terms may vary.
+              Discounts do not apply to airline baggage fees, distance
+              surcharges, oversized-item fees, declared-value upgrades, taxes,
+              or third-party charges unless stated.
             </p>
           </div>
         </div>

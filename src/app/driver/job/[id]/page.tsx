@@ -26,6 +26,8 @@ export default function DriverJobPage() {
   const [mounted, setMounted] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [photoNote, setPhotoNote] = useState("");
+  const [sealId, setSealId] = useState("");
+  const [error, setError] = useState("");
   const [native, setNative] = useState(false);
   const fileInput = useRef<HTMLInputElement | null>(null);
 
@@ -111,6 +113,8 @@ export default function DriverJobPage() {
   function clearPhoto() {
     setPendingPhoto(null);
     setPhotoNote("");
+    setSealId("");
+    setError("");
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -126,10 +130,16 @@ export default function DriverJobPage() {
 
   async function markPickedUp() {
     if (!booking || !pendingPhoto) return;
+    const cleanSealId = sealId.trim().toUpperCase();
+    if (!cleanSealId) {
+      setError("Enter the seal ID before confirming pickup.");
+      return;
+    }
     await addProof(booking.id, {
-      kind: "pickup",
+      kind: "seal",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      sealId: cleanSealId,
       driverName: driver ?? undefined,
       note: photoNote || undefined,
     });
@@ -149,10 +159,12 @@ export default function DriverJobPage() {
 
   async function markDelivered() {
     if (!booking || !pendingPhoto) return;
+    const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
     await addProof(booking.id, {
       kind: "delivery",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      sealId: latestSeal,
       driverName: driver ?? undefined,
       note: photoNote || undefined,
     });
@@ -241,14 +253,42 @@ export default function DriverJobPage() {
         {showCamera && (
           <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8">
             <h2 className="font-bold text-navy mb-2">
-              {needsPickupPhoto ? "Pickup proof" : "Delivery proof"}
+              {needsPickupPhoto ? "Seal proof" : "Delivery proof"}
             </h2>
             <p className="text-sm text-navy/70 mb-5">
               Take a clear photo of {booking.bags} bag{booking.bags > 1 ? "s" : ""}{" "}
               {needsPickupPhoto
-                ? "at the pickup location with the customer present if possible."
+                ? "after the tamper-evident seal is attached. Make sure the seal number is visible."
                 : "at the delivery point with seals intact."}
             </p>
+            {needsPickupPhoto && (
+              <div className="mb-4">
+                <label
+                  htmlFor="seal-id"
+                  className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5"
+                >
+                  Seal ID
+                </label>
+                <input
+                  id="seal-id"
+                  value={sealId}
+                  onChange={(event) => {
+                    setSealId(event.target.value.toUpperCase());
+                    setError("");
+                  }}
+                  placeholder="Example: TVT-483921"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all uppercase tracking-wide"
+                />
+                <p className="mt-1 text-xs text-navy/60">
+                  Use the printed number on the tamper-evident seal.
+                </p>
+              </div>
+            )}
+            {error && (
+              <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </p>
+            )}
 
             {!pendingPhoto ? (
               native ? (
@@ -290,7 +330,7 @@ export default function DriverJobPage() {
                 </div>
                 <textarea
                   rows={2}
-                  placeholder="Optional note: seal numbers, bag descriptions, condition…"
+                  placeholder="Optional note: bag descriptions, condition, customer present…"
                   value={photoNote}
                   onChange={(e) => setPhotoNote(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none mb-4"
@@ -306,7 +346,7 @@ export default function DriverJobPage() {
                     onClick={needsPickupPhoto ? markPickedUp : markDelivered}
                     className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
                   >
-                    {needsPickupPhoto ? "Confirm pickup" : "Confirm delivery"}
+                    {needsPickupPhoto ? "Confirm seal + pickup" : "Confirm delivery"}
                   </button>
                 </div>
               </div>
@@ -328,7 +368,15 @@ export default function DriverJobPage() {
                     <img src={p.dataUrl} alt={p.kind} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                   <div className="px-2 py-1.5 text-xs">
-                    <div className="font-semibold text-navy capitalize">{p.kind}</div>
+                    <div className="font-semibold text-navy capitalize">
+                      {proofTitle(p.kind)}
+                    </div>
+                    {p.sealId && (
+                      <div className="text-navy/70">Seal {p.sealId}</div>
+                    )}
+                    {p.approvedAt && (
+                      <div className="text-green-700">Customer approved</div>
+                    )}
                     <div className="text-navy/70">{new Date(p.timestamp).toLocaleTimeString()}</div>
                   </div>
                 </div>
@@ -339,6 +387,12 @@ export default function DriverJobPage() {
       </div>
     </div>
   );
+}
+
+function proofTitle(kind: Booking["proofs"][number]["kind"]) {
+  if (kind === "seal") return "Seal proof";
+  if (kind === "pickup") return "Pickup";
+  return "Delivery";
 }
 
 function Row({ label, value }: { label: string; value: string }) {

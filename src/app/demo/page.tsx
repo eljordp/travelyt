@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { Car, CreditCard, FileText, Route, Send } from "lucide-react";
+import { Car, FileText, PackageCheck, Route, Send } from "lucide-react";
 
 const demoSteps = [
   {
@@ -12,9 +12,9 @@ const demoSteps = [
     cta: "Start quote",
   },
   {
-    icon: <CreditCard className="h-6 w-6" strokeWidth={1.7} />,
-    title: "Continue to payment",
-    body: "The quote flow creates a demo booking and sends you to the payment screen.",
+    icon: <PackageCheck className="h-6 w-6" strokeWidth={1.7} />,
+    title: "Submit a request",
+    body: "The quote flow creates a launch request with an estimated total and follow-up status page.",
     href: "/quote?service=departure&airport=LAX&date=2026-06-15",
     cta: "Create booking",
   },
@@ -50,7 +50,7 @@ export default function DemoPage() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-navy/70">
               The public site explains the service. This page surfaces the
-              actual demo: quote request, booking/payment prototype, courier
+              actual demo: quote request, launch booking prototype, courier
               console, tracking updates, proof upload, and print flyer.
             </p>
           </div>

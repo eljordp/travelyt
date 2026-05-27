@@ -13,6 +13,15 @@ import {
   PROMO_CODES,
   type ServiceType as BookingServiceType,
 } from "@/lib/bookings";
+import {
+  EXPRESS_DISTANCE_RATE_CENTS,
+  INCLUDED_DISTANCE_MILES,
+  STANDARD_DISTANCE_RATE_CENTS,
+} from "@/lib/pricing";
+import {
+  AIRLINE_CUTOFF_COPY,
+  AIRLINE_CUTOFF_DETAIL,
+} from "@/lib/service-rules";
 import AppChrome from "@/components/AppChrome";
 
 const AIRPORTS = [
@@ -51,8 +60,10 @@ interface FormData {
   address: string;
   date: string;
   flight: string;
+  flightTime: string;
   bags: number;
   expressPickup: boolean;
+  distanceMiles: string;
   name: string;
   email: string;
   phone: string;
@@ -91,8 +102,10 @@ const emptyForm: FormData = {
   address: "",
   date: "",
   flight: "",
+  flightTime: "",
   bags: 2,
   expressPickup: false,
+  distanceMiles: "",
   name: "",
   email: "",
   phone: "",
@@ -189,6 +202,12 @@ export default function QuotePage() {
       if (!form.airport) e.airport = "Select an airport";
       if (!form.address.trim()) e.address = "Enter your pickup or delivery address";
       if (!form.date) e.date = "Select a travel date";
+      if (form.distanceMiles.trim()) {
+        const miles = Number(form.distanceMiles);
+        if (!Number.isFinite(miles) || miles < 0) {
+          e.distanceMiles = "Enter a valid mileage estimate";
+        }
+      }
     }
     if (step === 2) {
       if (!form.name.trim()) e.name = "Full name required";
@@ -208,6 +227,16 @@ export default function QuotePage() {
     setSubmitting(true);
 
     try {
+      const timingNotes = [
+        form.flightTime
+          ? `${form.service === "arrival" ? "Flight arrival time" : "Flight departure time"}: ${form.flightTime}.`
+          : "",
+        form.service !== "arrival" ? AIRLINE_CUTOFF_DETAIL : "",
+        form.notes || "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
       const b = await createBooking({
         service: form.service as BookingServiceType,
         airport: form.airport,
@@ -215,14 +244,15 @@ export default function QuotePage() {
         date: form.date,
         flight: form.flight || undefined,
         bags: form.bags,
+        distanceMiles,
         expressPickup: form.expressPickup,
         name: form.name,
         email: form.email,
         phone: form.phone,
-        notes: form.notes || undefined,
+        notes: timingNotes || undefined,
         promoCode,
       });
-      router.push(`/booking/${b.id}/pay`);
+      router.push(`/booking/${b.id}`);
     } catch (err) {
       console.error("Booking submit network error", err);
       setSubmitting(false);
@@ -234,12 +264,16 @@ export default function QuotePage() {
     arrival: "Arrival Delivery",
     both: "Both Ways",
   };
+  const distanceMiles = form.distanceMiles.trim()
+    ? Number(form.distanceMiles)
+    : undefined;
   const subtotalCents =
     form.service && form.bags
       ? calcPriceCents(
           form.bags,
           form.service as BookingServiceType,
-          form.expressPickup
+          form.expressPickup,
+          distanceMiles
         )
       : 0;
   const priceBreakdown =
@@ -247,11 +281,12 @@ export default function QuotePage() {
       ? calcPriceBreakdown(
           form.bags,
           form.service as BookingServiceType,
-          form.expressPickup
+          form.expressPickup,
+          distanceMiles
         )
       : undefined;
   const discountCents = subtotalCents
-    ? getPromoDiscountCents(subtotalCents, promoCode)
+    ? getPromoDiscountCents(priceBreakdown?.promoEligibleCents ?? 0, promoCode)
     : 0;
   const totalCents = subtotalCents - discountCents;
   const promoMeta = promoCode ? PROMO_CODES[promoCode] : undefined;
@@ -329,7 +364,7 @@ export default function QuotePage() {
                   <div className="grid grid-cols-1 gap-4">
                     {[
                       { value: "departure", icon: <Home className="h-5 w-5" strokeWidth={1.8} />, title: "Departure Pickup", desc: "Door pickup, airport handoff." },
-                      { value: "arrival", icon: <PlaneLanding className="h-5 w-5" strokeWidth={1.8} />, title: "Arrival Delivery", desc: "Baggage claim to your address." },
+                      { value: "arrival", icon: <PlaneLanding className="h-5 w-5" strokeWidth={1.8} />, title: "Arrival Delivery", desc: "Post-flight bag delivery." },
                       { value: "both", icon: <Repeat2 className="h-5 w-5" strokeWidth={1.8} />, title: "Both Ways", desc: "Round-trip bag handling." },
                     ].map((opt) => (
                       <button key={opt.value} type="button"
@@ -384,7 +419,11 @@ export default function QuotePage() {
                       ))}
                     </select>
                     {errors.airport ? <p className="text-xs text-red-500 mt-1">{errors.airport}</p>
-                      : <p className="text-xs text-navy/70 mt-1">We serve within 50 miles of each airport</p>}
+                      : (
+                        <p className="text-xs text-navy/70 mt-1">
+                          Base estimate includes the first {INCLUDED_DISTANCE_MILES} miles from the airport
+                        </p>
+                      )}
                   </div>
 
                   {/* Address */}
@@ -399,8 +438,38 @@ export default function QuotePage() {
                     {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
                   </div>
 
+                  <div>
+                    <label htmlFor="quote-distance" className={labelClass}>
+                      Distance from airport <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="quote-distance"
+                        name="distanceMiles"
+                        inputMode="decimal"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        placeholder="Example: 34"
+                        value={form.distanceMiles}
+                        onChange={(e) => set("distanceMiles", e.target.value)}
+                        className={`w-full px-4 py-3 rounded-xl border ${errors.distanceMiles ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`}
+                      />
+                      <span className="shrink-0 text-sm font-semibold text-navy/60">
+                        miles
+                      </span>
+                    </div>
+                    {errors.distanceMiles ? (
+                      <p className="text-xs text-red-500 mt-1">{errors.distanceMiles}</p>
+                    ) : (
+                      <p className="text-xs text-navy/70 mt-1">
+                        First {INCLUDED_DISTANCE_MILES} miles are included. Additional miles are {formatPrice(STANDARD_DISTANCE_RATE_CENTS)}/mi standard or {formatPrice(EXPRESS_DISTANCE_RATE_CENTS)}/mi with express.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Date + Flight */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
                       <label className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
                       <div className="grid grid-cols-3 gap-2">
@@ -454,7 +523,26 @@ export default function QuotePage() {
                       <input id="quote-flight" name="flight" type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy" />
                     </div>
+                    <div>
+                      <label htmlFor="quote-flight-time" className={labelClass}>
+                        {form.service === "arrival" ? "Arrival Time" : "Departure Time"} <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                      </label>
+                      <input
+                        id="quote-flight-time"
+                        name="flightTime"
+                        type="time"
+                        value={form.flightTime}
+                        onChange={(e) => set("flightTime", e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy"
+                      />
+                    </div>
                   </div>
+                  {form.service !== "arrival" && (
+                    <div className="rounded-xl border border-navy/10 bg-navy/[0.03] p-4 text-xs leading-relaxed text-navy/70">
+                      <span className="font-semibold text-navy">{AIRLINE_CUTOFF_COPY}</span>{" "}
+                      {AIRLINE_CUTOFF_DETAIL}
+                    </div>
+                  )}
 
                   {/* Bags counter */}
                   <div>
@@ -492,7 +580,7 @@ export default function QuotePage() {
                           Express pickup
                         </span>
                         <span className="mt-1 block text-sm text-navy/65">
-                          Two-hour pickup window. +$20 per booking, not per bag.
+                          Priority route coordination. +$20 per booking, not per bag. Extra miles use the express distance rate.
                         </span>
                       </span>
                     </button>
@@ -536,7 +624,7 @@ export default function QuotePage() {
               {step === 3 && (
                 <div>
                   <h2 className="text-xl font-bold text-navy mb-2">Review your request</h2>
-                  <p className="text-navy/70 text-sm mb-6">Everything look right? Submit and we&apos;ll be in touch within 2 hours.</p>
+                  <p className="text-navy/70 text-sm mb-6">Everything look right? Submit your request and we&apos;ll confirm availability before collecting payment.</p>
 
                   <div className="bg-[#f5f0ee] rounded-xl p-6 space-y-4 text-sm">
                     <Row label="Service" value={serviceLabels[form.service] || form.service} />
@@ -544,7 +632,25 @@ export default function QuotePage() {
                     <Row label={form.service === "arrival" ? "Delivery Address" : "Pickup Address"} value={form.address} />
                     <Row label="Travel Date" value={form.date} />
                     {form.flight && <Row label="Flight" value={form.flight} />}
+                    {form.flightTime && (
+                      <Row
+                        label={form.service === "arrival" ? "Arrival Time" : "Departure Time"}
+                        value={form.flightTime}
+                      />
+                    )}
+                    {form.service !== "arrival" && (
+                      <Row
+                        label="Airline Cutoff"
+                        value="Target bag acceptance at least 40 min before departure"
+                      />
+                    )}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
+                    {priceBreakdown?.distanceMiles !== undefined && (
+                      <Row
+                        label="Distance"
+                        value={`${priceBreakdown.distanceMiles} miles from airport`}
+                      />
+                    )}
                     {priceBreakdown && subtotalCents > 0 && (
                       <>
                         <Row
@@ -555,6 +661,12 @@ export default function QuotePage() {
                           <Row
                             label="Express pickup"
                             value={formatPrice(priceBreakdown.expressPickupCents)}
+                          />
+                        )}
+                        {priceBreakdown.distanceSurchargeCents > 0 && (
+                          <Row
+                            label={`Distance surcharge (${priceBreakdown.extraDistanceMiles} mi @ ${formatPrice(priceBreakdown.distanceRateCents)}/mi)`}
+                            value={formatPrice(priceBreakdown.distanceSurchargeCents)}
                           />
                         )}
                         {priceBreakdown.automaticDiscountCents > 0 && (
@@ -578,7 +690,7 @@ export default function QuotePage() {
                           </div>
                         ) : null}
                         <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-base">
-                          <span className="font-bold text-navy">Total</span>
+                          <span className="font-bold text-navy">Estimated total</span>
                           <span className="font-bold text-navy">{estimate}</span>
                         </div>
                       </>
@@ -621,10 +733,14 @@ export default function QuotePage() {
                     </div>
                   )}
                   <p className="mt-4 text-xs leading-relaxed text-navy/70">
-                    Estimate includes pickup or delivery, sealing, tracking, and
-                    standard coverage. Airline baggage fees, if any, are paid
-                    separately to the airline. Promotional codes apply to eligible
-                    Travelyt service fees after automatic bag discounts.
+                    Base estimate includes pickup or delivery within {INCLUDED_DISTANCE_MILES}
+                    miles of the airport, sealing, tracking, and standard
+                    coverage. Addresses farther than {INCLUDED_DISTANCE_MILES}
+                    miles may include a per-mile surcharge in the final
+                    confirmation. Pickup time is confirmed based on distance,
+                    traffic, and airline baggage cutoff rules. Airline baggage fees, if any, are paid
+                    separately to the airline. Promotional codes apply to
+                    eligible Travelyt service fees after automatic bag discounts.
                   </p>
                 </div>
               )}
@@ -646,7 +762,7 @@ export default function QuotePage() {
                   <button type="button" onClick={submitBooking}
                     disabled={submitting}
                     className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                    {submitting ? "Submitting…" : "Continue to Payment →"}
+                    {submitting ? "Submitting…" : "Submit Request →"}
                   </button>
                 )}
               </div>
