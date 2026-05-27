@@ -20,6 +20,8 @@ export type ServiceType = "departure" | "arrival" | "both";
 export interface PhotoProof {
   kind: "seal" | "pickup" | "delivery";
   dataUrl: string;
+  storagePath?: string;
+  contentType?: string;
   timestamp: string;
   sealId?: string;
   driverName?: string;
@@ -80,17 +82,24 @@ async function authHeaders() {
   return headers;
 }
 
-function getStoredAccessToken(id: string): string | null {
+export function getBookingAccessToken(id: string): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(`${ACCESS_PREFIX}${id}`);
 }
 
+export function storeBookingAccessToken(id: string, accessToken?: string | null) {
+  if (typeof window === "undefined" || !accessToken) return;
+  localStorage.setItem(`${ACCESS_PREFIX}${id}`, accessToken);
+}
+
 function storeAccessToken(booking: Booking) {
-  if (typeof window === "undefined" || !booking.customerAccessToken) return;
-  localStorage.setItem(
-    `${ACCESS_PREFIX}${booking.id}`,
-    booking.customerAccessToken
-  );
+  storeBookingAccessToken(booking.id, booking.customerAccessToken);
+}
+
+export function getBookingTrackingHref(booking: Pick<Booking, "id" | "customerAccessToken">) {
+  const accessToken = booking.customerAccessToken || getBookingAccessToken(booking.id);
+  const token = accessToken ? `?token=${encodeURIComponent(accessToken)}` : "";
+  return `/track/${encodeURIComponent(booking.id)}${token}`;
 }
 
 export function getDriverAccessCode(): string | null {
@@ -168,8 +177,12 @@ export async function getBookings(): Promise<Booking[]> {
   return sorted(readLocal());
 }
 
-export async function getBooking(id: string): Promise<Booking | undefined> {
-  const accessToken = getStoredAccessToken(id);
+export async function getBooking(
+  id: string,
+  explicitAccessToken?: string | null
+): Promise<Booking | undefined> {
+  const accessToken = explicitAccessToken || getBookingAccessToken(id);
+  if (explicitAccessToken) storeBookingAccessToken(id, explicitAccessToken);
   const qs = new URLSearchParams({ id });
   if (accessToken) qs.set("accessToken", accessToken);
   const data = await apiJson<{ booking: Booking | null }>(
@@ -250,7 +263,7 @@ export async function createBooking(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...booking,
-      accessToken: getStoredAccessToken(booking.id),
+      accessToken: getBookingAccessToken(booking.id),
       source: "quote-form",
     }),
   });
@@ -266,7 +279,7 @@ export async function updateBooking(
   const saved = await apiJson<{ booking: Booking }>(`/api/bookings`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, patch, accessToken: getStoredAccessToken(id) }),
+    body: JSON.stringify({ id, patch, accessToken: getBookingAccessToken(id) }),
   });
 
   if (saved?.booking) {
@@ -289,7 +302,7 @@ export async function addProof(
   const saved = await apiJson<{ booking: Booking }>(`/api/bookings`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, proof, accessToken: getStoredAccessToken(id) }),
+    body: JSON.stringify({ id, proof, accessToken: getBookingAccessToken(id) }),
   });
 
   if (saved?.booking) {

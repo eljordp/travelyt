@@ -8,6 +8,7 @@ import {
   type Booking,
   formatPrice,
   getBooking,
+  getBookingTrackingHref,
   SERVICE_LABELS,
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
@@ -97,7 +98,7 @@ export default function PayPage() {
             </div>
 
             <Link
-              href={`/booking/${booking.id}`}
+              href={getBookingTrackingHref(booking)}
               className="block w-full rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] py-4 text-center text-sm font-bold text-white transition-opacity hover:opacity-90"
             >
               View request status

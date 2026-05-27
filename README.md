@@ -53,6 +53,18 @@ listing and driver status updates. Couriers enter this code on `/driver`.
 Without Resend variables, booking and lead requests still work, but email
 notifications are skipped.
 
+Production deploy checklist:
+
+```sh
+vercel env ls
+supabase db push
+```
+
+Confirm Vercel has `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+`RESEND_API_KEY`, `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`, and the admin/driver
+access code variables before testing live customer requests.
+
 ## Push Notification Worker
 
 The Supabase Edge Function in `supabase/functions/send-push-notifications`
@@ -123,6 +135,11 @@ proof capture, and push permission timing.
 
 - Booking data is backend-backed when Supabase is configured, with local browser
   storage as a development fallback.
+- Customer-facing tracking lives at `/track/[id]` and uses the
+  `customer_access_token` query token from booking confirmation links.
+- Driver proof photos are uploaded to the private Supabase Storage bucket
+  `booking-proofs` when the bucket migration has been applied; local/base64
+  proof data remains as a fallback for development.
 - Native push tokens are persisted in Supabase and booking updates are queued in
   `push_notification_events` for an APNs worker to send.
 - Login and registration use Supabase Auth when public Supabase variables are

@@ -4,6 +4,49 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const resendApiKey = process.env.RESEND_API_KEY;
+const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
+const leadFromEmail =
+  process.env.LEAD_FROM_EMAIL || "Travelyt <onboarding@resend.dev>";
+
+async function sendLeadEmail({
+  email,
+  interest,
+  source,
+}: {
+  email: string;
+  interest: string;
+  source: string;
+}) {
+  if (!resendApiKey || !leadNotifyEmail) return;
+
+  const resendResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: leadFromEmail,
+      to: leadNotifyEmail,
+      subject: `New Travelyt lead: ${interest}`,
+      reply_to: email,
+      text: [
+        "New Travelyt lead",
+        "",
+        `Email:    ${email}`,
+        `Interest: ${interest}`,
+        `Source:   ${source}`,
+        `Created:  ${new Date().toISOString()}`,
+      ].join("\n"),
+    }),
+  });
+
+  if (!resendResponse.ok) {
+    const message = await resendResponse.text();
+    console.error("Resend lead notification failed", message);
+  }
+}
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, "leads:post", 10);
@@ -62,6 +105,8 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    await sendLeadEmail({ email, interest, source });
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -8,6 +8,7 @@ import {
   calcPriceBreakdown,
   createBooking,
   formatPrice,
+  getBookingTrackingHref,
   getPromoDiscountCents,
   normalizePromoCode,
   PROMO_CODES,
@@ -252,7 +253,7 @@ export default function QuotePage() {
         notes: timingNotes || undefined,
         promoCode,
       });
-      router.push(`/booking/${b.id}`);
+      router.push(getBookingTrackingHref(b));
     } catch (err) {
       console.error("Booking submit network error", err);
       setSubmitting(false);
@@ -741,6 +742,8 @@ export default function QuotePage() {
                     traffic, and airline baggage cutoff rules. Airline baggage fees, if any, are paid
                     separately to the airline. Promotional codes apply to
                     eligible Travelyt service fees after automatic bag discounts.
+                    A Travelyt agent may ask to confirm the pickup or delivery
+                    contact&apos;s ID before bags change hands.
                   </p>
                 </div>
               )}

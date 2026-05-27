@@ -107,7 +107,6 @@ export default function DriverApplyPage() {
 
   const input =
     "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10";
-  const label = "block text-xs font-semibold uppercase tracking-wider text-navy/70 mb-1.5";
 
   return (
     <div className="min-h-screen bg-[#f6f7fb]">

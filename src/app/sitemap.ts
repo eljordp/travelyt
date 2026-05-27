@@ -15,6 +15,7 @@ const routes = [
   "/privacy",
   "/terms",
   "/support",
+  "/for/embassies",
   "/cities/jfk",
   "/cities/lax",
   "/cities/ord",

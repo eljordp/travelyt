@@ -15,6 +15,7 @@ import AppChrome from "@/components/AppChrome";
 import {
   formatPrice,
   getBookings,
+  getBookingTrackingHref,
   SERVICE_LABELS,
   STATUS_LABELS,
   type Booking,
@@ -185,7 +186,9 @@ export default function ProfilePage() {
     },
   ];
 
-  const trackHref = activeBookings[0] ? `/booking/${activeBookings[0].id}` : "/quote";
+  const trackHref = activeBookings[0]
+    ? getBookingTrackingHref(activeBookings[0])
+    : "/quote";
 
   async function saveSettings(event: React.FormEvent) {
     event.preventDefault();
@@ -557,7 +560,7 @@ function BookingsList({
       {bookings.map((booking) => (
         <Link
           key={booking.id}
-          href={`/booking/${booking.id}`}
+          href={getBookingTrackingHref(booking)}
           className="flex items-center gap-3 p-4 transition-colors hover:bg-gray-50"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f6f7fb] text-navy">

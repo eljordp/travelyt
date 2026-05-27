@@ -6,10 +6,16 @@ import type { FormEvent } from "react";
 type LeadCaptureProps = {
   source: string;
   variant?: "cta" | "footer";
+  defaultInterest?: string;
 };
 
 const interestOptions = [
   { value: "early-customer", label: "Early customer" },
+  { value: "business-travel", label: "Business travel" },
+  { value: "family-trip", label: "Family trip" },
+  { value: "frequent-traveler", label: "Frequent traveler" },
+  { value: "corporate-team", label: "Corporate team" },
+  { value: "embassy-consular", label: "Embassy or consular team" },
   { value: "hotel-partner", label: "Hotel partner" },
   { value: "airport-partner", label: "Airport partner" },
 ];
@@ -29,9 +35,10 @@ function saveLocalLead(email: string, interest: string, source: string) {
 export default function LeadCapture({
   source,
   variant = "cta",
+  defaultInterest = interestOptions[0].value,
 }: LeadCaptureProps) {
   const [email, setEmail] = useState("");
-  const [interest, setInterest] = useState(interestOptions[0].value);
+  const [interest, setInterest] = useState(defaultInterest);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 

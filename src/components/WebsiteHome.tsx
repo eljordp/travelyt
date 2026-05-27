@@ -15,6 +15,7 @@ import Navbar from "@/components/Navbar";
 import HeroCarousel from "@/components/HeroCarousel";
 import BagStatus from "@/components/BagStatus";
 import Footer from "@/components/Footer";
+import LeadCapture from "@/components/LeadCapture";
 
 const personas = [
   {
@@ -256,6 +257,31 @@ export default function WebsiteHome() {
                 </span>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section
+          className="py-4"
+          aria-label="Early access"
+        >
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+              Planning a trip soon?
+            </p>
+            <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
+              Get launch availability for your route.
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-navy/65 sm:text-base">
+              Drop your email and what kind of trip you are planning. We will
+              use it to prioritize airport coverage, family routes, and business
+              travel windows before public launch.
+            </p>
+          </div>
+          <div className="mt-7">
+            <LeadCapture
+              source="homepage-early-access"
+              defaultInterest="early-customer"
+            />
           </div>
         </section>
 

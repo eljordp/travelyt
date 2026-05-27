@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Buffer } from "node:buffer";
 import {
   bookingPatchToRowPatch,
   bookingToInsert,
@@ -10,6 +11,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { calcPriceCents } from "@/lib/pricing";
 import { getAdminSession } from "@/lib/admin-auth";
+import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,6 +22,8 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
 const leadFromEmail =
   process.env.LEAD_FROM_EMAIL || "Travelyt <onboarding@resend.dev>";
+const proofBucket = "booking-proofs";
+const maxProofBytes = 10 * 1024 * 1024;
 
 const serviceLabels: Record<ServiceType, string> = {
   departure: "Departure Pickup",
@@ -72,10 +76,97 @@ function canReadBooking(
   return privilegedAuthorized(request) || userOwns(row, userId) || tokenMatches(row, token);
 }
 
-function responseBooking(row: BookingRow, includeAccessToken: boolean) {
+async function signedProofUrls(booking: Booking) {
+  if (!booking.proofs.some((proof) => proof.storagePath)) return booking;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return booking;
+
+  const proofs = await Promise.all(
+    booking.proofs.map(async (proof) => {
+      if (!proof.storagePath) return proof;
+
+      const { data, error } = await supabase.storage
+        .from(proofBucket)
+        .createSignedUrl(proof.storagePath, 60 * 60);
+
+      if (error || !data?.signedUrl) {
+        console.error("Supabase proof signed URL failed", error);
+        return proof;
+      }
+
+      return { ...proof, dataUrl: data.signedUrl };
+    })
+  );
+
+  return { ...booking, proofs };
+}
+
+async function responseBooking(row: BookingRow, includeAccessToken: boolean) {
   const booking = rowToBooking(row);
   if (!includeAccessToken) delete booking.customerAccessToken;
-  return booking;
+  return signedProofUrls(booking);
+}
+
+function parseProofDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) return null;
+
+  const contentType = match[1].toLowerCase();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) {
+    return null;
+  }
+
+  const buffer = Buffer.from(match[2], "base64");
+  if (!buffer.length || buffer.length > maxProofBytes) return null;
+
+  const extension =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/webp"
+        ? "webp"
+        : "jpg";
+
+  return { buffer, contentType, extension };
+}
+
+async function storeProofImage(
+  bookingId: string,
+  proof: Booking["proofs"][number]
+) {
+  if (!proof.dataUrl.startsWith("data:")) return proof;
+
+  const parsed = parseProofDataUrl(proof.dataUrl);
+  if (!parsed) return proof;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return proof;
+
+  const fileName = `${Date.now()}-${proof.kind}-${crypto.randomUUID()}.${parsed.extension}`;
+  const storagePath = `${bookingId}/${fileName}`;
+  const { error } = await supabase.storage
+    .from(proofBucket)
+    .upload(storagePath, parsed.buffer, {
+      contentType: parsed.contentType,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    console.error("Supabase proof upload failed", error);
+    return proof;
+  }
+
+  const { data: signed } = await supabase.storage
+    .from(proofBucket)
+    .createSignedUrl(storagePath, 60 * 60);
+
+  return {
+    ...proof,
+    dataUrl: signed?.signedUrl ?? proof.dataUrl,
+    storagePath,
+    contentType: parsed.contentType,
+  };
 }
 
 function validateBooking(body: Partial<Booking> & { source?: string }) {
@@ -131,6 +222,12 @@ function validateBooking(body: Partial<Booking> & { source?: string }) {
 async function sendBookingEmail(booking: Booking, source: string) {
   if (!resendApiKey || !leadNotifyEmail) return;
 
+  const trackingUrl = `${SITE_URL}/track/${encodeURIComponent(booking.id)}${
+    booking.customerAccessToken
+      ? `?token=${encodeURIComponent(booking.customerAccessToken)}`
+      : ""
+  }`;
+
   const lines = [
     "New Travelyt booking",
     "",
@@ -147,6 +244,7 @@ async function sendBookingEmail(booking: Booking, source: string) {
     `Email:    ${booking.email}`,
     `Phone:    ${booking.phone}`,
     `Notes:    ${booking.notes || "(none)"}`,
+    `Track:    ${trackingUrl}`,
     "",
     `Source:   ${source}`,
     `Created:  ${booking.createdAt}`,
@@ -184,6 +282,7 @@ export async function GET(request: Request) {
   const id = searchParams.get("id");
   const accessToken =
     searchParams.get("accessToken") ||
+    searchParams.get("token") ||
     request.headers.get("x-travelyt-booking-token");
   const user = await getRequestUser(request);
 
@@ -202,7 +301,7 @@ export async function GET(request: Request) {
       data ? userOwns(data, user?.id) || tokenMatches(data, accessToken) : false;
     return NextResponse.json({
       ok: true,
-      booking: data ? responseBooking(data, includeAccessToken) : null,
+      booking: data ? await responseBooking(data, includeAccessToken) : null,
     });
   }
 
@@ -224,8 +323,10 @@ export async function GET(request: Request) {
   if (error) return bad("Could not load bookings.", 500);
   return NextResponse.json({
     ok: true,
-    bookings: ((data ?? []) as BookingRow[]).map((row) =>
-      responseBooking(row, isPrivileged || userOwns(row, user?.id))
+    bookings: await Promise.all(
+      ((data ?? []) as BookingRow[]).map((row) =>
+        responseBooking(row, isPrivileged || userOwns(row, user?.id))
+      )
     ),
   });
 }
@@ -259,7 +360,7 @@ export async function POST(request: Request) {
     }
 
     await sendBookingEmail(validated, source);
-    return NextResponse.json({ ok: true, booking: responseBooking(data, true) });
+    return NextResponse.json({ ok: true, booking: await responseBooking(data, true) });
   } catch {
     return bad("We could not save that booking.");
   }
@@ -308,8 +409,11 @@ export async function PATCH(request: Request) {
     }
 
     const rowPatch = bookingPatchToRowPatch(body.patch ?? {});
-    if (body.proof) {
-      rowPatch.proofs = [...(existing.proofs ?? []), body.proof];
+    const storedProof = body.proof
+      ? await storeProofImage(id, body.proof)
+      : undefined;
+    if (storedProof) {
+      rowPatch.proofs = [...(existing.proofs ?? []), storedProof];
     }
 
     const { data, error } = await supabase
@@ -333,7 +437,7 @@ export async function PATCH(request: Request) {
       userOwns(data, user?.id) || tokenMatches(data, body.accessToken);
     return NextResponse.json({
       ok: true,
-      booking: responseBooking(data, includeAccessToken),
+      booking: await responseBooking(data, includeAccessToken),
     });
   } catch {
     return bad("We could not update that booking.");
