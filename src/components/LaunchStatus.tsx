@@ -10,7 +10,7 @@ const proofPoints = [
   {
     icon: <ShieldCheck className="h-6 w-6" strokeWidth={1.7} />,
     title: "Security-first operation",
-    body: "Tamper-evident seals, live tracking, insured transport, and chain-of-custody logs are core to the service.",
+    body: "Tamper-evident seals, GPS custody checkpoints, insured transport, and chain-of-custody logs are core to the service.",
   },
   {
     icon: <Handshake className="h-6 w-6" strokeWidth={1.7} />,

@@ -41,7 +41,7 @@ export default function BusinessCardVariantsPage() {
           height: 2in;
           position: relative;
           overflow: hidden;
-          color: #0a1f5c;
+          color: #081546;
           font-family: var(--font-geist-sans), Inter, sans-serif;
           border-radius: 0;
         }
@@ -53,7 +53,7 @@ export default function BusinessCardVariantsPage() {
           <h1 className="text-2xl font-bold text-white">Travelyt — card variants</h1>
           <p className="mt-2 text-sm text-white/55">
             Four directions. Each prints standalone — pick a favorite and run with it. The clean minimal version lives at{" "}
-            <a href="/business-cards" className="text-[#c41e2a] underline hover:text-[#ff8a8a]">
+            <a href="/business-cards" className="text-[#ff6868] underline hover:text-[#ff8a8a]">
               /business-cards
             </a>
             .
@@ -65,7 +65,7 @@ export default function BusinessCardVariantsPage() {
           <div className="variant-block" data-printing={printing === "field"}>
             <div className="variant-header mb-4 flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#c41e2a]">Variant 01</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#ff6868]">Variant 01</p>
                 <h2 className="mt-1 text-lg font-bold text-white">{VARIANTS[0].name}</h2>
                 <p className="mt-1 text-xs text-white/55 max-w-md">{VARIANTS[0].description}</p>
               </div>
@@ -88,11 +88,11 @@ export default function BusinessCardVariantsPage() {
                   sizes="350px"
                   style={{ objectPosition: "center 25%" }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0a1f5c]/40 via-[#0a1f5c]/30 to-[#0a1f5c]/95" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#081546]/40 via-[#081546]/30 to-[#081546]/95" />
 
                 {/* Top: coral mark */}
                 <div className="absolute top-[0.22in] left-[0.28in] flex items-center gap-1.5">
-                  <span className="block w-1.5 h-1.5 rounded-full bg-[#c41e2a]" />
+                  <span className="block w-1.5 h-1.5 rounded-full bg-[#ff6868]" />
                   <span className="text-[7pt] uppercase tracking-[0.22em] text-white/85 font-semibold">
                     Travelyt
                   </span>
@@ -103,7 +103,7 @@ export default function BusinessCardVariantsPage() {
                   <p className="text-[14pt] font-bold leading-tight text-white tracking-tight">
                     Travel light,
                   </p>
-                  <p className="text-[14pt] font-bold leading-tight text-[#c41e2a] tracking-tight italic">
+                  <p className="text-[14pt] font-bold leading-tight text-[#ff6868] tracking-tight italic">
                     arrive smart.
                   </p>
                 </div>
@@ -112,24 +112,24 @@ export default function BusinessCardVariantsPage() {
               {/* Back — White contact */}
               <div className="card-face shadow-2xl bg-white border border-gray-200">
                 <div className="absolute top-[0.22in] left-[0.28in] flex items-center gap-1.5">
-                  <span className="text-[9pt] font-bold tracking-tight text-[#0a1f5c]">Travelyt</span>
-                  <span className="block w-1 h-1 rounded-full bg-[#c41e2a]" />
+                  <span className="text-[9pt] font-bold tracking-tight text-[#081546]">Travelyt</span>
+                  <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
                 </div>
 
                 <div className="absolute left-[0.28in] top-[0.55in]">
-                  <p className="text-[11pt] font-bold leading-tight tracking-tight text-[#0a1f5c]">
+                  <p className="text-[11pt] font-bold leading-tight tracking-tight text-[#081546]">
                     [ Full Name ]
                   </p>
-                  <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#c41e2a]">
+                  <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
                     [ Role / Title ]
                   </p>
                 </div>
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
-                  <div className="space-y-[0.04in] text-[8pt] text-[#0a1f5c]/85 leading-tight">
+                  <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
                     <p>[ +1 (000) 000-0000 ]</p>
                     <p>[ name@travelyt.com ]</p>
-                    <p className="text-[#0a1f5c]/60">travelyt.app</p>
+                    <p className="text-[#081546]/60">travelyt.app</p>
                   </div>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function BusinessCardVariantsPage() {
           <div className="variant-block" data-printing={printing === "boarding"}>
             <div className="variant-header mb-4 flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#c41e2a]">Variant 02</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#ff6868]">Variant 02</p>
                 <h2 className="mt-1 text-lg font-bold text-white">{VARIANTS[1].name}</h2>
                 <p className="mt-1 text-xs text-white/55 max-w-md">{VARIANTS[1].description}</p>
               </div>
@@ -159,16 +159,16 @@ export default function BusinessCardVariantsPage() {
                 <div className="relative flex-1 px-[0.22in] py-[0.18in]">
                   {/* Header strip */}
                   <div className="flex items-center justify-between">
-                    <p className="text-[7pt] uppercase tracking-[0.22em] text-[#0a1f5c]/55 font-semibold">
+                    <p className="text-[7pt] uppercase tracking-[0.22em] text-[#081546]/55 font-semibold">
                       Travelyt Boarding Pass
                     </p>
-                    <span className="block w-1.5 h-1.5 rounded-full bg-[#c41e2a]" />
+                    <span className="block w-1.5 h-1.5 rounded-full bg-[#ff6868]" />
                   </div>
 
                   {/* Center: large brand */}
                   <div className="mt-[0.18in]">
-                    <p className="text-[7pt] uppercase tracking-[0.18em] text-[#0a1f5c]/55 font-semibold">Passenger</p>
-                    <p className="text-[12pt] font-bold leading-tight text-[#0a1f5c] tracking-tight">
+                    <p className="text-[7pt] uppercase tracking-[0.18em] text-[#081546]/55 font-semibold">Passenger</p>
+                    <p className="text-[12pt] font-bold leading-tight text-[#081546] tracking-tight">
                       [ Full Name ]
                     </p>
                   </div>
@@ -176,17 +176,17 @@ export default function BusinessCardVariantsPage() {
                   {/* Bottom row: from/to style codes */}
                   <div className="absolute bottom-[0.18in] left-[0.22in] right-[0.22in] flex items-end justify-between">
                     <div>
-                      <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#0a1f5c]/55 font-semibold">Door</p>
-                      <p className="text-[14pt] font-bold leading-none text-[#0a1f5c] tracking-tight">
+                      <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#081546]/55 font-semibold">Door</p>
+                      <p className="text-[14pt] font-bold leading-none text-[#081546] tracking-tight">
                         HOME
                       </p>
                     </div>
 
-                    <ArrowRight className="h-3.5 w-3.5 text-[#c41e2a] mb-1" strokeWidth={3} />
+                    <ArrowRight className="h-3.5 w-3.5 text-[#ff6868] mb-1" strokeWidth={3} />
 
                     <div className="text-right">
-                      <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#0a1f5c]/55 font-semibold">Gate</p>
-                      <p className="text-[14pt] font-bold leading-none text-[#c41e2a] tracking-tight">
+                      <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#081546]/55 font-semibold">Gate</p>
+                      <p className="text-[14pt] font-bold leading-none text-[#ff6868] tracking-tight">
                         TVT
                       </p>
                     </div>
@@ -194,7 +194,7 @@ export default function BusinessCardVariantsPage() {
                 </div>
 
                 {/* Stub — perforated edge */}
-                <div className="relative w-[0.85in] bg-[#0a1f5c] text-white px-[0.14in] py-[0.18in]">
+                <div className="relative w-[0.85in] bg-[#081546] text-white px-[0.14in] py-[0.18in]">
                   {/* Notches */}
                   <div className="absolute -left-[0.06in] top-1/2 -translate-y-1/2 w-[0.12in] h-[0.12in] rounded-full bg-[#0a0f1f]" />
                   <div className="absolute -left-[0.04in] top-0 bottom-0 flex flex-col justify-around py-[0.05in]">
@@ -206,7 +206,7 @@ export default function BusinessCardVariantsPage() {
                   <div className="flex h-full flex-col justify-between">
                     <div>
                       <p className="text-[6pt] uppercase tracking-[0.18em] text-white/55 font-semibold">Class</p>
-                      <p className="text-[8pt] font-bold leading-tight text-[#c41e2a]">Hands-free</p>
+                      <p className="text-[8pt] font-bold leading-tight text-[#ff6868]">Hands-free</p>
                     </div>
 
                     <div>
@@ -225,25 +225,25 @@ export default function BusinessCardVariantsPage() {
               {/* Back — Contact */}
               <div className="card-face shadow-2xl bg-[#fdfbf7] border border-gray-200">
                 <div className="absolute top-[0.22in] left-[0.28in] flex items-center gap-1.5">
-                  <Plane className="h-3 w-3 text-[#c41e2a]" fill="currentColor" strokeWidth={1} />
-                  <span className="text-[9pt] font-bold tracking-tight text-[#0a1f5c]">Travelyt</span>
+                  <Plane className="h-3 w-3 text-[#ff6868]" fill="currentColor" strokeWidth={1} />
+                  <span className="text-[9pt] font-bold tracking-tight text-[#081546]">Travelyt</span>
                 </div>
 
                 <div className="absolute right-[0.28in] top-[0.22in]">
-                  <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#0a1f5c]/55 font-semibold">Travel light</p>
-                  <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#c41e2a] font-semibold text-right">Arrive smart</p>
+                  <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#081546]/55 font-semibold">Travel light</p>
+                  <p className="text-[6.5pt] uppercase tracking-[0.18em] text-[#ff6868] font-semibold text-right">Arrive smart</p>
                 </div>
 
-                <div className="absolute left-[0.28in] right-[0.28in] top-[0.65in] border-t border-dashed border-[#0a1f5c]/15" />
+                <div className="absolute left-[0.28in] right-[0.28in] top-[0.65in] border-t border-dashed border-[#081546]/15" />
 
                 <div className="absolute left-[0.28in] right-[0.28in] bottom-[0.24in] flex items-end justify-between">
-                  <div className="space-y-[0.04in] text-[8pt] text-[#0a1f5c]/85 leading-tight">
+                  <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
                     <p>[ +1 (000) 000-0000 ]</p>
                     <p>[ name@travelyt.com ]</p>
-                    <p className="text-[#0a1f5c]/60">travelyt.app</p>
+                    <p className="text-[#081546]/60">travelyt.app</p>
                   </div>
 
-                  <p className="text-[6pt] uppercase tracking-[0.2em] text-[#0a1f5c]/45 text-right max-w-[1in] leading-snug">
+                  <p className="text-[6pt] uppercase tracking-[0.2em] text-[#081546]/45 text-right max-w-[1in] leading-snug">
                     We move<br />your bags
                   </p>
                 </div>
@@ -255,7 +255,7 @@ export default function BusinessCardVariantsPage() {
           <div className="variant-block" data-printing={printing === "plane"}>
             <div className="variant-header mb-4 flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#c41e2a]">Variant 03</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#ff6868]">Variant 03</p>
                 <h2 className="mt-1 text-lg font-bold text-white">{VARIANTS[2].name}</h2>
                 <p className="mt-1 text-xs text-white/55 max-w-md">{VARIANTS[2].description}</p>
               </div>
@@ -269,7 +269,7 @@ export default function BusinessCardVariantsPage() {
 
             <div className="flex items-start justify-center gap-8 flex-wrap">
               {/* Front — Plane on Navy */}
-              <div className="card-face shadow-2xl bg-[#0a1f5c] text-white">
+              <div className="card-face shadow-2xl bg-[#081546] text-white">
                 {/* Coral plane silhouette + contrail */}
                 <svg
                   viewBox="0 0 350 200"
@@ -278,7 +278,7 @@ export default function BusinessCardVariantsPage() {
                 >
                   <path
                     d="M -20 180 Q 90 130 180 95 T 380 30"
-                    stroke="#c41e2a"
+                    stroke="#ff6868"
                     strokeWidth="2.5"
                     fill="none"
                     opacity="0.55"
@@ -287,7 +287,7 @@ export default function BusinessCardVariantsPage() {
                 </svg>
 
                 <Plane
-                  className="absolute h-9 w-9 text-[#c41e2a]"
+                  className="absolute h-9 w-9 text-[#ff6868]"
                   style={{ top: "0.32in", right: "0.5in", transform: "rotate(-18deg)" }}
                   fill="currentColor"
                   strokeWidth={0.5}
@@ -296,7 +296,7 @@ export default function BusinessCardVariantsPage() {
                 {/* Wordmark */}
                 <div className="absolute bottom-[0.32in] left-[0.32in]">
                   <p className="text-[20pt] font-bold leading-none tracking-tight text-white">
-                    Travel<span className="text-[#c41e2a]">yt</span>
+                    Travel<span className="text-[#ff6868]">yt</span>
                   </p>
                   <p className="mt-[0.06in] text-[7pt] uppercase tracking-[0.22em] text-white/65 font-semibold">
                     Travel light, arrive smart
@@ -305,7 +305,7 @@ export default function BusinessCardVariantsPage() {
               </div>
 
               {/* Back — Coral with contact */}
-              <div className="card-face shadow-2xl bg-[#c41e2a] text-white">
+              <div className="card-face shadow-2xl bg-[#ff6868] text-white">
                 <div className="absolute top-[0.22in] left-[0.28in] flex items-center gap-1.5">
                   <Plane className="h-3 w-3 text-white" fill="currentColor" strokeWidth={1} />
                   <span className="text-[9pt] font-bold tracking-tight text-white">Travelyt</span>
@@ -335,7 +335,7 @@ export default function BusinessCardVariantsPage() {
           <div className="variant-block" data-printing={printing === "split"}>
             <div className="variant-header mb-4 flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#c41e2a]">Variant 04</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#ff6868]">Variant 04</p>
                 <h2 className="mt-1 text-lg font-bold text-white">{VARIANTS[3].name}</h2>
                 <p className="mt-1 text-xs text-white/55 max-w-md">{VARIANTS[3].description}</p>
               </div>
@@ -360,7 +360,7 @@ export default function BusinessCardVariantsPage() {
                     style={{ objectPosition: "center 30%" }}
                   />
                 </div>
-                <div className="relative flex-1 bg-[#c41e2a] text-white px-[0.22in] py-[0.2in] flex flex-col justify-between">
+                <div className="relative flex-1 bg-[#ff6868] text-white px-[0.22in] py-[0.2in] flex flex-col justify-between">
                   <div>
                     <p className="text-[6.5pt] uppercase tracking-[0.22em] font-semibold text-white/85">
                       Travelyt
@@ -378,11 +378,11 @@ export default function BusinessCardVariantsPage() {
               </div>
 
               {/* Back — Navy with horizontal divider */}
-              <div className="card-face shadow-2xl bg-[#0a1f5c] text-white">
+              <div className="card-face shadow-2xl bg-[#081546] text-white">
                 <div className="absolute top-[0.22in] left-[0.28in] right-[0.28in] flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9pt] font-bold tracking-tight text-white">Travelyt</span>
-                    <span className="block w-1 h-1 rounded-full bg-[#c41e2a]" />
+                    <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
                   </div>
                   <p className="text-[6pt] uppercase tracking-[0.2em] text-white/55 font-semibold">
                     Door to gate
@@ -393,12 +393,12 @@ export default function BusinessCardVariantsPage() {
                   <p className="text-[11pt] font-bold leading-tight tracking-tight text-white">
                     [ Full Name ]
                   </p>
-                  <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#c41e2a]">
+                  <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
                     [ Role / Title ]
                   </p>
                 </div>
 
-                <div className="absolute left-[0.28in] right-[0.28in] top-[1.15in] border-t border-[#c41e2a]/30" />
+                <div className="absolute left-[0.28in] right-[0.28in] top-[1.15in] border-t border-[#ff6868]/30" />
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-white/85 leading-tight">

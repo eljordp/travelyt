@@ -13,7 +13,7 @@ export default function Services() {
         "Weighing and tamper-proof sealing",
         "Airline-compliant bag prep",
         "Direct delivery to your airline",
-        "Live GPS tracking",
+        "GPS custody checkpoints",
         "Insurance on every bag",
       ],
       image: "/service-departures.jpg",
@@ -26,7 +26,7 @@ export default function Services() {
       features: [
         "Post-flight bag collection",
         "Door-to-door delivery",
-        "Real-time tracking updates",
+        "Status and custody updates",
         "Same-day delivery windows",
         "Multi-bag support",
         "Secure chain of custody",

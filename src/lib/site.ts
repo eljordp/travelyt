@@ -1,4 +1,4 @@
-export const SITE_URL = "https://www.travelyt.us";
+export const SITE_URL = "https://travelyt.us";
 export const SITE_HOST = "travelyt.us";
 
 export const SITE_DESCRIPTION =

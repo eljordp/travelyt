@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Home, PlaneLanding, Repeat2, Tag, X } from "lucide-react";
 import {
@@ -8,7 +9,6 @@ import {
   calcPriceBreakdown,
   createBooking,
   formatPrice,
-  getBookingTrackingHref,
   getPromoDiscountCents,
   normalizePromoCode,
   PROMO_CODES,
@@ -19,39 +19,19 @@ import {
   INCLUDED_DISTANCE_MILES,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
+import { AIRPORTS } from "@/lib/airports";
 import {
   AIRLINE_CUTOFF_COPY,
   AIRLINE_CUTOFF_DETAIL,
 } from "@/lib/service-rules";
+import {
+  getCurrentTimeString,
+  getTodayDateString,
+  isValidTravelDate,
+  validateFlightCutoff,
+  validateTravelDateTime,
+} from "@/lib/booking-time";
 import AppChrome from "@/components/AppChrome";
-
-const AIRPORTS = [
-  { code: "ATL", name: "Atlanta Hartsfield-Jackson" },
-  { code: "BOS", name: "Boston Logan" },
-  { code: "BWI", name: "Baltimore/Washington" },
-  { code: "DCA", name: "Washington Reagan National" },
-  { code: "DEN", name: "Denver International" },
-  { code: "DFW", name: "Dallas/Fort Worth" },
-  { code: "DTW", name: "Detroit Metropolitan" },
-  { code: "EWR", name: "New York Newark" },
-  { code: "HOU", name: "Houston Hobby" },
-  { code: "IAD", name: "Washington Dulles" },
-  { code: "IAH", name: "Houston Intercontinental" },
-  { code: "JFK", name: "New York JFK" },
-  { code: "LAS", name: "Las Vegas Harry Reid" },
-  { code: "LAX", name: "Los Angeles International" },
-  { code: "MCO", name: "Orlando International" },
-  { code: "MDW", name: "Chicago Midway" },
-  { code: "MIA", name: "Miami International" },
-  { code: "MSP", name: "Minneapolis-Saint Paul" },
-  { code: "ORD", name: "Chicago O'Hare" },
-  { code: "ORF", name: "Norfolk International" },
-  { code: "PDX", name: "Portland International" },
-  { code: "PHX", name: "Phoenix Sky Harbor" },
-  { code: "RIC", name: "Richmond International" },
-  { code: "SEA", name: "Seattle-Tacoma" },
-  { code: "SFO", name: "San Francisco International" },
-];
 
 type ServiceType = "departure" | "arrival" | "both" | "";
 
@@ -69,6 +49,9 @@ interface FormData {
   email: string;
   phone: string;
   notes: string;
+  declaredValue: string;
+  coverageNoticeAccepted: boolean;
+  restrictedItemsAttested: boolean;
 }
 
 interface DateParts {
@@ -111,6 +94,9 @@ const emptyForm: FormData = {
   email: "",
   phone: "",
   notes: "",
+  declaredValue: "",
+  coverageNoticeAccepted: false,
+  restrictedItemsAttested: false,
 };
 
 export default function QuotePage() {
@@ -127,6 +113,11 @@ export default function QuotePage() {
   const [promoCode, setPromoCode] = useState<string | undefined>(undefined);
   const [promoInput, setPromoInput] = useState("");
   const [promoError, setPromoError] = useState<string | undefined>(undefined);
+  const [capturedLeadKey, setCapturedLeadKey] = useState("");
+  const [addressStatus, setAddressStatus] = useState<
+    "idle" | "verifying" | "verified" | "error"
+  >("idle");
+  const [addressMessage, setAddressMessage] = useState("");
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -140,7 +131,7 @@ export default function QuotePage() {
       if (airport && AIRPORTS.some((a) => a.code === airport)) {
         nextForm.airport = airport;
       }
-      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      if (date && validateTravelDateTime(date) === undefined) {
         nextForm.date = date;
         const [year, month, day] = date.split("-");
         setDateParts({ month, day, year });
@@ -182,6 +173,10 @@ export default function QuotePage() {
   function set(field: keyof FormData, value: string | number | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+    if (field === "address" || field === "airport") {
+      setAddressStatus("idle");
+      setAddressMessage("");
+    }
   }
 
   function setDatePart(part: "month" | "day" | "year", value: string) {
@@ -202,13 +197,23 @@ export default function QuotePage() {
     if (step === 1) {
       if (!form.airport) e.airport = "Select an airport";
       if (!form.address.trim()) e.address = "Enter your pickup or delivery address";
-      if (!form.date) e.date = "Select a travel date";
+      const dateError = validateTravelDateTime(form.date, form.flightTime);
+      if (dateError) e.date = dateError;
+      if (!form.flightTime) e.flightTime = "Select the flight time";
       if (form.distanceMiles.trim()) {
         const miles = Number(form.distanceMiles);
         if (!Number.isFinite(miles) || miles < 0) {
           e.distanceMiles = "Enter a valid mileage estimate";
         }
       }
+      const miles = form.distanceMiles.trim() ? Number(form.distanceMiles) : undefined;
+      const cutoffError = validateFlightCutoff(
+        form.date,
+        form.flightTime,
+        form.service,
+        Number.isFinite(miles) ? miles : undefined
+      );
+      if (cutoffError) e.flightTime = cutoffError;
     }
     if (step === 2) {
       if (!form.name.trim()) e.name = "Full name required";
@@ -216,15 +221,160 @@ export default function QuotePage() {
       else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
       if (!form.phone.trim()) e.phone = "Phone number required";
     }
+    if (step === 3 && !form.restrictedItemsAttested) {
+      e.restrictedItemsAttested =
+        "Confirm your bags do not contain restricted or undeclared high-value items";
+    }
+    if (step === 3 && form.declaredValue.trim()) {
+      const declaredValue = Number(form.declaredValue);
+      if (!Number.isFinite(declaredValue) || declaredValue < 0) {
+        e.declaredValue = "Enter a valid declared value";
+      } else if (declaredValue > 0 && !form.coverageNoticeAccepted) {
+        e.coverageNoticeAccepted = "Confirm the declared-value coverage notice";
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function next() { if (validate()) setStep((s) => s + 1); }
+  function quoteLeadKey() {
+    return [
+      form.email.trim().toLowerCase(),
+      form.service,
+      form.airport,
+      form.date,
+      form.flightTime,
+    ].join("|");
+  }
+
+  async function captureQuoteLead() {
+    const key = quoteLeadKey();
+    const email = form.email.trim().toLowerCase();
+    if (!email || capturedLeadKey === key) return;
+    setCapturedLeadKey(key);
+
+    try {
+      await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          email,
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          interest: "booking-started",
+          source: "quote-contact-step",
+          metadata: {
+            service: form.service,
+            airport: form.airport,
+            address: form.address,
+            date: form.date,
+            flight: form.flight,
+            flightTime: form.flightTime,
+            bags: form.bags,
+            distanceMiles,
+            expressPickup: form.expressPickup,
+            estimatedTotal: estimate,
+            promoCode,
+          },
+        }),
+      });
+    } catch {
+      setCapturedLeadKey("");
+    }
+  }
+
+  async function verifyAddress() {
+    const cleanAddress = form.address.trim();
+    if (!form.airport) {
+      setErrors((current) => ({ ...current, airport: "Select an airport first" }));
+      return;
+    }
+    if (!cleanAddress) {
+      setErrors((current) => ({
+        ...current,
+        address: "Enter your pickup or delivery address first",
+      }));
+      return;
+    }
+
+    setAddressStatus("verifying");
+    setAddressMessage("");
+
+    try {
+      const response = await fetch("/api/address/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          airport: form.airport,
+          address: cleanAddress,
+        }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        address?: string;
+        distanceMiles?: number;
+        distanceSource?: "driving_route" | "straight_line_fallback";
+        distanceText?: string;
+        durationText?: string;
+      };
+
+      if (!response.ok || !data.ok || typeof data.distanceMiles !== "number") {
+        setAddressStatus("error");
+        setAddressMessage(
+          data.error || "Could not verify address. Use manual mileage for now."
+        );
+        return;
+      }
+
+      if (data.distanceSource !== "driving_route") {
+        setForm((current) => ({
+          ...current,
+          address: data.address || current.address,
+        }));
+        setAddressStatus("error");
+        setAddressMessage(
+          "Address verified, but Google route mileage is not enabled yet. Enter the route miles manually so pricing does not use a straight-line estimate."
+        );
+        return;
+      }
+
+      setForm((current) => ({
+        ...current,
+        address: data.address || current.address,
+        distanceMiles: data.distanceMiles!.toFixed(1),
+      }));
+      setErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors.address;
+        delete nextErrors.distanceMiles;
+        return nextErrors;
+      });
+      setAddressStatus("verified");
+      setAddressMessage(
+        data.distanceSource === "driving_route"
+          ? `Verified driving route. Distance set to ${data.distanceMiles.toFixed(1)} miles from ${form.airport}${
+              data.durationText ? `, about ${data.durationText}` : ""
+            }.`
+          : `Verified address. Route mileage was unavailable, so distance is using a straight-line fallback: ${data.distanceMiles.toFixed(1)} miles from ${form.airport}.`
+      );
+    } catch {
+      setAddressStatus("error");
+      setAddressMessage("Could not verify address. Use manual mileage for now.");
+    }
+  }
+
+  function next() {
+    if (!validate()) return;
+    if (step === 2) void captureQuoteLead();
+    setStep((s) => s + 1);
+  }
   function back() { setStep((s) => s - 1); setErrors({}); }
 
   async function submitBooking() {
     if (!form.service || submitting) return;
+    if (!validate()) return;
     setSubmitting(true);
 
     try {
@@ -244,6 +394,7 @@ export default function QuotePage() {
         address: form.address,
         date: form.date,
         flight: form.flight || undefined,
+        flightTime: form.flightTime || undefined,
         bags: form.bags,
         distanceMiles,
         expressPickup: form.expressPickup,
@@ -252,10 +403,30 @@ export default function QuotePage() {
         phone: form.phone,
         notes: timingNotes || undefined,
         promoCode,
+        declaredValueCents:
+          declaredValueCents && declaredValueCents > 0
+            ? declaredValueCents
+            : undefined,
+        coverageElection:
+          declaredValueCents && declaredValueCents > 0
+            ? "declared_value"
+            : "standard",
+        coverageAcceptedAt:
+          declaredValueCents && declaredValueCents > 0
+            ? new Date().toISOString()
+            : undefined,
+        restrictedItemsAttestedAt: new Date().toISOString(),
       });
-      router.push(getBookingTrackingHref(b));
+      router.push(`/booking/${b.id}/pay`);
     } catch (err) {
       console.error("Booking submit network error", err);
+      setErrors((current) => ({
+        ...current,
+        submit:
+          err instanceof Error
+            ? err.message
+            : "Could not submit this request. Please review the details.",
+      }));
       setSubmitting(false);
     }
   }
@@ -267,6 +438,9 @@ export default function QuotePage() {
   };
   const distanceMiles = form.distanceMiles.trim()
     ? Number(form.distanceMiles)
+    : undefined;
+  const declaredValueCents = form.declaredValue.trim()
+    ? Math.round(Number(form.declaredValue) * 100)
     : undefined;
   const subtotalCents =
     form.service && form.bags
@@ -293,7 +467,22 @@ export default function QuotePage() {
   const promoMeta = promoCode ? PROMO_CODES[promoCode] : undefined;
   const estimate = subtotalCents ? formatPrice(totalCents) : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
-  const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white text-navy`;
+  const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all bg-white text-navy`;
+  const todayDate = getTodayDateString();
+  const selectedDateIsToday = form.date === todayDate;
+  const minFlightTime = selectedDateIsToday ? getCurrentTimeString() : undefined;
+
+  function monthDisabled(month: string): boolean {
+    if (!dateParts.year) return false;
+    const monthDate = `${dateParts.year}-${month}-01`;
+    return monthDate.slice(0, 7) < todayDate.slice(0, 7);
+  }
+
+  function dayDisabled(day: string): boolean {
+    if (!dateParts.year || !dateParts.month) return false;
+    const date = `${dateParts.year}-${dateParts.month}-${day}`;
+    return !isValidTravelDate(date) || date < todayDate;
+  }
 
   return (
     <AppChrome title="Book bags">
@@ -306,12 +495,12 @@ export default function QuotePage() {
         </div>
 
         {promoCode && promoMeta && (
-          <div className="flex items-center gap-3 rounded-2xl border border-[#c41e2a]/30 bg-[#c41e2a]/5 px-4 py-3 text-sm">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/15 text-[#c41e2a]">
+          <div className="flex items-center gap-3 rounded-2xl border border-[#ff6868]/30 bg-[#ff6868]/5 px-4 py-3 text-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/15 text-[#ff6868]">
               <Tag className="h-4 w-4" strokeWidth={2} />
             </span>
             <div className="flex-1">
-              <p className="font-bold text-[#c41e2a]">
+              <p className="font-bold text-[#ff6868]">
                 {promoMeta.label}
               </p>
               <p className="text-xs text-navy/65">
@@ -338,7 +527,7 @@ export default function QuotePage() {
                   <div key={label} className="flex items-center flex-1 last:flex-none">
                     <div className="flex flex-col items-center">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                        i < step ? "bg-[#c41e2a] text-white" :
+                        i < step ? "bg-[#ff6868] text-white" :
                         i === step ? "bg-navy text-white" :
                         "bg-gray-100 text-navy/30"
                       }`}>
@@ -349,7 +538,7 @@ export default function QuotePage() {
                       <span className={`text-xs mt-1 font-medium hidden sm:block ${i === step ? "text-navy" : "text-navy/30"}`}>{label}</span>
                     </div>
                     {i < STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all ${i < step ? "bg-[#c41e2a]" : "bg-gray-100"}`} />
+                      <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all ${i < step ? "bg-[#ff6868]" : "bg-gray-100"}`} />
                     )}
                   </div>
                 ))}
@@ -373,21 +562,21 @@ export default function QuotePage() {
                         aria-pressed={form.service === opt.value}
                         className={`w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer ${
                           form.service === opt.value
-                            ? "border-[#c41e2a] bg-[#c41e2a]/5"
+                            ? "border-[#ff6868] bg-[#ff6868]/5"
                             : "border-gray-100 hover:border-gray-200"
                         }`}>
                         <div className="flex items-start gap-4">
                           <span className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-                            form.service === opt.value ? "bg-[#c41e2a] text-white" : "bg-[#f5f0ee] text-navy"
+                            form.service === opt.value ? "bg-[#ff6868] text-white" : "bg-[#f5f0ee] text-navy"
                           }`}>
                             {opt.icon}
                           </span>
                           <div>
-                            <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#c41e2a]" : "text-navy"}`}>{opt.title}</div>
+                            <div className={`font-bold mb-1 ${form.service === opt.value ? "text-[#ff6868]" : "text-navy"}`}>{opt.title}</div>
                             <div className="text-sm text-navy/70">{opt.desc}</div>
                           </div>
                           <div className={`ml-auto w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-all ${
-                            form.service === opt.value ? "border-[#c41e2a] bg-[#c41e2a]" : "border-gray-200"
+                            form.service === opt.value ? "border-[#ff6868] bg-[#ff6868]" : "border-gray-200"
                           }`}>
                             {form.service === opt.value && (
                               <Check className="w-full h-full p-0.5 text-white" strokeWidth={3} />
@@ -411,9 +600,9 @@ export default function QuotePage() {
 
                   {/* Airport */}
                   <div>
-                    <label htmlFor="quote-airport" className={labelClass}>Airport <span className="text-[#c41e2a]">*</span></label>
+                    <label htmlFor="quote-airport" className={labelClass}>Airport <span className="text-[#ff6868]">*</span></label>
                     <select id="quote-airport" name="airport" required value={form.airport} onChange={(e) => set("airport", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all bg-white appearance-none text-navy`}>
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.airport ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all bg-white appearance-none text-navy`}>
                       <option value="">Select airport...</option>
                       {AIRPORTS.map((a) => (
                         <option key={a.code} value={a.code}>{a.name} ({a.code})</option>
@@ -430,18 +619,43 @@ export default function QuotePage() {
                   {/* Address */}
                   <div>
                     <label htmlFor="quote-address" className={labelClass}>
-                      {form.service === "arrival" ? "Delivery Address" : "Pickup Address"} <span className="text-[#c41e2a]">*</span>
+                      {form.service === "arrival" ? "Delivery Address" : "Pickup Address"} <span className="text-[#ff6868]">*</span>
                     </label>
                     <input id="quote-address" name="address" required type="text"
                       placeholder={form.service === "arrival" ? "Where should we deliver your bags?" : "Where should we collect your bags?"}
                       value={form.address} onChange={(e) => set("address", e.target.value)}
-                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
+                      className={`w-full px-4 py-3 rounded-xl border ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`} />
                     {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => void verifyAddress()}
+                        disabled={addressStatus === "verifying"}
+                        className="inline-flex items-center justify-center rounded-xl border border-navy/15 px-4 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-navy/5 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+                      >
+                        {addressStatus === "verifying"
+                          ? "Verifying..."
+                          : addressStatus === "verified"
+                            ? "Verified address"
+                            : "Verify address"}
+                      </button>
+                      {addressMessage && (
+                        <p
+                          className={`text-xs leading-relaxed ${
+                            addressStatus === "verified"
+                              ? "text-green-700"
+                              : "text-navy/65"
+                          }`}
+                        >
+                          {addressMessage}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div>
                     <label htmlFor="quote-distance" className={labelClass}>
-                      Distance from airport <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                      Route distance from airport <span className="text-navy/70 font-normal normal-case">(optional)</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -454,7 +668,7 @@ export default function QuotePage() {
                         placeholder="Example: 34"
                         value={form.distanceMiles}
                         onChange={(e) => set("distanceMiles", e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors.distanceMiles ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`}
+                        className={`w-full px-4 py-3 rounded-xl border ${errors.distanceMiles ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`}
                       />
                       <span className="shrink-0 text-sm font-semibold text-navy/60">
                         miles
@@ -464,15 +678,43 @@ export default function QuotePage() {
                       <p className="text-xs text-red-500 mt-1">{errors.distanceMiles}</p>
                     ) : (
                       <p className="text-xs text-navy/70 mt-1">
-                        First {INCLUDED_DISTANCE_MILES} miles are included. Additional miles are {formatPrice(STANDARD_DISTANCE_RATE_CENTS)}/mi standard or {formatPrice(EXPRESS_DISTANCE_RATE_CENTS)}/mi with express.
+                        First {INCLUDED_DISTANCE_MILES} route miles are included. Additional miles are {formatPrice(STANDARD_DISTANCE_RATE_CENTS)}/mi standard or {formatPrice(EXPRESS_DISTANCE_RATE_CENTS)}/mi with express.
                       </p>
+                    )}
+                    {priceBreakdown && priceBreakdown.distanceMiles !== undefined && (
+                      <div className="mt-3 rounded-xl border border-navy/10 bg-[#f6f7fb] p-4 text-sm">
+                        {priceBreakdown.distanceSurchargeCents > 0 ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="font-semibold text-navy">
+                                Mileage added
+                              </span>
+                              <span className="font-bold text-[#ff6868]">
+                                {formatPrice(priceBreakdown.distanceSurchargeCents)}
+                              </span>
+                            </div>
+                            <p className="text-xs leading-relaxed text-navy/65">
+                              {priceBreakdown.extraDistanceMiles} mile
+                              {priceBreakdown.extraDistanceMiles === 1 ? "" : "s"} beyond the included {INCLUDED_DISTANCE_MILES} at {formatPrice(priceBreakdown.distanceRateCents)}/mi.
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold text-navy/70">
+                            No mileage charge. This route is within the included {INCLUDED_DISTANCE_MILES} miles.
+                          </p>
+                        )}
+                        <div className="mt-3 flex items-center justify-between gap-4 border-t border-navy/10 pt-3">
+                          <span className="font-semibold text-navy">Updated estimate</span>
+                          <span className="font-bold text-navy">{estimate}</span>
+                        </div>
+                      </div>
                     )}
                   </div>
 
                   {/* Date + Flight */}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
-                      <label className={labelClass}>Travel Date <span className="text-[#c41e2a]">*</span></label>
+                      <label className={labelClass}>Travel Date <span className="text-[#ff6868]">*</span></label>
                       <div className="grid grid-cols-3 gap-2">
                         <select
                           id="quote-date-month"
@@ -483,7 +725,11 @@ export default function QuotePage() {
                         >
                           <option value="">Month</option>
                           {MONTHS.map(([value, label]) => (
-                            <option key={value} value={value}>
+                            <option
+                              key={value}
+                              value={value}
+                              disabled={monthDisabled(value)}
+                            >
                               {label}
                             </option>
                           ))}
@@ -497,7 +743,11 @@ export default function QuotePage() {
                         >
                           <option value="">Day</option>
                           {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                            <option key={d} value={String(d).padStart(2, "0")}>
+                            <option
+                              key={d}
+                              value={String(d).padStart(2, "0")}
+                              disabled={dayDisabled(String(d).padStart(2, "0"))}
+                            >
                               {d}
                             </option>
                           ))}
@@ -522,20 +772,24 @@ export default function QuotePage() {
                     <div>
                       <label htmlFor="quote-flight" className={labelClass}>Flight Number <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
                       <input id="quote-flight" name="flight" type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy" />
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy" />
                     </div>
                     <div>
                       <label htmlFor="quote-flight-time" className={labelClass}>
-                        {form.service === "arrival" ? "Arrival Time" : "Departure Time"} <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                        {form.service === "arrival" ? "Arrival Time" : "Departure Time"} <span className="text-[#ff6868]">*</span>
                       </label>
                       <input
                         id="quote-flight-time"
                         name="flightTime"
                         type="time"
+                        min={minFlightTime}
                         value={form.flightTime}
                         onChange={(e) => set("flightTime", e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy"
+                        className={`w-full px-4 py-3 rounded-xl border ${errors.flightTime ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`}
                       />
+                      {errors.flightTime && (
+                        <p className="mt-1 text-xs text-red-500">{errors.flightTime}</p>
+                      )}
                     </div>
                   </div>
                   {form.service !== "arrival" && (
@@ -565,13 +819,13 @@ export default function QuotePage() {
                       aria-pressed={form.expressPickup}
                       className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                         form.expressPickup
-                          ? "border-[#c41e2a] bg-[#c41e2a]/5"
+                          ? "border-[#ff6868] bg-[#ff6868]/5"
                           : "border-gray-100 hover:border-gray-200"
                       }`}
                     >
                       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${
                         form.expressPickup
-                          ? "border-[#c41e2a] bg-[#c41e2a] text-white"
+                          ? "border-[#ff6868] bg-[#ff6868] text-white"
                           : "border-gray-200"
                       }`}>
                         {form.expressPickup && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -603,11 +857,11 @@ export default function QuotePage() {
                     { id: "phone", label: "Phone Number", type: "tel", placeholder: "+1 (555) 000-0000" },
                   ].map((f) => (
                     <div key={f.id}>
-                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#c41e2a]">*</span></label>
+                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#ff6868]">*</span></label>
                       <input id={`quote-${f.id}`} name={f.id} required type={f.type} placeholder={f.placeholder}
                         value={form[f.id as keyof FormData] as string}
                         onChange={(e) => set(f.id as keyof FormData, e.target.value)}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all text-navy`} />
+                        className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`} />
                       {errors[f.id] && <p className="text-xs text-red-500 mt-1">{errors[f.id]}</p>}
                     </div>
                   ))}
@@ -616,7 +870,7 @@ export default function QuotePage() {
                     <label htmlFor="quote-notes" className={labelClass}>Special Instructions <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
                     <textarea id="quote-notes" name="notes" rows={3} placeholder="Fragile items, oversized bags, gate code, etc."
                       value={form.notes} onChange={(e) => set("notes", e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all resize-none text-navy" />
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all resize-none text-navy" />
                   </div>
                 </div>
               )}
@@ -649,7 +903,7 @@ export default function QuotePage() {
                     {priceBreakdown?.distanceMiles !== undefined && (
                       <Row
                         label="Distance"
-                        value={`${priceBreakdown.distanceMiles} miles from airport`}
+                        value={`${priceBreakdown.distanceMiles} route miles from airport`}
                       />
                     )}
                     {priceBreakdown && subtotalCents > 0 && (
@@ -671,7 +925,7 @@ export default function QuotePage() {
                           />
                         )}
                         {priceBreakdown.automaticDiscountCents > 0 && (
-                          <div className="flex justify-between gap-4 text-[#c41e2a]">
+                          <div className="flex justify-between gap-4 text-[#ff6868]">
                             <span className="min-w-0 flex-1 font-medium">
                               {priceBreakdown.automaticDiscountLabel}
                             </span>
@@ -681,7 +935,7 @@ export default function QuotePage() {
                           </div>
                         )}
                         {discountCents > 0 && promoMeta ? (
-                          <div className="flex justify-between gap-4 text-[#c41e2a]">
+                          <div className="flex justify-between gap-4 text-[#ff6868]">
                             <span className="min-w-0 flex-1 font-medium">
                               {promoMeta.label} ({promoCode})
                             </span>
@@ -696,6 +950,62 @@ export default function QuotePage() {
                         </div>
                       </>
                     )}
+                    <div className="border-t border-gray-200 pt-4">
+                      <label htmlFor="quote-declared-value" className={labelClass}>
+                        Declared Bag Value <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-navy/60">$</span>
+                        <input
+                          id="quote-declared-value"
+                          inputMode="decimal"
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="0"
+                          value={form.declaredValue}
+                          onChange={(event) => set("declaredValue", event.target.value)}
+                          className={`w-full rounded-xl border px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 ${
+                            errors.declaredValue ? "border-red-400 bg-red-50" : "border-gray-200"
+                          }`}
+                        />
+                      </div>
+                      {errors.declaredValue && (
+                        <p className="mt-1 text-xs text-red-500">{errors.declaredValue}</p>
+                      )}
+                      <p className="mt-2 text-xs leading-relaxed text-navy/65">
+                        Standard coverage applies unless Travelyt approves a
+                        declared-value election during manual confirmation.
+                      </p>
+                      {declaredValueCents && declaredValueCents > 0 ? (
+                        <label
+                          className={`mt-3 flex items-start gap-3 rounded-xl border p-3 text-xs leading-relaxed ${
+                            errors.coverageNoticeAccepted
+                              ? "border-red-300 bg-red-50 text-red-700"
+                              : "border-navy/10 bg-white text-navy/70"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={form.coverageNoticeAccepted}
+                            onChange={(event) =>
+                              set("coverageNoticeAccepted", event.target.checked)
+                            }
+                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                          />
+                          <span>
+                            I understand declared value is reviewed by Travelyt
+                            before custody and may require extra documentation,
+                            exclusions, or adjusted coverage terms.
+                          </span>
+                        </label>
+                      ) : null}
+                      {errors.coverageNoticeAccepted && (
+                        <p className="mt-2 text-xs text-red-500">
+                          {errors.coverageNoticeAccepted}
+                        </p>
+                      )}
+                    </div>
                     <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
                       <Row label="Name" value={form.name} />
                       <Row label="Email" value={form.email} />
@@ -718,7 +1028,7 @@ export default function QuotePage() {
                             setPromoError(undefined);
                           }}
                           placeholder="Enter promo code"
-                          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm tracking-wide outline-none focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10"
+                          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm tracking-wide outline-none focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
                         />
                         <button
                           type="button"
@@ -735,16 +1045,50 @@ export default function QuotePage() {
                   )}
                   <p className="mt-4 text-xs leading-relaxed text-navy/70">
                     Base estimate includes pickup or delivery within {INCLUDED_DISTANCE_MILES}
-                    miles of the airport, sealing, tracking, and standard
+                    route miles of the airport, sealing, tracking, and standard
                     coverage. Addresses farther than {INCLUDED_DISTANCE_MILES}
                     miles may include a per-mile surcharge in the final
                     confirmation. Pickup time is confirmed based on distance,
                     traffic, and airline baggage cutoff rules. Airline baggage fees, if any, are paid
                     separately to the airline. Promotional codes apply to
                     eligible Travelyt service fees after automatic bag discounts.
-                    A Travelyt agent may ask to confirm the pickup or delivery
-                    contact&apos;s ID before bags change hands.
                   </p>
+
+                  <label
+                    className={`mt-4 flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed ${
+                      errors.restrictedItemsAttested
+                        ? "border-red-300 bg-red-50 text-red-700"
+                        : "border-navy/10 bg-navy/[0.03] text-navy/70"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.restrictedItemsAttested}
+                      onChange={(event) =>
+                        set("restrictedItemsAttested", event.target.checked)
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                    />
+                    <span>
+                      I confirm these bags do not contain prohibited,
+                      illegal, hazardous, or undeclared high-value items, and I
+                      understand Travelyt may pause custody if the contents or
+                      identity checks cannot be verified.{" "}
+                      <Link
+                        href="/prohibited-items"
+                        className="font-semibold text-[#ff6868] underline underline-offset-2"
+                        target="_blank"
+                      >
+                        Review prohibited items
+                      </Link>
+                      .
+                    </span>
+                  </label>
+                  {errors.restrictedItemsAttested && (
+                    <p className="mt-2 text-xs text-red-500">
+                      {errors.restrictedItemsAttested}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -758,15 +1102,22 @@ export default function QuotePage() {
                 )}
                 {step < 3 ? (
                   <button type="button" onClick={next}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
+                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer">
                     Continue →
                   </button>
                 ) : (
-                  <button type="button" onClick={submitBooking}
-                    disabled={submitting}
-                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
-                    {submitting ? "Submitting…" : "Submit Request →"}
-                  </button>
+                  <div className="flex flex-col items-end gap-2">
+                    {errors.submit && (
+                      <p className="max-w-sm text-right text-xs text-red-500">
+                        {errors.submit}
+                      </p>
+                    )}
+                    <button type="button" onClick={submitBooking}
+                      disabled={submitting}
+                      className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                      {submitting ? "Submitting…" : "Submit Request →"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

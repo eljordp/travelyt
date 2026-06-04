@@ -21,7 +21,7 @@ export default function SupportPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="mx-auto max-w-3xl px-6">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-[#c41e2a]">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-[#ff6868]">
             Support
           </p>
           <h1 className="mb-4 text-4xl font-bold text-navy md:text-5xl">
@@ -39,7 +39,7 @@ export default function SupportPage() {
               <p className="mt-2 text-sm leading-relaxed text-navy/70">
                 For quote requests, route availability, bag handoff questions,
                 or launch timing, email{" "}
-                <a className="font-semibold text-[#c41e2a]" href={`mailto:${SUPPORT_EMAIL}`}>
+                <a className="font-semibold text-[#ff6868]" href={`mailto:${SUPPORT_EMAIL}`}>
                   {SUPPORT_EMAIL}
                 </a>
                 .
@@ -51,7 +51,7 @@ export default function SupportPage() {
               <p className="mt-2 text-sm leading-relaxed text-navy/70">
                 You can delete your account from Profile → Settings in the app.
                 For privacy requests or help deleting data, email{" "}
-                <a className="font-semibold text-[#c41e2a]" href={`mailto:${PRIVACY_EMAIL}`}>
+                <a className="font-semibold text-[#ff6868]" href={`mailto:${PRIVACY_EMAIL}`}>
                   {PRIVACY_EMAIL}
                 </a>
                 .
@@ -61,10 +61,10 @@ export default function SupportPage() {
             <section className="rounded-2xl border border-navy/10 p-5">
               <h2 className="text-lg font-bold text-navy">Legal links</h2>
               <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
-                <Link className="text-[#c41e2a]" href="/privacy">
+                <Link className="text-[#ff6868]" href="/privacy">
                   Privacy Policy
                 </Link>
-                <Link className="text-[#c41e2a]" href="/terms">
+                <Link className="text-[#ff6868]" href="/terms">
                   Terms of Service
                 </Link>
               </div>

@@ -5,6 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 import { SITE_URL } from "@/lib/site";
+import {
+  normalizePhone,
+  validatePassword,
+  validatePhone,
+} from "@/lib/auth-policy";
 
 function nextPath() {
   if (typeof window === "undefined") return "/profile";
@@ -16,6 +21,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirm: "",
     agreed: false,
@@ -29,8 +35,10 @@ export default function RegisterPage() {
     if (!form.name.trim()) e.name = "Full name is required";
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
-    if (!form.password) e.password = "Password is required";
-    else if (form.password.length < 8) e.password = "At least 8 characters";
+    const phoneError = validatePhone(form.phone);
+    if (phoneError) e.phone = phoneError;
+    const passwordError = validatePassword(form.password);
+    if (passwordError) e.password = passwordError;
     if (form.password !== form.confirm) e.confirm = "Passwords don't match";
     if (!form.agreed) e.agreed = "You must agree to continue";
     return e;
@@ -49,6 +57,7 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     setNotice("");
+    const phone = normalizePhone(form.phone);
     const { data, error } = await supabase.auth.signUp({
       email: form.email.trim().toLowerCase(),
       password: form.password,
@@ -56,6 +65,10 @@ export default function RegisterPage() {
         emailRedirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath())}`,
         data: {
           full_name: form.name.trim(),
+          phone,
+          role: "customer",
+          phone_verified: false,
+          mfa_required: false,
         },
       },
     });
@@ -66,12 +79,9 @@ export default function RegisterPage() {
       return;
     }
 
-    if (data.session) {
-      window.location.href = nextPath();
-      return;
-    }
+    if (data.session) await supabase.auth.signOut();
 
-    setNotice("Check your email to confirm your Travelyt account.");
+    setNotice("Check your email to confirm your Travelyt account before signing in.");
   }
 
   const field = (id: string) => ({
@@ -88,7 +98,10 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg shadow-navy/5 p-8">
         <h1 className="text-2xl font-bold text-navy mb-1">Create your account</h1>
-        <p className="text-sm text-navy/70 mb-8">Start traveling without the baggage stress.</p>
+        <p className="text-sm text-navy/70 mb-8">
+          Start traveling without the baggage stress. ID verification may be
+          required before your first custody handoff.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {errors.form && (
@@ -105,7 +118,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-name" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Full Name</label>
             <input id="reg-name" type="text" placeholder="Jordan Williams" {...field("name")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
 
@@ -113,15 +126,23 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-email" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Email</label>
             <input id="reg-email" type="email" placeholder="you@example.com" {...field("email")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label htmlFor="reg-phone" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Phone Number</label>
+            <input id="reg-phone" type="tel" placeholder="+1 555 000 0000" {...field("phone")}
+              className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
+            {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
           </div>
 
           {/* Password */}
           <div>
             <label htmlFor="reg-password" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Password</label>
-            <input id="reg-password" type="password" placeholder="At least 8 characters" {...field("password")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+            <input id="reg-password" type="password" placeholder="10+ characters with a number" {...field("password")}
+              className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
 
@@ -129,7 +150,7 @@ export default function RegisterPage() {
           <div>
             <label htmlFor="reg-confirm" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Confirm Password</label>
             <input id="reg-confirm" type="password" placeholder="Repeat password" {...field("confirm")}
-              className={`w-full px-4 py-3 rounded-xl border ${errors.confirm ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all`} />
+              className={`w-full px-4 py-3 rounded-xl border ${errors.confirm ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm}</p>}
           </div>
 
@@ -138,26 +159,33 @@ export default function RegisterPage() {
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={form.agreed}
                 onChange={(e) => setForm((f) => ({ ...f, agreed: e.target.checked }))}
-                className="mt-0.5 accent-[#c41e2a]" />
+                className="mt-0.5 accent-[#ff6868]" />
               <span className="text-sm text-navy/70">
                 I agree to the{" "}
-                <Link href="/terms" className="text-[#c41e2a] hover:underline">Terms of Service</Link>{" "}
+                <Link href="/terms" className="text-[#ff6868] hover:underline">Terms of Service</Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-[#c41e2a] hover:underline">Privacy Policy</Link>
+                <Link href="/privacy" className="text-[#ff6868] hover:underline">Privacy Policy</Link>
               </span>
             </label>
             {errors.agreed && <p className="text-xs text-red-500 mt-1">{errors.agreed}</p>}
           </div>
 
+          <p className="rounded-xl bg-navy/[0.03] px-4 py-3 text-xs leading-relaxed text-navy/65">
+            Before a live pickup, Travelyt may verify a government ID
+            (driver&apos;s license or passport) plus a selfie or liveness video.
+            This protects customers, drivers, employees, and the chain of
+            custody.
+          </p>
+
           <button type="submit" disabled={submitting}
-            className="w-full bg-gradient-to-r from-[#c41e2a] to-[#c41e2a] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+            className="w-full bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white py-3.5 rounded-xl font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-wait">
             {submitting ? "Creating account…" : "Create Account"}
           </button>
         </form>
 
         <p className="text-center text-sm text-navy/70 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#c41e2a] font-semibold hover:underline">Sign in</Link>
+          <Link href="/login" className="text-[#ff6868] font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

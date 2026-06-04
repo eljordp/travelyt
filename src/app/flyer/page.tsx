@@ -40,7 +40,7 @@ export default function FlyerPage() {
           {/* Top navy band */}
           <div className="bg-[#081546] text-white px-12 py-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Send className="w-[34px] h-[34px] text-[#c41e2a]" fill="currentColor" strokeWidth={1.2} />
+              <Send className="w-[34px] h-[34px] text-[#ff6868]" fill="currentColor" strokeWidth={1.2} />
               <div className="text-2xl font-bold tracking-tight">Travelyt</div>
             </div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
@@ -50,7 +50,7 @@ export default function FlyerPage() {
 
           {/* Hero */}
           <div className="px-12 pt-14 pb-10">
-            <div className="text-xs uppercase tracking-[0.3em] text-[#c41e2a] font-bold mb-5">
+            <div className="text-xs uppercase tracking-[0.3em] text-[#ff6868] font-bold mb-5">
               Door-to-Door Baggage Service
             </div>
             <h1
@@ -61,7 +61,7 @@ export default function FlyerPage() {
               <br />
               your bags.
               <br />
-              <span className="text-[#c41e2a]">You move freely.</span>
+              <span className="text-[#ff6868]">You move freely.</span>
             </h1>
             <p className="text-lg leading-relaxed max-w-[5.5in] text-[#081546]/75">
               Travelyt picks up your luggage at home, transports it to the
@@ -95,7 +95,7 @@ export default function FlyerPage() {
                   n: "02",
                   title: "Tracked transit",
                   body:
-                    "Bags are transported to the airport with GPS tracking and a tamper-evident seal log.",
+                    "Bags are transported to the airport with GPS custody checkpoints and a tamper-evident seal log.",
                 },
                 {
                   n: "03",
@@ -105,7 +105,7 @@ export default function FlyerPage() {
                 },
               ].map((step) => (
                 <div key={step.n}>
-                  <div className="text-[#c41e2a] text-2xl font-bold mb-2">
+                  <div className="text-[#ff6868] text-2xl font-bold mb-2">
                     {step.n}
                   </div>
                   <div className="font-bold text-base mb-1.5">{step.title}</div>
@@ -163,7 +163,7 @@ export default function FlyerPage() {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-[0.3em] text-[#c41e2a] font-bold mb-2">
+              <div className="text-xs uppercase tracking-[0.3em] text-[#ff6868] font-bold mb-2">
                 Reserve early
               </div>
               <div
@@ -178,7 +178,7 @@ export default function FlyerPage() {
           </div>
 
           {/* Bottom band */}
-          <div className="bg-[#c41e2a] text-white px-12 py-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em]">
+          <div className="bg-[#ff6868] text-white px-12 py-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em]">
             <span>Doorstep · Airport · Destination</span>
             <span>{SITE_HOST}</span>
           </div>

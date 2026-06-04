@@ -91,8 +91,8 @@ export default function BagStatus({
             </p>
           ) : null}
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#c41e2a]/10 px-3 py-1 text-xs font-semibold text-[#c41e2a]">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#c41e2a]" />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ff6868]/10 px-3 py-1 text-xs font-semibold text-[#ff6868]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff6868]" />
           Live
         </span>
       </div>
@@ -111,7 +111,7 @@ export default function BagStatus({
                 <span
                   aria-hidden
                   className={`absolute left-[18px] top-9 h-[calc(100%-1.5rem)] w-px ${
-                    done ? "bg-[#c41e2a]" : "bg-navy/10"
+                    done ? "bg-[#ff6868]" : "bg-navy/10"
                   }`}
                 />
               ) : null}
@@ -120,7 +120,7 @@ export default function BagStatus({
                 <span
                   className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white ${
                     done
-                      ? "bg-[#c41e2a] text-white"
+                      ? "bg-[#ff6868] text-white"
                       : active
                       ? "bg-navy text-white"
                       : "bg-[#f6f7fb] text-navy/40"

@@ -3,7 +3,7 @@ import {
   adminAuthConfigured,
   createAdminSession,
   setAdminSessionCookie,
-  verifyAdminCredentials,
+  verifyAdminCredentialsWithSupabase,
 } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -27,18 +27,22 @@ export async function POST(request: Request) {
     const email = body.email ?? "";
     const password = body.password ?? "";
 
-    if (!verifyAdminCredentials(email, password)) {
-      return bad("Email or password is incorrect.", 401);
+    const role = await verifyAdminCredentialsWithSupabase(email, password);
+    if (!role) {
+      return bad(
+        "Email/password is incorrect, or this account is not marked as manager/admin/employee/dispatcher.",
+        401
+      );
     }
 
     const response = NextResponse.json({
       ok: true,
       email: email.trim().toLowerCase(),
+      role,
     });
-    setAdminSessionCookie(response, createAdminSession(email));
+    setAdminSessionCookie(response, createAdminSession(email, role));
     return response;
   } catch {
     return bad("Could not sign in.");
   }
 }
-

@@ -3,11 +3,11 @@
 @theme inline {
   --color-navy: #081546;
   --color-navy-light: #0f2160;
-  --color-coral: #c41e2a;
-  --color-coral-light: #e63946;
-  --color-purple: #c41e2a;
-  --color-purple-light: #e63946;
-  --color-cyan: #e63946;
+  --color-coral: #ff6868;
+  --color-coral-light: #ff7a85;
+  --color-purple: #ff6868;
+  --color-purple-light: #ff7a85;
+  --color-cyan: #ff7a85;
   --color-blue-light: #f5f0ee;
   --color-background: #ffffff;
   --color-foreground: #171717;

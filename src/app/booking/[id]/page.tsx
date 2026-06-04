@@ -7,17 +7,20 @@ import AppChrome from "@/components/AppChrome";
 import { enableBookingPush, isNative } from "@/lib/native";
 import {
   approveProof,
+  confirmDelivery,
   type Booking,
   type BookingStatus,
   formatPrice,
   getBooking,
+  getBookingStatusLabel,
+  getLastApiFailureMessage,
   subscribe,
   SERVICE_LABELS,
-  STATUS_LABELS,
   STATUS_ORDER,
   statusIndex,
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
+import { latestLocationEvent } from "@/lib/ops-rules";
 
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
 
@@ -30,6 +33,10 @@ export default function BookingPage() {
     "idle" | "working" | "enabled" | "denied"
   >("idle");
   const [approvingProof, setApprovingProof] = useState<number | null>(null);
+  const [signatureName, setSignatureName] = useState("");
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [confirmationError, setConfirmationError] = useState("");
 
   useEffect(() => {
     const handle = window.setTimeout(() => setNative(isNative()), 0);
@@ -83,7 +90,10 @@ export default function BookingPage() {
     );
   }
 
-  const current = statusIndex(booking.status);
+  const terminalStatus =
+    booking.status === "cancelled" || booking.status === "issue";
+  const current = terminalStatus ? -1 : statusIndex(booking.status);
+  const lastLocation = latestLocationEvent(booking);
   const enableLiveUpdates = async () => {
     setPushState("working");
     const ok = await enableBookingPush(booking.id);
@@ -95,6 +105,34 @@ export default function BookingPage() {
     if (updated) setBooking(updated);
     setApprovingProof(null);
   };
+  const confirmCustomerDelivery = async () => {
+    setConfirmationError("");
+    if (!signatureName.trim()) {
+      setConfirmationError("Enter the receiving customer name.");
+      return;
+    }
+    if (!confirmationCode.trim()) {
+      setConfirmationError("Enter the confirmation code.");
+      return;
+    }
+
+    setConfirmingDelivery(true);
+    const updated = await confirmDelivery(
+      booking.id,
+      signatureName,
+      confirmationCode.trim()
+    );
+    if (updated) {
+      setBooking(updated);
+      setSignatureName("");
+      setConfirmationCode("");
+    } else {
+      setConfirmationError(
+        getLastApiFailureMessage() || "Could not confirm delivery. Check the code and try again."
+      );
+    }
+    setConfirmingDelivery(false);
+  };
 
   return (
     <AppChrome title="Tracking">
@@ -104,13 +142,23 @@ export default function BookingPage() {
             Booking {booking.id}
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">
-            {STATUS_LABELS[booking.status]}
+            {getBookingStatusLabel(booking)}
           </h1>
           <p className="text-navy/70">
             {SERVICE_LABELS[booking.service]} · {booking.bags} bag
             {booking.bags > 1 ? "s" : ""} · {booking.date}
           </p>
         </div>
+
+        {terminalStatus && (
+          <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm leading-relaxed text-red-800">
+            <div className="font-bold">{getBookingStatusLabel(booking)}</div>
+            <p className="mt-1">
+              Travelyt operations needs to review this booking before it can
+              continue. Contact support if you need help.
+            </p>
+          </div>
+        )}
 
         {/* Status timeline */}
         <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
@@ -127,7 +175,7 @@ export default function BookingPage() {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0 ${
                       isCurrent
-                        ? "bg-[#c41e2a] text-white ring-4 ring-[#c41e2a]/20 animate-pulse"
+                        ? "bg-[#ff6868] text-white ring-4 ring-[#ff6868]/20 animate-pulse"
                         : isDone
                           ? "bg-navy text-white"
                           : "bg-gray-100 text-navy/30"
@@ -137,7 +185,7 @@ export default function BookingPage() {
                   </div>
                   <div className="flex-1">
                     <div className={`font-semibold text-sm ${isDone ? "text-navy" : "text-navy/30"}`}>
-                      {STATUS_LABELS[s]}
+                      {getBookingStatusLabel({ service: booking.service, status: s })}
                     </div>
                   </div>
                 </div>
@@ -208,6 +256,35 @@ export default function BookingPage() {
                     {p.note && (
                       <div className="text-xs text-navy/70 mt-2">{p.note}</div>
                     )}
+                    {p.handoff && (
+                      <div className="mt-2 rounded-lg bg-navy/5 px-3 py-2 text-xs text-navy/70">
+                        <div className="font-semibold text-navy">
+                          Accepted by {p.handoff.recipientName}
+                        </div>
+                        <div>
+                          {p.handoff.organization}
+                          {p.handoff.recipientRole
+                            ? ` · ${p.handoff.recipientRole}`
+                            : ""}
+                        </div>
+                        {p.handoff.badgeOrReference && (
+                          <div>Reference: {p.handoff.badgeOrReference}</div>
+                        )}
+                      </div>
+                    )}
+                    {p.location && (
+                      <a
+                        href={`https://maps.google.com/?q=${p.location.latitude},${p.location.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block text-xs font-semibold text-[#ff6868] hover:underline"
+                      >
+                        View proof location
+                        {p.location.accuracyMeters
+                          ? ` (${p.location.accuracyMeters}m accuracy)`
+                          : ""}
+                      </a>
+                    )}
                     {p.approvedAt ? (
                       <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">
                         Approved by customer · {new Date(p.approvedAt).toLocaleString()}
@@ -217,7 +294,7 @@ export default function BookingPage() {
                         type="button"
                         onClick={() => approveCustodyProof(i)}
                         disabled={approvingProof === i}
-                        className="mt-3 w-full rounded-lg bg-[#c41e2a] px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                        className="mt-3 w-full rounded-lg bg-[#ff6868] px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
                       >
                         {approvingProof === i ? "Approving..." : "Approve seal proof"}
                       </button>
@@ -227,6 +304,98 @@ export default function BookingPage() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {lastLocation && (
+          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-6 mb-5">
+            <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-3">
+              Last custody location
+            </h2>
+            <div className="rounded-xl border border-navy/10 bg-navy/[0.03] px-4 py-3 text-sm text-navy/70">
+              <div className="font-bold text-navy">{lastLocation.label}</div>
+              <div className="mt-1">
+                {new Date(lastLocation.capturedAt).toLocaleString()}
+                {lastLocation.actorName ? ` · ${lastLocation.actorName}` : ""}
+              </div>
+              <a
+                href={`https://maps.google.com/?q=${lastLocation.latitude},${lastLocation.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex text-xs font-bold text-[#ff6868] underline"
+              >
+                View on map
+              </a>
+            </div>
+          </div>
+        )}
+
+        {booking.status === "delivery_pending" && (
+          <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
+            <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
+              Confirm delivery
+            </h2>
+            <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm leading-relaxed text-orange-900">
+              Driver delivery proof is on file. Confirm only after the bag is
+              physically received and matches the proof.
+            </div>
+            {booking.deliveryConfirmationCode && (
+              <div className="mt-4 rounded-xl border border-navy/10 bg-navy/5 px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-navy/60">
+                  Customer confirmation code
+                </div>
+                <div className="mt-1 font-mono text-2xl font-bold tracking-wider text-navy">
+                  {booking.deliveryConfirmationCode}
+                </div>
+              </div>
+            )}
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-semibold text-navy">
+                Receiving name
+                <input
+                  value={signatureName}
+                  onChange={(event) => setSignatureName(event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-navy outline-none focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/15"
+                  placeholder="Full name"
+                />
+              </label>
+              <label className="text-sm font-semibold text-navy">
+                Confirmation code
+                <input
+                  value={confirmationCode}
+                  onChange={(event) =>
+                    setConfirmationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium tracking-widest text-navy outline-none focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/15"
+                  placeholder="6-digit code"
+                />
+              </label>
+            </div>
+            {confirmationError && (
+              <div className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {confirmationError}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={confirmCustomerDelivery}
+              disabled={confirmingDelivery}
+              className="mt-4 w-full rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+            >
+              {confirmingDelivery ? "Confirming..." : "Confirm and close booking"}
+            </button>
+          </div>
+        )}
+
+        {booking.status === "closed" && (
+          <div className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-sm leading-relaxed text-emerald-800">
+            <div className="font-bold">Delivery confirmed and closed</div>
+            <p className="mt-1">
+              {booking.customerSignatureName
+                ? `${booking.customerSignatureName} confirmed delivery.`
+                : "The customer confirmed delivery."}
+            </p>
           </div>
         )}
 
@@ -240,8 +409,22 @@ export default function BookingPage() {
             <Row label="Airport" value={booking.airport} />
             <Row label={booking.service === "arrival" ? "Delivery" : "Pickup"} value={booking.address} />
             <Row label="Date" value={booking.date} />
+            {booking.flightTime && (
+              <Row
+                label={booking.service === "arrival" ? "Arrival Time" : "Departure Time"}
+                value={booking.flightTime}
+              />
+            )}
             {booking.flight && <Row label="Flight" value={booking.flight} />}
             <Row label="Bags" value={`${booking.bags}`} />
+            <Row
+              label="Coverage"
+              value={
+                booking.declaredValueCents
+                  ? `Declared value ${formatPrice(booking.declaredValueCents)}`
+                  : "Standard coverage"
+              }
+            />
             {booking.driverName && <Row label="Driver" value={booking.driverName} />}
           </div>
           <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between">
@@ -257,8 +440,26 @@ export default function BookingPage() {
 
         <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70">
           <div className="font-semibold text-navy mb-1">What happens next</div>
-          A Travelyt coordinator will review your request, confirm service
-          availability, and send the next step before any payment is collected.
+          {booking.status === "pending" ? (
+            <>
+              Complete secure checkout so Travelyt can confirm the request and
+              prepare driver assignment.
+              <Link
+                href={`/booking/${booking.id}/pay`}
+                className="mt-4 block rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] px-5 py-3 text-center text-sm font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Pay securely with Stripe
+              </Link>
+            </>
+          ) : terminalStatus ? (
+            "Travelyt support will review the issue or cancellation before this booking can continue."
+          ) : booking.status === "delivery_pending" ? (
+            "Review the proof, enter the customer confirmation code, and close the booking once the bag is physically received."
+          ) : booking.status === "closed" ? (
+            "This booking is closed with customer confirmation recorded."
+          ) : (
+            "Travelyt coordination, the assigned driver, and customer proof checks will keep this booking moving."
+          )}
         </div>
       </div>
     </AppChrome>
@@ -268,6 +469,7 @@ export default function BookingPage() {
 function proofTitle(kind: Booking["proofs"][number]["kind"]) {
   if (kind === "seal") return "Seal applied";
   if (kind === "pickup") return "Picked up";
+  if (kind === "airline_handoff") return "Airline handoff";
   return "Delivered";
 }
 

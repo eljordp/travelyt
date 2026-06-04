@@ -76,7 +76,7 @@ export default function WebsiteHome() {
 
       <main className="mx-auto max-w-7xl space-y-12 px-6 pb-16 pt-24">
         <section className="text-center sm:text-left">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#c41e2a]">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#ff6868]">
             Travel light, arrive smart
           </p>
           <h1 className="mt-3 text-4xl font-bold leading-[1.05] text-navy sm:text-5xl lg:text-6xl">
@@ -96,7 +96,7 @@ export default function WebsiteHome() {
                   href={service.href}
                   className="group flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 transition-transform hover:-translate-y-0.5"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/10 text-[#ff6868]">
                     <Icon className="h-5 w-5" strokeWidth={2} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -105,7 +105,7 @@ export default function WebsiteHome() {
                       {service.text}
                     </span>
                   </span>
-                  <ArrowRight className="h-4 w-4 text-navy/35 transition-transform group-hover:translate-x-0.5 group-hover:text-[#c41e2a]" />
+                  <ArrowRight className="h-4 w-4 text-navy/35 transition-transform group-hover:translate-x-0.5 group-hover:text-[#ff6868]" />
                 </Link>
               );
             })}
@@ -114,7 +114,7 @@ export default function WebsiteHome() {
 
         <section className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
               Live tracking
             </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
@@ -127,22 +127,22 @@ export default function WebsiteHome() {
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
                 Tamper-evident seal and weight on file at pickup.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
                 Live status as your bag clears the airport and boards your flight.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c41e2a]" />
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
                 Photo proof when it&apos;s handed off to the airline and delivered.
               </li>
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 href="/quote"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#c41e2a]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#ff6868] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#ff6868]"
               >
                 Book your first bag <ArrowRight className="h-4 w-4" />
               </Link>
@@ -165,7 +165,7 @@ export default function WebsiteHome() {
         <section aria-label="First time here">
           <div className="rounded-3xl border border-navy/8 bg-white p-6 shadow-sm shadow-navy/5 sm:p-10">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
                 First time? Here&apos;s the idea.
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
@@ -178,7 +178,7 @@ export default function WebsiteHome() {
 
             <ol className="mt-8 grid gap-5 sm:grid-cols-3">
               <li className="rounded-2xl bg-[#f6f7fb] p-5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6868] text-sm font-bold text-white">
                   1
                 </span>
                 <p className="mt-3 font-bold text-navy">Book a pickup</p>
@@ -187,7 +187,7 @@ export default function WebsiteHome() {
                 </p>
               </li>
               <li className="rounded-2xl bg-[#f6f7fb] p-5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6868] text-sm font-bold text-white">
                   2
                 </span>
                 <p className="mt-3 font-bold text-navy">We collect at your door</p>
@@ -196,7 +196,7 @@ export default function WebsiteHome() {
                 </p>
               </li>
               <li className="rounded-2xl bg-[#f6f7fb] p-5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#c41e2a] text-sm font-bold text-white">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6868] text-sm font-bold text-white">
                   3
                 </span>
                 <p className="mt-3 font-bold text-navy">You arrive lighter</p>
@@ -208,15 +208,15 @@ export default function WebsiteHome() {
 
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy/65">
               <span className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                <ShieldCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
                 Sealed and insured
               </span>
               <span className="flex items-center gap-2">
-                <ClipboardCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                <ClipboardCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
                 Background-checked handlers
               </span>
               <span className="flex items-center gap-2">
-                <BadgeCheck className="h-4 w-4 text-[#c41e2a]" strokeWidth={2} />
+                <BadgeCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
                 Photo proof at every step
               </span>
             </div>
@@ -225,7 +225,7 @@ export default function WebsiteHome() {
 
         <section aria-label="Which traveler are you">
           <div className="mb-6 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
               Which traveler are you
             </p>
             <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
@@ -242,7 +242,7 @@ export default function WebsiteHome() {
                 href={persona.href}
                 className="group flex h-full flex-col rounded-2xl border border-navy/8 bg-white p-6 shadow-sm shadow-navy/5 transition-transform hover:-translate-y-0.5"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
                   {persona.eyebrow}
                 </p>
                 <p className="mt-3 text-xl font-bold leading-tight text-navy">
@@ -251,7 +251,7 @@ export default function WebsiteHome() {
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-navy/65">
                   {persona.body}
                 </p>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-navy group-hover:text-[#c41e2a]">
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-navy group-hover:text-[#ff6868]">
                   {persona.cta}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </span>
@@ -291,7 +291,7 @@ export default function WebsiteHome() {
         >
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
                 Where to start
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
@@ -304,7 +304,7 @@ export default function WebsiteHome() {
 
             <Link
               href="/quote"
-              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#c41e2a] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#c41e2a]"
+              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#ff6868] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6868]"
             >
               Get your quote <ArrowRight className="h-4 w-4" />
             </Link>
@@ -320,7 +320,7 @@ export default function WebsiteHome() {
                   className="group flex items-center gap-3 rounded-xl bg-white/[0.06] px-4 py-3.5 transition-colors hover:bg-white/[0.12]"
                 >
                   <Icon
-                    className="h-5 w-5 shrink-0 text-[#c41e2a]"
+                    className="h-5 w-5 shrink-0 text-[#ff6868]"
                     strokeWidth={2}
                   />
                   <span className="flex-1 text-sm font-semibold text-white">

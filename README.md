@@ -29,11 +29,23 @@ SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+TRAVELYT_ADMIN_ACCESS_CODE=
+TRAVELYT_ADMIN_SESSION_SECRET=
+TRAVELYT_DRIVER_SESSION_SECRET=
+TRAVELYT_ALLOW_LEGACY_DRIVER_CODE=false
 TRAVELYT_DRIVER_ACCESS_CODE=
+TRAVELYT_DRIVER_ACCESS_CODES="Driver Name:one-time-driver-code,Second Driver:second-driver-code"
+GOOGLE_MAPS_API_KEY=
+SUPABASE_PUSH_WORKER_URL=
+PUSH_WORKER_SECRET=
 
 RESEND_API_KEY=
-LEAD_NOTIFY_EMAIL=
-LEAD_FROM_EMAIL="Travelyt <onboarding@resend.dev>"
+LEAD_NOTIFY_EMAIL=info@travelyt.us
+LEAD_FROM_EMAIL="Travelyt <info@travelyt.us>"
+
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_PHONE=
 ```
 
 Run the SQL in `supabase/migrations` against your Supabase project before
@@ -47,12 +59,6 @@ with:
 supabase db push
 ```
 
-Set `TRAVELYT_DRIVER_ACCESS_CODE` in production to prevent unauthenticated
-listing and driver status updates. Couriers enter this code on `/driver`.
-
-Without Resend variables, booking and lead requests still work, but email
-notifications are skipped.
-
 Production deploy checklist:
 
 ```sh
@@ -62,8 +68,32 @@ supabase db push
 
 Confirm Vercel has `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-`RESEND_API_KEY`, `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`, and the admin/driver
-access code variables before testing live customer requests.
+`RESEND_API_KEY`, `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`,
+`TRAVELYT_ADMIN_ACCESS_CODE`, `TRAVELYT_ADMIN_SESSION_SECRET`,
+`TRAVELYT_DRIVER_SESSION_SECRET`, `GOOGLE_MAPS_API_KEY`, and the Stripe env
+vars before testing live customer requests.
+
+Create driver codes in Admin -> Driver access codes. Each code is assigned to
+one courier profile, can be revoked, and is stored hashed in Supabase. Keep
+`TRAVELYT_DRIVER_ACCESS_CODES` or `TRAVELYT_DRIVER_ACCESS_CODE` only as a
+temporary beta fallback while onboarding the first trusted drivers. The shared
+`TRAVELYT_DRIVER_ACCESS_CODE` fallback only works after the database table
+exists if `TRAVELYT_ALLOW_LEGACY_DRIVER_CODE=true` is deliberately enabled.
+
+Set `GOOGLE_MAPS_API_KEY` to enable server-side pickup-address verification and
+automatic mileage estimates. Without it, customers can still enter mileage
+manually.
+
+Set `PUSH_WORKER_SECRET` in Vercel and Supabase to the same value so booking
+status/proof updates can wake the Supabase APNs worker immediately after a push
+event is queued. `SUPABASE_PUSH_WORKER_URL` is optional; the app derives it from
+`SUPABASE_URL` when omitted.
+
+Without Resend variables, booking and lead requests still work, but email
+notifications are skipped.
+
+Resend covers email. SMS will need a separate provider such as Twilio; set the
+Twilio variables once SMS booking alerts are wired.
 
 ## Push Notification Worker
 
@@ -79,7 +109,7 @@ supabase secrets set \
   APNS_TEAM_ID= \
   APNS_BUNDLE_ID=app.travelyt.travelyt \
   APNS_PRIVATE_KEY="$(cat AuthKey_YOURKEYID.p8)" \
-  APNS_PRODUCTION=false \
+  APNS_PRODUCTION=true \
   PUSH_WORKER_SECRET=
 ```
 
@@ -94,8 +124,9 @@ curl -X POST \
   -H "x-worker-secret: $PUSH_WORKER_SECRET"
 ```
 
-Use `APNS_PRODUCTION=false` for debug/TestFlight builds signed with the sandbox
-APNs environment, then switch it to `true` for production App Store pushes.
+Use `APNS_PRODUCTION=false` only for local debug builds with the development
+APNs entitlement. TestFlight and App Store distribution use the production APNs
+environment, so keep `APNS_PRODUCTION=true` there.
 
 ## iOS
 
@@ -129,17 +160,12 @@ npm audit --omit=dev
 
 For App Store readiness, also build the `App` scheme in Xcode and verify the
 simulator flow for quote creation, booking detail, driver job status, camera
-proof capture, and push permission timing.
+proof capture, GPS checkpoint capture, and push permission timing.
 
 ## Current Product Notes
 
 - Booking data is backend-backed when Supabase is configured, with local browser
   storage as a development fallback.
-- Customer-facing tracking lives at `/track/[id]` and uses the
-  `customer_access_token` query token from booking confirmation links.
-- Driver proof photos are uploaded to the private Supabase Storage bucket
-  `booking-proofs` when the bucket migration has been applied; local/base64
-  proof data remains as a fallback for development.
 - Native push tokens are persisted in Supabase and booking updates are queued in
   `push_notification_events` for an APNs worker to send.
 - Login and registration use Supabase Auth when public Supabase variables are
@@ -148,5 +174,7 @@ proof capture, and push permission timing.
   if the remote app cannot load.
 - Push permission is requested from the booking detail screen after the
   customer opts into live updates.
-- The iOS target includes a privacy manifest and camera/photo usage strings for
-  App Store review.
+- Driver custody actions use native geolocation on iOS/Android when running in
+  the Capacitor shell, with browser geolocation as the web fallback.
+- The iOS target includes a privacy manifest plus camera, photo, and location
+  usage strings for App Store review.

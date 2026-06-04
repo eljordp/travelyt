@@ -5,7 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 const resendApiKey = process.env.RESEND_API_KEY;
 const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
 const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <onboarding@resend.dev>";
+  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, "push-tokens:post", 20);

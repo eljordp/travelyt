@@ -2,6 +2,7 @@
 
 import { Capacitor } from "@capacitor/core";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Geolocation, type Position } from "@capacitor/geolocation";
 import {
   PushNotifications,
   type PermissionStatus,
@@ -16,6 +17,65 @@ export function isNative(): boolean {
 
 export function platform(): string {
   return Capacitor.getPlatform();
+}
+
+export interface CapturedLocation {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  capturedAt: string;
+}
+
+function normalizePosition(position: Position | GeolocationPosition): CapturedLocation {
+  return {
+    latitude: Number(position.coords.latitude.toFixed(6)),
+    longitude: Number(position.coords.longitude.toFixed(6)),
+    accuracyMeters: Math.round(position.coords.accuracy),
+    capturedAt: new Date(position.timestamp || Date.now()).toISOString(),
+  };
+}
+
+function captureBrowserLocation(): Promise<CapturedLocation | null> {
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(normalizePosition(position)),
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 12000,
+      }
+    );
+  });
+}
+
+export async function captureCurrentLocation(): Promise<CapturedLocation | null> {
+  if (!isNative()) return captureBrowserLocation();
+
+  try {
+    let status = await Geolocation.checkPermissions();
+    if (status.location !== "granted") {
+      status = await Geolocation.requestPermissions({
+        permissions: ["location"],
+      });
+    }
+
+    if (status.location !== "granted") return null;
+
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      maximumAge: 30000,
+      timeout: 12000,
+    });
+    return normalizePosition(position);
+  } catch (err) {
+    console.warn("Location capture failed", err);
+    return null;
+  }
 }
 
 export async function captureProofPhoto(): Promise<string | null> {

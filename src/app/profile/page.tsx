@@ -18,8 +18,10 @@ import {
   getBookingTrackingHref,
   SERVICE_LABELS,
   STATUS_LABELS,
+  TERMINAL_STATUSES,
   type Booking,
 } from "@/lib/bookings";
+import { normalizePhone, validatePhone } from "@/lib/auth-policy";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 
 type Tab = "overview" | "bookings" | "settings";
@@ -43,9 +45,16 @@ const statusColors: Record<Booking["status"], string> = {
   pending: "bg-yellow-100 text-yellow-700",
   paid: "bg-blue-100 text-blue-700",
   assigned: "bg-indigo-100 text-indigo-700",
+  accepted: "bg-sky-100 text-sky-700",
+  en_route: "bg-cyan-100 text-cyan-700",
+  arrived: "bg-teal-100 text-teal-700",
   picked_up: "bg-purple-100 text-purple-700",
   in_transit: "bg-cyan-100 text-cyan-700",
+  delivery_pending: "bg-orange-100 text-orange-700",
   delivered: "bg-green-100 text-green-700",
+  closed: "bg-emerald-100 text-emerald-700",
+  cancelled: "bg-gray-100 text-gray-700",
+  issue: "bg-red-100 text-red-700",
 };
 
 function loginUrl() {
@@ -106,6 +115,7 @@ export default function ProfilePage() {
   const [settings, setSettings] = useState<ProfileSettings>(emptySettings);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [identitySubmitting, setIdentitySubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -160,7 +170,7 @@ export default function ProfilePage() {
   }, []);
 
   const activeBookings = useMemo(
-    () => bookings.filter((booking) => booking.status !== "delivered"),
+    () => bookings.filter((booking) => !TERMINAL_STATUSES.includes(booking.status)),
     [bookings]
   );
 
@@ -208,6 +218,11 @@ export default function ProfilePage() {
       setError("Enter a valid email.");
       return;
     }
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -217,7 +232,8 @@ export default function ProfilePage() {
       email: email !== user.email ? email : undefined,
       data: {
         full_name: name,
-        phone,
+        phone: normalizePhone(phone),
+        role: (user.user_metadata?.role as string | undefined) ?? "customer",
         address,
       },
     });
@@ -284,6 +300,52 @@ export default function ProfilePage() {
 
     await supabase?.auth.signOut();
     window.location.href = "/";
+  }
+
+  async function requestIdentityVerification() {
+    const supabase = getSupabaseBrowser();
+    const session = supabase
+      ? (await supabase.auth.getSession()).data.session
+      : null;
+
+    if (!session?.access_token) {
+      setError("Sign in again before requesting verification.");
+      return;
+    }
+
+    setIdentitySubmitting(true);
+    setError("");
+    setNotice("");
+
+    const response = await fetch("/api/identity/verification-request", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        role: (user?.user_metadata?.role as string | undefined) ?? "customer",
+        documentType: "driver_license",
+      }),
+    });
+    const data = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      error?: string;
+      existing?: boolean;
+    } | null;
+
+    setIdentitySubmitting(false);
+
+    if (!response.ok || !data?.ok) {
+      setError(data?.error || "Could not request verification.");
+      return;
+    }
+
+    setNotice(
+      data.existing
+        ? "Verification is already pending. Travelyt will send the secure ID link."
+        : "Verification requested. Travelyt will send the secure ID link."
+    );
   }
 
   if (authState === "loading" || authState === "signed-out") {
@@ -353,7 +415,7 @@ export default function ProfilePage() {
                     className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5"
                   >
                     <Icon
-                      className="mb-3 h-5 w-5 text-[#c41e2a]"
+                      className="mb-3 h-5 w-5 text-[#ff6868]"
                       strokeWidth={2}
                     />
                     <div className="text-2xl font-bold text-navy">{s.value}</div>
@@ -368,7 +430,7 @@ export default function ProfilePage() {
                 <h2 className="font-bold text-navy">Recent Bookings</h2>
                 <button
                   onClick={() => setTab("bookings")}
-                  className="text-sm text-[#c41e2a] hover:underline cursor-pointer"
+                  className="text-sm text-[#ff6868] hover:underline cursor-pointer"
                 >
                   View all
                 </button>
@@ -382,7 +444,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-3">
               <Link
                 href="/quote"
-                className="flex items-center gap-3 rounded-2xl bg-[#c41e2a] p-4 text-white transition-opacity hover:opacity-90"
+                className="flex items-center gap-3 rounded-2xl bg-[#ff6868] p-4 text-white transition-opacity hover:opacity-90"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
                   <PlusCircle className="h-5 w-5" strokeWidth={2} />
@@ -461,16 +523,39 @@ export default function ProfilePage() {
                     onChange={(e) =>
                       setSettings((s) => ({ ...s, [field]: e.target.value }))
                     }
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10 outline-none text-sm transition-all"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                   />
                 </div>
               ))}
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full rounded-xl bg-[#c41e2a] px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+                className="w-full rounded-xl bg-[#ff6868] px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer disabled:cursor-wait disabled:opacity-60"
               >
                 {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-xl border border-navy/10 bg-navy/[0.03] p-4">
+              <h3 className="text-sm font-bold text-navy">
+                Identity verification
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-navy/70">
+                Live custody handoffs may require a government ID
+                (driver&apos;s license or passport) plus a selfie or liveness
+                video. Travelyt uses this to confirm the customer, driver, or
+                employee identity attached to each custody event.
+              </p>
+              <div className="mt-3 inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
+                Secure verification link pending
+              </div>
+              <button
+                type="button"
+                onClick={() => void requestIdentityVerification()}
+                disabled={identitySubmitting}
+                className="mt-3 block rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+              >
+                {identitySubmitting ? "Requesting..." : "Request verification link"}
               </button>
             </div>
 
@@ -547,7 +632,7 @@ function BookingsList({
     return (
       <div className="p-6 text-center text-sm text-navy/65">
         No bookings yet.{" "}
-        <Link href="/quote" className="font-semibold text-[#c41e2a] underline">
+        <Link href="/quote" className="font-semibold text-[#ff6868] underline">
           Book your first pickup
         </Link>
         .

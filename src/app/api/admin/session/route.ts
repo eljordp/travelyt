@@ -7,6 +7,6 @@ export async function GET(request: Request) {
     ok: true,
     authenticated: Boolean(session),
     email: session?.email,
+    role: session?.role,
   });
 }
-

@@ -40,7 +40,7 @@ export default function AppHome() {
 
         <Link
           href="/quote?promo=TRAVELYT30"
-          className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[#c41e2a] to-[#c41e2a] p-5 text-white shadow-lg shadow-[#c41e2a]/20"
+          className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[#ff6868] to-[#ff6868] p-5 text-white shadow-lg shadow-[#ff6868]/20"
         >
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
             <Tag className="h-5 w-5" strokeWidth={2} />
@@ -52,9 +52,9 @@ export default function AppHome() {
             <p className="mt-0.5 text-base font-bold leading-tight">
               30% off your first booking
             </p>
-            <p className="mt-0.5 text-xs text-white/80">
-              Tap to claim — code TRAVELYT30
-            </p>
+            <span className="mt-2 inline-flex max-w-full rounded-full bg-white/15 px-2.5 py-1 font-mono text-[11px] font-bold tracking-wide text-white">
+              Code TRAVELYT30
+            </span>
           </span>
           <ArrowRight className="h-5 w-5 shrink-0 text-white/90" />
         </Link>
@@ -71,7 +71,7 @@ export default function AppHome() {
             href="/quote?service=departure"
             className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5"
           >
-            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+            <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6868]/10 text-[#ff6868]">
               <PackageCheck className="h-5 w-5" strokeWidth={2} />
             </span>
             <p className="font-bold text-navy">Book pickup</p>
@@ -99,7 +99,7 @@ export default function AppHome() {
             <h2 className="text-base font-bold text-navy">Trip activity</h2>
             <Link
               href="/profile"
-              className="flex items-center gap-1 text-xs font-semibold text-[#c41e2a]"
+              className="flex items-center gap-1 text-xs font-semibold text-[#ff6868]"
             >
               View all <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -143,7 +143,7 @@ export default function AppHome() {
                 key={item.label}
                 className="rounded-2xl bg-white p-3 text-center shadow-sm shadow-navy/5"
               >
-                <Icon className="mx-auto h-5 w-5 text-[#c41e2a]" strokeWidth={2} />
+                <Icon className="mx-auto h-5 w-5 text-[#ff6868]" strokeWidth={2} />
                 <p className="mt-2 text-xs font-semibold text-navy/70">
                   {item.label}
                 </p>

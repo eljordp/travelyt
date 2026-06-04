@@ -66,7 +66,7 @@ export default function AuthCallbackPage() {
         {message.includes("could not") && (
           <Link
             href="/login"
-            className="mt-6 inline-flex rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="mt-6 inline-flex rounded-xl bg-[#ff6868] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             Sign in
           </Link>

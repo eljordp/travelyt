@@ -11,14 +11,14 @@ export const metadata: Metadata = {
   },
 };
 
-const LAST_UPDATED = "May 26, 2026";
+const LAST_UPDATED = "May 30, 2026";
 const CONTACT_EMAIL = "privacy@travelyt.app";
 
 const sections: { title: string; body: string }[] = [
   {
     title: "Information we collect",
     body:
-      "When you request a quote, create a booking request, or contact support, we collect identifiers and trip details you provide directly: full name, email address, phone number, pickup and delivery addresses, travel dates, flight numbers, number and description of bags, and any handling notes. The current launch version does not collect payment card details in the app. When online checkout launches, our payment processor will collect card or wallet details on our behalf — we will not store full card numbers on our systems. For active bookings, we may also generate operational records (timestamps, location checkpoints, seal IDs, bag photos, signatures, and proof-of-service images) needed to maintain chain of custody. If you create an account, we store your login credentials and account preferences. We may also collect basic device information (browser type, IP address, app version, crash logs) for security, fraud prevention, and product improvement.",
+      "When you request a quote, create a booking request, pay for service, or contact support, we collect identifiers and trip details you provide directly: full name, email address, phone number, pickup and delivery addresses, travel dates, flight numbers, number and description of bags, and any handling notes. Before live custody handoffs, we may verify customer, driver, handler, or employee identity using a government ID such as a driver's license or passport plus a selfie, liveness video, or similar biometric check. Online checkout is processed by Stripe or another payment processor on our behalf; Travelyt does not store full card numbers, card security codes, or wallet credentials on our systems. For active bookings, we may also generate operational records (timestamps, location checkpoints, seal IDs, bag photos, airline or airport handoff recipient details, signatures, and proof-of-service images) needed to maintain chain of custody. If you create an account, we store your login credentials and account preferences. We may also collect basic device information (browser type, IP address, app version, crash logs) for security, fraud prevention, and product improvement.",
   },
   {
     title: "How we use it",
@@ -28,12 +28,17 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Who we share it with",
     body:
-      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, airport or airline contacts when needed for bag identification and authorized handoff, our communications providers (SMS and email delivery), our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. When online payments launch, we will also share the information needed to process payment with our payment processor. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
+      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, airport or airline contacts when needed for bag identification and authorized handoff, identity verification providers, background-check providers for drivers and staff, our communications providers (SMS and email delivery), payment processors, our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
   },
   {
     title: "Tracking and custody data",
     body:
-      "For active bookings, we generate and retain timestamps, GPS location checkpoints, tamper-evident seal IDs, bag photos, driver and handler IDs, and proof-of-service signatures or photos. This data is used to verify chain of custody, support insurance claims, and let you and authorized recipients track your bags in real time.",
+      "For active bookings, we generate and retain timestamps, GPS location checkpoints, tamper-evident seal IDs, bag photos, driver and handler IDs, airline or airport receiving-party details, and proof-of-service signatures or photos. This data is used to verify chain of custody, support insurance claims, and let you and authorized recipients follow verified bag status updates.",
+  },
+  {
+    title: "Identity verification and biometrics",
+    body:
+      "When identity verification is required, Travelyt may ask a customer, driver, employee, or handler to verify a driver's license, passport, employee credential, selfie, or liveness video. We use this only for account security, fraud prevention, background screening where applicable, custody handoff validation, and legal or claims support. Where possible, government ID images and biometric/liveness checks are processed by a specialized verification provider, and Travelyt stores only verification status, provider reference IDs, timestamps, and the minimum information needed to prove that verification occurred.",
   },
   {
     title: "Push notifications",
@@ -48,7 +53,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Data retention",
     body:
-      "We retain quote requests for up to 24 months. We retain completed booking records and chain-of-custody data for as long as needed to provide service, handle claims, comply with laws, and resolve disputes — typically 3 years for operational records, unless a longer period is required by law. When online payments launch, financial records may be retained for up to 7 years as required for tax, accounting, and dispute purposes. Account data is retained while your account is active and deleted on request as described below.",
+      "We retain quote requests for up to 24 months. We retain completed booking records and chain-of-custody data for as long as needed to provide service, handle claims, comply with laws, and resolve disputes — typically 3 years for operational records, unless a longer period is required by law. Payment and financial records may be retained for up to 7 years as required for tax, accounting, and dispute purposes. Account data is retained while your account is active and deleted on request as described below.",
   },
   {
     title: "Security",
@@ -91,7 +96,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Third-party services",
     body:
-      "Travelyt integrates with third-party services including our SMS and email providers, hosting and analytics providers, operational partners needed to coordinate authorized handoff, and mobile platform services from Apple and Google when you use our app. When online checkout launches, Travelyt may also integrate Stripe or another payment processor. These providers process information under their own privacy policies and our data-processing agreements with them.",
+      "Travelyt integrates with third-party services including our SMS and email providers, hosting and analytics providers, Stripe or another payment processor, operational partners needed to coordinate authorized handoff, and mobile platform services from Apple and Google when you use our app. These providers process information under their own privacy policies and our data-processing agreements with them.",
   },
   {
     title: "Changes to this policy",
@@ -113,7 +118,7 @@ export default function PrivacyPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider mb-3">
             Legal
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">

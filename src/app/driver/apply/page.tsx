@@ -87,7 +87,7 @@ export default function DriverApplyPage() {
         <Navbar />
         <main className="mx-auto max-w-3xl px-6 pt-32 pb-20">
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm shadow-navy/5">
-            <CheckCircle2 className="mx-auto h-14 w-14 text-[#c41e2a]" strokeWidth={1.8} />
+            <CheckCircle2 className="mx-auto h-14 w-14 text-[#ff6868]" strokeWidth={1.8} />
             <h1 className="mt-5 text-3xl font-bold text-navy">Application received</h1>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-navy/65">
               {message}
@@ -106,14 +106,14 @@ export default function DriverApplyPage() {
   }
 
   const input =
-    "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#c41e2a] focus:ring-2 focus:ring-[#c41e2a]/10";
+    "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10";
 
   return (
     <div className="min-h-screen bg-[#f6f7fb]">
       <Navbar />
       <main className="mx-auto max-w-3xl px-6 pt-28 pb-20">
         <header className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
             Drive with Travelyt
           </p>
           <h1 className="mt-2 text-4xl font-bold leading-tight text-navy sm:text-5xl">
@@ -337,7 +337,7 @@ export default function DriverApplyPage() {
             <button
               type="submit"
               disabled={status === "loading"}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#c41e2a] px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff6868] px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {status === "loading" ? "Submitting…" : "Submit application"}
               {status !== "loading" && <ArrowRight className="h-4 w-4" />}
@@ -353,7 +353,7 @@ export default function DriverApplyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="space-y-4">
-      <legend className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
+      <legend className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
         {title}
       </legend>
       {children}
@@ -378,7 +378,7 @@ function Field({
         htmlFor={id}
         className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-navy/70"
       >
-        {label} {required && <span className="text-[#c41e2a]">*</span>}
+        {label} {required && <span className="text-[#ff6868]">*</span>}
       </label>
       {children}
     </div>
@@ -400,7 +400,7 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 shrink-0 rounded border-navy/20 text-[#c41e2a] focus:ring-[#c41e2a]"
+        className="mt-1 h-4 w-4 shrink-0 rounded border-navy/20 text-[#ff6868] focus:ring-[#ff6868]"
       />
       <span className="text-sm leading-relaxed text-navy/75">{children}</span>
     </label>
@@ -418,7 +418,7 @@ function Perk({
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#c41e2a]/10 text-[#c41e2a]">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#ff6868]/10 text-[#ff6868]">
         <Icon className="h-5 w-5" strokeWidth={2} />
       </span>
       <p className="mt-3 font-bold text-navy">{title}</p>

@@ -19,7 +19,7 @@ export default function BusinessCardsPage() {
           height: 2in;
           position: relative;
           overflow: hidden;
-          color: #0a1f5c;
+          color: #081546;
           font-family: var(--font-geist-sans), Inter, sans-serif;
         }
         .card-face-front {
@@ -27,7 +27,7 @@ export default function BusinessCardsPage() {
           border: 1px solid #e6e6e6;
         }
         .card-face-back {
-          background: #0a1f5c;
+          background: #081546;
           color: #ffffff;
         }
         .card-bleed-guide {
@@ -73,16 +73,16 @@ export default function BusinessCardsPage() {
               </div>
 
               {/* Slogan */}
-              <p className="mt-[0.05in] text-[10pt] font-medium italic text-[#c41e2a] tracking-wide">
+              <p className="mt-[0.05in] text-[10pt] font-medium italic text-[#ff6868] tracking-wide">
                 Travel light, arrive smart.
               </p>
             </div>
 
             {/* Small coral mark bottom-right */}
             <div className="absolute bottom-[0.18in] right-[0.22in] flex items-center gap-1.5">
-              <span className="block w-1 h-1 rounded-full bg-[#c41e2a]" />
-              <span className="block w-1 h-1 rounded-full bg-[#c41e2a]/60" />
-              <span className="block w-1 h-1 rounded-full bg-[#c41e2a]/30" />
+              <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
+              <span className="block w-1 h-1 rounded-full bg-[#ff6868]/60" />
+              <span className="block w-1 h-1 rounded-full bg-[#ff6868]/30" />
             </div>
           </div>
 
@@ -93,7 +93,7 @@ export default function BusinessCardsPage() {
             {/* Top: wordmark */}
             <div className="absolute top-[0.22in] left-[0.28in] flex items-center gap-1.5">
               <span className="text-[9pt] font-bold tracking-tight text-white">Travelyt</span>
-              <span className="block w-1 h-1 rounded-full bg-[#c41e2a]" />
+              <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
             </div>
 
             {/* Middle: Name + role */}
@@ -101,7 +101,7 @@ export default function BusinessCardsPage() {
               <p className="text-[11pt] font-bold leading-tight tracking-tight text-white">
                 [ Full Name ]
               </p>
-              <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#c41e2a]">
+              <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
                 [ Role / Title ]
               </p>
             </div>

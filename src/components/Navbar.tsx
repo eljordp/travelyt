@@ -23,6 +23,7 @@ export default function Navbar() {
           <Link href="/trust" className="hover:text-cyan transition-colors">Trust</Link>
           <Link href="/demo" className="hover:text-cyan transition-colors">Demo</Link>
           <Link href="/#faq" className="hover:text-cyan transition-colors">FAQ</Link>
+          <Link href="/driver/apply" className="hover:text-cyan transition-colors">Drivers</Link>
           <Link href="/login?next=%2Fprofile" className="text-white/90 hover:text-white transition-colors">Customer Login</Link>
           <Link href="/quote" className="bg-gradient-to-r from-purple to-purple-light text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
             Get a Quote
@@ -55,6 +56,7 @@ export default function Navbar() {
           <Link href="/trust" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Trust</Link>
           <Link href="/demo" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Demo</Link>
           <Link href="/#faq" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>FAQ</Link>
+          <Link href="/driver/apply" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Drivers</Link>
           <Link href="/login?next=%2Fprofile" className="block py-2 text-white/90 hover:text-white" onClick={() => setOpen(false)}>Customer Login</Link>
           <Link href="/quote" className="block bg-gradient-to-r from-purple to-purple-light text-white px-6 py-3 rounded-full text-center font-semibold" onClick={() => setOpen(false)}>
             Get a Quote

@@ -32,8 +32,8 @@ export default function OpengraphImage() {
           >
             <path
               d="M2 16l20-7-9 13-2-6-9-0z"
-              fill="#c41e2a"
-              stroke="#c41e2a"
+              fill="#ff6868"
+              stroke="#ff6868"
               strokeWidth="1.2"
               strokeLinejoin="round"
             />

@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "Travelyt",
   webDir: "public",
   server: {
-    url: "https://travelyt-psi.vercel.app",
+    url: "https://travelyt.us",
     cleartext: false,
     androidScheme: "https",
     errorPath: "offline.html",

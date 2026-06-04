@@ -57,7 +57,7 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Trust badges */}
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-white/70">
-          {["Fully Insured", "Live Tracking", "Sealed In Transit"].map((badge) => (
+          {["Fully Insured", "GPS Checkpoints", "Sealed In Transit"].map((badge) => (
             <span key={badge} className="flex items-center gap-2">
               <CircleCheck className="w-5 h-5 text-cyan" fill="currentColor" strokeWidth={1.5} />
               {badge}
@@ -160,7 +160,7 @@ export default function Hero() {
                 <ShieldCheck className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Fully Secured",
-              desc: "Real-time GPS tracking, tamper-evident seals, and secure luggage handling from pickup to handoff.",
+              desc: "GPS custody checkpoints, tamper-evident seals, and secure luggage handling from pickup to handoff.",
             },
           ].map((card) => (
             <div key={card.title} className="bg-white rounded-2xl p-6 shadow-lg shadow-navy/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">

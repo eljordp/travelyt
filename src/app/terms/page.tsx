@@ -22,7 +22,15 @@ const sections = [
   },
   {
     title: "Customer responsibilities",
-    body: "Customers are responsible for accurate booking details, accessible pickup and delivery locations, compliance with airline and TSA baggage rules, and excluding restricted, illegal, unsafe, or undeclared high-value items.",
+    body: "Customers are responsible for accurate booking details, accessible pickup and delivery locations, compliance with airline and TSA baggage rules, completing required identity verification before custody handoff, and excluding restricted, illegal, unsafe, or undeclared high-value items.",
+  },
+  {
+    title: "Identity verification",
+    body: "Travelyt may require customers, drivers, employees, or handlers to verify identity using a driver's license, passport, employee credential, selfie, liveness video, or similar check before a live custody event. Refusal or failed verification may delay, modify, or cancel service.",
+  },
+  {
+    title: "Chain of custody",
+    body: "Travelyt custody records may include verified account identity, driver or handler identity, GPS checkpoints, tamper-evident seal IDs, bag photos, customer approvals, and airline or airport receiving-party details. A bag handoff is not considered complete until Travelyt records the required proof for that stage, including airline or airport acceptance when applicable.",
   },
   {
     title: "Restricted items",
@@ -41,8 +49,8 @@ const sections = [
     body: "Automated outputs — including estimated arrival windows, suggested routes, dispatch decisions, status summaries, and reporting — are provided for operational convenience and may contain errors. Travelyt does not warrant that automated outputs are complete, accurate, or current, and customers should rely on confirmed booking records, chain-of-custody scans, and direct communications from Travelyt staff for binding service details. Travelyt's liability for any AI-generated output is limited to the same caps that apply to the underlying service under these terms.",
   },
   {
-    title: "Pre-launch status",
-    body: "Travelyt is onboarding early customers, partners, and launch markets. In this launch version, users can request service and receive confirmation before any payment is collected. Availability, timing, pricing, coverage, and service areas may change as operations are finalized.",
+    title: "Launch status and payment",
+    body: "Travelyt is onboarding early customers, partners, and launch markets. Users can request service, see an estimated total, and pay through secure third-party checkout where available. Payment reserves the request; Travelyt still confirms operational availability, timing, pricing, coverage, and service-area constraints before custody begins. If a route cannot be served, Travelyt may modify, cancel, or refund the request as appropriate.",
   },
 ];
 
@@ -52,7 +60,7 @@ export default function TermsPage() {
       <Navbar />
       <main className="pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-sm font-semibold text-[#c41e2a] uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider mb-3">
             Legal
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mb-4">

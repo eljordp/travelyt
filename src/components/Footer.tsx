@@ -44,6 +44,11 @@ export default function Footer() {
                   Trust & Security
                 </Link>
               </li>
+              <li>
+                <Link href="/prohibited-items" className="hover:text-cyan transition-colors">
+                  Prohibited items
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -66,6 +71,11 @@ export default function Footer() {
               <li>
                 <Link href="/demo" className="hover:text-cyan transition-colors">
                   Demo
+                </Link>
+              </li>
+              <li>
+                <Link href="/driver/apply" className="hover:text-cyan transition-colors">
+                  Drive with us
                 </Link>
               </li>
               <li>
@@ -99,6 +109,9 @@ export default function Footer() {
             </Link>
             <Link href="/terms" className="hover:text-cyan transition-colors">
               Terms
+            </Link>
+            <Link href="/prohibited-items" className="hover:text-cyan transition-colors">
+              Prohibited items
             </Link>
             <Link href="/support" className="hover:text-cyan transition-colors">
               Support
