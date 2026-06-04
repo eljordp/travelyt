@@ -8,7 +8,7 @@ iOS target:
 
 - Bundle ID: `app.travelyt.travelyt`
 - Version: `1.0`
-- Build: `6`
+- Build: `7`
 - Apple team: `CQ67GR327Q`
 - Release signing: automatic
 - Installed provisioning profile: `iOS Team Store Provisioning Profile: app.travelyt.travelyt`
@@ -25,7 +25,7 @@ xcodebuild -project ios/App/App.xcodeproj \
   -scheme App \
   -configuration Release \
   -destination 'generic/platform=iOS' \
-  -archivePath /Users/jp/Desktop/Travelyt-AppStore/Travelyt-1.0-6.xcarchive \
+  -archivePath /Users/jp/Desktop/Travelyt-AppStore/Travelyt-1.0-7.xcarchive \
   archive
 ```
 
@@ -33,7 +33,7 @@ To upload from the command line after a successful archive:
 
 ```sh
 xcodebuild -exportArchive \
-  -archivePath /Users/jp/Desktop/Travelyt-AppStore/Travelyt-1.0-6.xcarchive \
+  -archivePath /Users/jp/Desktop/Travelyt-AppStore/Travelyt-1.0-7.xcarchive \
   -exportPath /Users/jp/Desktop/Travelyt-AppStore/export \
   -exportOptionsPlist app-store/ExportOptions-AppStore.plist
 ```
