@@ -168,11 +168,10 @@ export default function DriverApplyPage() {
                   className={input}
                 />
               </Field>
-              <Field id="phone" label="Phone" required>
+              <Field id="phone" label="Phone">
                 <input
                   id="phone"
                   type="tel"
-                  required
                   placeholder="+1 (555) 000-0000"
                   value={form.phone}
                   onChange={(e) => set("phone", e.target.value)}

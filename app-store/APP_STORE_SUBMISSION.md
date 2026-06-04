@@ -129,7 +129,7 @@ The app is safe to test with sample data such as:
 - Bags: 2
 - Name: App Review
 - Email: reviewer@example.com
-- Phone: +1 555 000 0000
+- Phone: optional; leave blank or use +1 555 000 0000
 
 ## App Privacy Details For App Store Connect
 
@@ -137,7 +137,7 @@ Data linked to the user:
 
 - Name: App Functionality
 - Email Address: App Functionality
-- Phone Number: App Functionality
+- Phone Number: App Functionality, optional customer/applicant contact detail only when provided
 - Physical Address: App Functionality
 - User ID: App Functionality
 - Photos or Videos: App Functionality, only when proof-of-handling photos are used

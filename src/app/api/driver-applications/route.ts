@@ -52,7 +52,6 @@ export async function POST(request: Request) {
 
     const fieldChecks: Array<[unknown, string]> = [
       [fullName, "Full name"],
-      [phone, "Phone"],
       [city, "City"],
       [state, "State"],
       [vehicleMakeModel, "Vehicle make and model"],
@@ -110,7 +109,7 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("driver_applications").insert({
       full_name: fullName,
       email,
-      phone,
+      phone: phone || null,
       city,
       state,
       vehicle_make_model: vehicleMakeModel,

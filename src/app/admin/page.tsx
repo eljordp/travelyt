@@ -1261,7 +1261,8 @@ function BookingCard({
             {booking.name}
           </p>
           <p className="mt-0.5 text-xs text-navy/60">
-            {booking.email} · {booking.phone}
+            {booking.email}
+            {booking.phone ? ` · ${booking.phone}` : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

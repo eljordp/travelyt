@@ -65,9 +65,9 @@ export default function RegisterPage() {
         emailRedirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath())}`,
         data: {
           full_name: form.name.trim(),
-          phone,
+          phone: phone || undefined,
           role: "customer",
-          phone_verified: false,
+          phone_verified: Boolean(phone),
           mfa_required: false,
         },
       },
@@ -132,7 +132,9 @@ export default function RegisterPage() {
 
           {/* Phone */}
           <div>
-            <label htmlFor="reg-phone" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">Phone Number</label>
+            <label htmlFor="reg-phone" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
+              Phone Number <span className="font-normal normal-case text-navy/70">(optional)</span>
+            </label>
             <input id="reg-phone" type="tel" placeholder="+1 555 000 0000" {...field("phone")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}

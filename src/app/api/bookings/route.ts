@@ -479,7 +479,7 @@ function validateBooking(
   const bags = typeof body.bags === "number" ? body.bags : 0;
   const name = body.name?.trim();
   const email = body.email?.trim().toLowerCase();
-  const phone = body.phone?.trim();
+  const phone = body.phone?.trim() || "";
   const notes = body.notes?.trim() || undefined;
   const declaredValueCents =
     typeof body.declaredValueCents === "number" &&
@@ -507,7 +507,7 @@ function validateBooking(
   if (!bags || bags < 1) return "Need at least one bag.";
   if (!name) return "Name is required.";
   if (!email || !emailPattern.test(email)) return "Enter a valid email address.";
-  if (!phone || !phonePattern.test(phone)) return "Enter a valid phone number.";
+  if (phone && !phonePattern.test(phone)) return "Enter a valid phone number.";
   if (!body.restrictedItemsAttestedAt) {
     return "Confirm that your bags do not contain restricted or undeclared high-value items.";
   }
@@ -605,7 +605,7 @@ async function sendBookingEmail(booking: Booking, source: string) {
     "",
     `Name:     ${booking.name}`,
     `Email:    ${booking.email}`,
-    `Phone:    ${booking.phone}`,
+    `Phone:    ${booking.phone || "(none)"}`,
     `Notes:    ${booking.notes || "(none)"}`,
     `Track:    ${trackingUrl}`,
     "",

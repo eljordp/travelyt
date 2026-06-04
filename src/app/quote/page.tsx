@@ -219,7 +219,9 @@ export default function QuotePage() {
       if (!form.name.trim()) e.name = "Full name required";
       if (!form.email.trim()) e.email = "Email required";
       else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
-      if (!form.phone.trim()) e.phone = "Phone number required";
+      if (form.phone.trim() && !/^[+\d][\d\s().-]{6,}$/.test(form.phone.trim())) {
+        e.phone = "Enter a valid phone number";
+      }
     }
     if (step === 3 && !form.restrictedItemsAttested) {
       e.restrictedItemsAttested =
@@ -852,13 +854,20 @@ export default function QuotePage() {
                   </div>
 
                   {[
-                    { id: "name", label: "Full Name", type: "text", placeholder: "Jordan Williams" },
-                    { id: "email", label: "Email Address", type: "email", placeholder: "you@example.com" },
-                    { id: "phone", label: "Phone Number", type: "tel", placeholder: "+1 (555) 000-0000" },
+                    { id: "name", label: "Full Name", type: "text", placeholder: "Jordan Williams", required: true },
+                    { id: "email", label: "Email Address", type: "email", placeholder: "you@example.com", required: true },
+                    { id: "phone", label: "Phone Number", type: "tel", placeholder: "+1 (555) 000-0000", required: false },
                   ].map((f) => (
                     <div key={f.id}>
-                      <label htmlFor={`quote-${f.id}`} className={labelClass}>{f.label} <span className="text-[#ff6868]">*</span></label>
-                      <input id={`quote-${f.id}`} name={f.id} required type={f.type} placeholder={f.placeholder}
+                      <label htmlFor={`quote-${f.id}`} className={labelClass}>
+                        {f.label}{" "}
+                        {f.required ? (
+                          <span className="text-[#ff6868]">*</span>
+                        ) : (
+                          <span className="font-normal normal-case text-navy/70">(optional)</span>
+                        )}
+                      </label>
+                      <input id={`quote-${f.id}`} name={f.id} required={f.required} type={f.type} placeholder={f.placeholder}
                         value={form[f.id as keyof FormData] as string}
                         onChange={(e) => set(f.id as keyof FormData, e.target.value)}
                         className={`w-full px-4 py-3 rounded-xl border ${errors[f.id] ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`} />
@@ -1009,7 +1018,7 @@ export default function QuotePage() {
                     <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
                       <Row label="Name" value={form.name} />
                       <Row label="Email" value={form.email} />
-                      <Row label="Phone" value={form.phone} />
+                      {form.phone.trim() && <Row label="Phone" value={form.phone} />}
                       {form.notes && <Row label="Notes" value={form.notes} />}
                     </div>
                   </div>

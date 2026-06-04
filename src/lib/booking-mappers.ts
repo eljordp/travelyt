@@ -19,7 +19,7 @@ export interface BookingRow {
   bags: number;
   customer_name: string;
   email: string;
-  phone: string;
+  phone: string | null;
   notes: string | null;
   declared_value_cents: number | null;
   coverage_election: "standard" | "declared_value" | null;
@@ -71,7 +71,7 @@ export function rowToBooking(row: BookingRow): Booking {
     bags: row.bags,
     name: row.customer_name,
     email: row.email,
-    phone: row.phone,
+    phone: row.phone ?? "",
     notes: row.notes ?? undefined,
     declaredValueCents: row.declared_value_cents ?? undefined,
     coverageElection: row.coverage_election ?? undefined,
@@ -126,7 +126,7 @@ export function bookingToInsert(
     bags: booking.bags,
     customer_name: booking.name,
     email: booking.email,
-    phone: booking.phone,
+    phone: booking.phone.trim() || null,
     notes: booking.notes ?? null,
     declared_value_cents: booking.declaredValueCents ?? null,
     coverage_election: booking.coverageElection ?? "standard",
@@ -178,7 +178,7 @@ export function bookingPatchToRowPatch(patch: Partial<Booking>) {
   if (patch.bags !== undefined) row.bags = patch.bags;
   if (patch.name !== undefined) row.customer_name = patch.name;
   if (patch.email !== undefined) row.email = patch.email;
-  if (patch.phone !== undefined) row.phone = patch.phone;
+  if (patch.phone !== undefined) row.phone = patch.phone.trim() || null;
   if (patch.notes !== undefined) row.notes = patch.notes ?? null;
   if (patch.declaredValueCents !== undefined) {
     row.declared_value_cents = patch.declaredValueCents ?? null;

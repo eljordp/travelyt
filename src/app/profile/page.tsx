@@ -232,7 +232,7 @@ export default function ProfilePage() {
       email: email !== user.email ? email : undefined,
       data: {
         full_name: name,
-        phone: normalizePhone(phone),
+        phone: phone ? normalizePhone(phone) : "",
         role: (user.user_metadata?.role as string | undefined) ?? "customer",
         address,
       },
@@ -515,6 +515,9 @@ export default function ProfilePage() {
                     className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5 capitalize"
                   >
                     {field === "address" ? "Home Address" : field}
+                    {field === "phone" && (
+                      <span className="font-normal normal-case text-navy/70"> (optional)</span>
+                    )}
                   </label>
                   <input
                     id={`profile-${field}`}

@@ -8,7 +8,7 @@ export function normalizePhone(input: string): string {
 
 export function validatePhone(input: string): string | undefined {
   const phone = normalizePhone(input);
-  if (!phone) return "Phone number is required.";
+  if (!phone) return undefined;
   if (!/^\+?\d{10,15}$/.test(phone)) {
     return "Enter a valid phone number with area code.";
   }
