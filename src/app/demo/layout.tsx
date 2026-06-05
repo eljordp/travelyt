@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Demo",
+  title: "App Walkthrough",
   description:
-    "Try the Travelyt booking prototype, driver console, and print-ready flyer.",
+    "Walk through Travelyt customer booking, customer trips, courier jobs, and operations review.",
   alternates: {
     canonical: "/demo",
+  },
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 

@@ -1,36 +1,50 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { Car, FileText, PackageCheck, Route, Send } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Car,
+  ClipboardCheck,
+  PackageCheck,
+  Route,
+  Send,
+} from "lucide-react";
 
 const demoSteps = [
   {
     icon: <Send className="h-6 w-6" strokeWidth={1.7} />,
-    title: "Create a sample quote",
-    body: "Starts the traveler flow with LAX and departure pickup prefilled.",
+    title: "Quote request",
+    body: "Start the traveler flow with LAX and departure pickup details prefilled.",
     href: "/quote?service=departure&airport=LAX&date=2026-06-15",
     cta: "Start quote",
   },
   {
     icon: <PackageCheck className="h-6 w-6" strokeWidth={1.7} />,
-    title: "Submit a request",
-    body: "The quote flow creates a launch request with an estimated total and follow-up status page.",
-    href: "/quote?service=departure&airport=LAX&date=2026-06-15",
-    cta: "Create booking",
+    title: "Customer trips",
+    body: "Sign in with the review customer account to see seeded bookings, status, and tracking.",
+    href: "/login?next=%2Fprofile",
+    cta: "Open trips",
   },
   {
     icon: <Car className="h-6 w-6" strokeWidth={1.7} />,
-    title: "Open driver console",
-    body: "Use the courier view to assign, update, and upload proof for demo bookings.",
+    title: "Courier console",
+    body: "Use the review courier name and access code to inspect assigned jobs and custody actions.",
     href: "/driver",
     cta: "Open driver",
   },
   {
-    icon: <FileText className="h-6 w-6" strokeWidth={1.7} />,
-    title: "Print the flyer",
-    body: "A shareable one-page handout for partner conversations and demos.",
-    href: "/flyer",
-    cta: "View flyer",
+    icon: <BriefcaseBusiness className="h-6 w-6" strokeWidth={1.7} />,
+    title: "Operations console",
+    body: "Sign in with the review operations account to manage bookings, driver access, and exceptions.",
+    href: "/admin",
+    cta: "Open ops",
+  },
+  {
+    icon: <ClipboardCheck className="h-6 w-6" strokeWidth={1.7} />,
+    title: "Review data",
+    body: "Seeded review bookings include customer trips, assigned courier work, and custody proof.",
+    href: "/profile",
+    cta: "View account",
   },
 ];
 
@@ -43,21 +57,21 @@ export default function DemoPage() {
         <section className="px-6 pb-16 pt-10">
           <div className="mx-auto max-w-5xl text-center">
             <span className="text-sm font-semibold uppercase tracking-wider text-[#ff6868]">
-              Prototype Demo
+              App Review Walkthrough
             </span>
             <h1 className="mt-3 text-4xl font-bold text-navy md:text-6xl">
-              Try the working Travelyt flow
+              Review the working Travelyt flow
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-navy/70">
-              The public site explains the service. This page surfaces the
-              actual demo: quote request, launch booking prototype, courier
-              console, tracking updates, proof upload, and print flyer.
+              Use the credentials in App Store Connect to access customer trips,
+              quote requests, courier jobs, tracking updates, proof review, and
+              the operations console.
             </p>
           </div>
         </section>
 
         <section className="px-6 pb-20">
-          <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2">
+          <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-2 xl:grid-cols-3">
             {demoSteps.map((step) => (
               <Link
                 key={step.title}
