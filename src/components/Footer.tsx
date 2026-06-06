@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import LeadCapture from "./LeadCapture";
+import { APP_STORE_URL } from "@/lib/site";
 
 export default function Footer() {
   return (
@@ -16,6 +18,15 @@ export default function Footer() {
               Travel light, arrive smart. Door-to-door baggage solutions for the
               modern traveler.
             </p>
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-bold text-navy transition-colors hover:bg-white/90"
+            >
+              <Download className="h-4 w-4" strokeWidth={2} />
+              App Store
+            </a>
           </div>
 
           {/* Services */}
@@ -64,7 +75,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#early-access" className="hover:text-cyan transition-colors">
+                <Link href="/#route-updates" className="hover:text-cyan transition-colors">
                   Partners
                 </Link>
               </li>
@@ -92,7 +103,7 @@ export default function Footer() {
               Stay Updated
             </div>
             <p className="text-white/60 text-sm mb-4">
-              Get early access updates before public launch.
+              Get route, airport, and service updates.
             </p>
             <LeadCapture source="footer" variant="footer" />
           </div>
@@ -121,10 +132,10 @@ export default function Footer() {
             </Link>
           </div>
           <Link
-            href="/#early-access"
+            href="/#route-updates"
             className="text-sm font-semibold text-white/70 hover:text-cyan transition-colors"
           >
-            Early access
+            Route updates
           </Link>
         </div>
       </div>

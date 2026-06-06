@@ -69,7 +69,7 @@ export default function LeadCapture({
       }
 
       setStatus("success");
-      setMessage("You're on the list. We'll reach out before launch.");
+      setMessage("You're on the list. We'll reach out with route availability.");
       setEmail("");
     } catch {
       setStatus("error");
@@ -136,7 +136,7 @@ export default function LeadCapture({
         disabled={status === "loading"}
         className="rounded-xl bg-navy px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
       >
-        {status === "loading" ? "Joining..." : "Join early access"}
+        {status === "loading" ? "Joining..." : "Get updates"}
       </button>
       {message && (
         <p className={`sm:col-span-3 text-sm ${status === "error" ? "text-red-600" : "text-navy/70"}`}>

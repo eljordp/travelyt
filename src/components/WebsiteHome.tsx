@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   CircleDollarSign,
   ClipboardCheck,
+  Download,
   MapPinned,
   PackageCheck,
   PlaneLanding,
@@ -16,6 +17,7 @@ import HeroCarousel from "@/components/HeroCarousel";
 import BagStatus from "@/components/BagStatus";
 import Footer from "@/components/Footer";
 import LeadCapture from "@/components/LeadCapture";
+import { APP_STORE_URL } from "@/lib/site";
 
 const personas = [
   {
@@ -82,9 +84,64 @@ export default function WebsiteHome() {
           <h1 className="mt-3 text-4xl font-bold leading-[1.05] text-navy sm:text-5xl lg:text-6xl">
             We move your bags, you move freely.
           </h1>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-navy/90"
+            >
+              <Download className="h-4 w-4" strokeWidth={2} />
+              Download on App Store
+            </a>
+            <Link
+              href="/quote"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-navy shadow-sm shadow-navy/5 transition-colors hover:bg-navy/5"
+            >
+              Start online <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </section>
 
         <HeroCarousel />
+
+        <section
+          className="rounded-3xl bg-navy px-6 py-6 text-white shadow-sm shadow-navy/10 sm:px-8"
+          aria-label="Download Travelyt"
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
+                Now on the App Store
+              </p>
+              <h2 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
+                Download Travelyt and request luggage help from your phone.
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-white/70">
+                Share the app with travelers who want pickup, handoff, arrival
+                delivery, and live bag status for supported launch routes.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-navy transition-colors hover:bg-white/90"
+              >
+                <Download className="h-4 w-4" strokeWidth={2} />
+                Download on App Store
+              </a>
+              <Link
+                href="/quote"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+              >
+                Start online <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
 
         <section>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -261,25 +318,26 @@ export default function WebsiteHome() {
         </section>
 
         <section
+          id="route-updates"
           className="py-4"
-          aria-label="Early access"
+          aria-label="Route updates"
         >
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
               Planning a trip soon?
             </p>
             <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
-              Get launch availability for your route.
+              Get availability for your route.
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-navy/65 sm:text-base">
               Drop your email and what kind of trip you are planning. We will
               use it to prioritize airport coverage, family routes, and business
-              travel windows before public launch.
+              travel windows for supported launch markets.
             </p>
           </div>
           <div className="mt-7">
             <LeadCapture
-              source="homepage-early-access"
+              source="homepage-route-updates"
               defaultInterest="early-customer"
             />
           </div>
@@ -295,19 +353,30 @@ export default function WebsiteHome() {
                 Where to start
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
-                Tell us about your trip. We&apos;ll handle the bags.
+                Download the app or start with a quote.
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-white/75 sm:text-base">
-                Pick a service, drop your dates, and we&apos;ll quote your route in seconds. No accounts needed to start.
+                Travelyt is live on the App Store. Pick a service, drop your dates, and we&apos;ll quote your route in seconds.
               </p>
             </div>
 
-            <Link
-              href="/quote"
-              className="inline-flex items-center gap-2 self-start rounded-xl bg-[#ff6868] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6868]"
-            >
-              Get your quote <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-navy transition-colors hover:bg-white/90"
+              >
+                <Download className="h-4 w-4" strokeWidth={2} />
+                App Store
+              </a>
+              <Link
+                href="/quote"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff6868] px-6 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#ff6868]"
+              >
+                Get your quote <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

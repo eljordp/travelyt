@@ -19,7 +19,7 @@ type Promo = {
 const PROMOS: Promo[] = [
   {
     icon: Tag,
-    eyebrow: "Early access pricing",
+    eyebrow: "Launch pricing",
     text: "30% off your first booking",
     code: "TRAVELYT30",
     cta: "Claim discount",
@@ -35,7 +35,7 @@ const PROMOS: Promo[] = [
   {
     icon: Trophy,
     eyebrow: "World Cup window",
-    text: "Pilot routes opening for the summer — get on the list early.",
+    text: "Pilot routes opening for the summer — reserve a service slot.",
     cta: "Reserve a slot",
     href: "/quote",
   },

@@ -99,8 +99,8 @@ export default function LoginPage() {
           <Link href="/register" className="text-[#ff6868] font-semibold hover:underline">Create one</Link>
         </p>
         <p className="mt-3 text-center text-xs text-navy/55">
-          Need beta access?{" "}
-          <Link href="/#early-access" className="text-[#ff6868] hover:underline">Join early access</Link>
+          Need route updates?{" "}
+          <Link href="/#route-updates" className="text-[#ff6868] hover:underline">Get updates</Link>
         </p>
       </div>
     </div>
