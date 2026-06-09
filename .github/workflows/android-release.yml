@@ -18,6 +18,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS deps + sync Capacitor Android
+        run: |
+          npm ci
+          npx cap sync android
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
