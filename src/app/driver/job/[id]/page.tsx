@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import { ArrowLeft } from "lucide-react";
+import AppChrome from "@/components/AppChrome";
 import {
   addProof,
   type Booking,
@@ -38,6 +39,32 @@ function custodyBlockers(booking: Booking) {
 
 function latestApiError(fallback: string) {
   return getLastApiFailureMessage() || fallback;
+}
+
+function DriverJobChrome({
+  children,
+  title = "Driver job",
+}: {
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <AppChrome
+      title={title}
+      action={
+        <Link
+          href="/driver"
+          aria-label="Back to driver jobs"
+          className="flex h-10 items-center gap-1.5 rounded-full bg-navy/5 px-3 text-xs font-bold text-navy transition-colors hover:bg-navy/10"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
+          Jobs
+        </Link>
+      }
+    >
+      {children}
+    </AppChrome>
+  );
 }
 
 export default function DriverJobPage() {
@@ -94,37 +121,38 @@ export default function DriverJobPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-      </div>
+      <DriverJobChrome title="Driver">
+        <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
+          <div className="h-4 w-28 rounded-full bg-navy/10" />
+          <div className="mt-4 h-32 rounded-xl bg-navy/5" />
+        </div>
+      </DriverJobChrome>
     );
   }
 
   if (!driver) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-md mx-auto px-4 pt-28 pb-16 text-center">
+      <DriverJobChrome title="Driver">
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm shadow-navy/5">
           <h1 className="text-2xl font-bold text-navy mb-3">Sign in first</h1>
           <Link href="/driver" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Go to courier login
           </Link>
         </div>
-      </div>
+      </DriverJobChrome>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-[#f5f0ee]">
-        <Navbar />
-        <div className="max-w-md mx-auto px-4 pt-28 pb-16 text-center">
+      <DriverJobChrome title="Driver">
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm shadow-navy/5">
           <h1 className="text-2xl font-bold text-navy mb-3">Job not found</h1>
           <Link href="/driver" className="px-6 py-3 rounded-xl bg-navy text-white font-semibold text-sm hover:opacity-90 transition-opacity">
             Back to jobs
           </Link>
         </div>
-      </div>
+      </DriverJobChrome>
     );
   }
 
@@ -424,12 +452,14 @@ export default function DriverJobPage() {
       needsDeliveryPhoto);
 
   return (
-    <div className="min-h-screen bg-[#f5f0ee]">
-      <Navbar />
-
-      <div className="max-w-2xl mx-auto px-4 pt-28 pb-16">
-        <Link href="/driver" className="text-sm text-navy/70 hover:text-navy mb-4 inline-block">
-          ← Back to jobs
+    <DriverJobChrome>
+      <div className="mx-auto max-w-2xl">
+        <Link
+          href="/driver"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-bold text-navy/70 transition-colors hover:text-navy"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
+          Back to jobs
         </Link>
 
         <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
@@ -861,7 +891,7 @@ export default function DriverJobPage() {
           </div>
         )}
       </div>
-    </div>
+    </DriverJobChrome>
   );
 }
 

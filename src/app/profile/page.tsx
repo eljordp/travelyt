@@ -15,7 +15,6 @@ import AppChrome from "@/components/AppChrome";
 import {
   formatPrice,
   getBookings,
-  getBookingTrackingHref,
   SERVICE_LABELS,
   STATUS_LABELS,
   TERMINAL_STATUSES,
@@ -89,6 +88,10 @@ function customerBookings(rows: Booking[], user: User) {
 function bookingTime(booking: Booking) {
   const parsed = Date.parse(`${booking.date}T00:00:00`);
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function bookingAppHref(booking: Pick<Booking, "id">) {
+  return `/booking/${encodeURIComponent(booking.id)}`;
 }
 
 function formatTripDate(value: string) {
@@ -196,9 +199,7 @@ export default function ProfilePage() {
     },
   ];
 
-  const trackHref = activeBookings[0]
-    ? getBookingTrackingHref(activeBookings[0])
-    : "/quote";
+  const trackHref = activeBookings[0] ? bookingAppHref(activeBookings[0]) : "/quote";
 
   async function saveSettings(event: React.FormEvent) {
     event.preventDefault();
@@ -648,7 +649,7 @@ function BookingsList({
       {bookings.map((booking) => (
         <Link
           key={booking.id}
-          href={getBookingTrackingHref(booking)}
+          href={bookingAppHref(booking)}
           className="flex items-center gap-3 p-4 transition-colors hover:bg-gray-50"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f6f7fb] text-navy">
