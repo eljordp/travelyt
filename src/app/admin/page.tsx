@@ -103,6 +103,15 @@ const statusColors: Record<Booking["status"], string> = {
 
 const issueOptions = Object.keys(ISSUE_TYPE_LABELS) as BookingIssueType[];
 
+function isArchivedDriverCode(code: DriverAccessCode) {
+  return code.status !== "active";
+}
+
+function driverCodeStatusLabel(code: DriverAccessCode) {
+  if (code.status === "active") return "active";
+  return code.status === "expired" ? "archived: expired" : "archived: revoked";
+}
+
 function formatDate(value?: string) {
   if (!value) return "Not set";
   const parsed = Date.parse(value.includes("T") ? value : `${value}T00:00:00`);
@@ -260,6 +269,10 @@ export default function AdminPage() {
   const [archiveView, setArchiveView] = useState<"active" | "archived" | "all">(
     "active"
   );
+  const [cleanupOnly, setCleanupOnly] = useState(false);
+  const [driverCodeView, setDriverCodeView] = useState<
+    "active" | "archived" | "all"
+  >("active");
   const [updatingId, setUpdatingId] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [newDriverName, setNewDriverName] = useState("");
@@ -549,12 +562,25 @@ export default function AdminPage() {
     }
   }
 
+  function openStaleCleanupQueue() {
+    setArchiveView("active");
+    setStatus("pending");
+    setQuery("");
+    setCleanupOnly(true);
+    requestAnimationFrame(() => {
+      document
+        .getElementById("booking-cleanup-queue")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   const filtered = useMemo(() => {
     const clean = query.trim().toLowerCase();
     return bookings.filter((booking) => {
       const archived = Boolean(booking.archivedAt);
       if (archiveView === "active" && archived) return false;
       if (archiveView === "archived" && !archived) return false;
+      if (cleanupOnly && !isStalePending(booking)) return false;
       const matchesStatus = status === "all" || booking.status === status;
       const matchesQuery =
         !clean ||
@@ -573,7 +599,18 @@ export default function AdminPage() {
 
       return matchesStatus && matchesQuery;
     });
-  }, [archiveView, bookings, query, status]);
+  }, [archiveView, bookings, cleanupOnly, query, status]);
+
+  const filteredDriverCodes = useMemo(
+    () =>
+      driverCodes.filter((code) => {
+        const archived = isArchivedDriverCode(code);
+        if (driverCodeView === "active") return !archived;
+        if (driverCodeView === "archived") return archived;
+        return true;
+      }),
+    [driverCodeView, driverCodes]
+  );
 
   const metrics = useMemo(() => {
     const operationalBookings = bookings.filter((booking) => !booking.archivedAt);
@@ -606,6 +643,16 @@ export default function AdminPage() {
   const stalePending = useMemo(
     () => bookings.filter((booking) => isStalePending(booking)),
     [bookings]
+  );
+
+  const activeDriverCodeCount = useMemo(
+    () => driverCodes.filter((code) => !isArchivedDriverCode(code)).length,
+    [driverCodes]
+  );
+
+  const archivedDriverCodeCount = useMemo(
+    () => driverCodes.filter(isArchivedDriverCode).length,
+    [driverCodes]
   );
 
   function exportCsv() {
@@ -850,10 +897,17 @@ export default function AdminPage() {
                 {stalePending.length === 1 ? "" : "s"} need cleanup.
               </p>
               <p className="mt-1 leading-relaxed">
-                They are hidden from the driver board now. Update the travel
-                date, mark confirmed, or remove test records in Supabase before
-                sending drivers into production.
+                They are hidden from the driver board. Open the cleanup queue,
+                then update the travel date, move the status forward, or archive
+                old test records so they stay stored but out of operations.
               </p>
+              <button
+                type="button"
+                onClick={openStaleCleanupQueue}
+                className="mt-3 rounded-xl bg-yellow-900 px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Open cleanup queue
+              </button>
             </div>
           </div>
         )}
@@ -939,7 +993,8 @@ export default function AdminPage() {
               </div>
               <p className="mt-1 text-xs leading-relaxed text-navy/55">
                 Create one code per courier. The full code is shown once; after
-                that only the last characters are visible.
+                that only the last characters are visible. Archived codes stay
+                stored for audit but cannot sign in.
               </p>
             </div>
             <button
@@ -971,8 +1026,8 @@ export default function AdminPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-green-800">
-                Send this to the driver privately. If they lose it, revoke this
-                row and create a new code.
+                Send this to the driver privately. If they lose it, revoke and
+                archive this row, then create a new code.
               </p>
             </div>
           )}
@@ -1010,14 +1065,40 @@ export default function AdminPage() {
           </div>
           {adminRole !== "admin" && (
             <p className="mt-2 text-xs text-navy/50">
-              Dispatchers can view code status. Only admin can create or revoke
-              driver codes.
+              Dispatchers can view code status. Only admin can create, revoke,
+              or archive driver codes.
             </p>
           )}
 
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
+            Active codes open the driver portal. Archived codes are revoked or
+            expired, kept in history, and blocked from future driver sign-in.
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-navy/[0.03] p-1 text-xs font-bold text-navy">
+            {([
+              ["active", `Active ${activeDriverCodeCount}`],
+              ["archived", `Archived ${archivedDriverCodeCount}`],
+              ["all", `All ${driverCodes.length}`],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setDriverCodeView(value)}
+                className={`rounded-lg px-2 py-2 transition-colors ${
+                  driverCodeView === value
+                    ? "bg-white text-navy shadow-sm shadow-navy/5"
+                    : "text-navy/55 hover:bg-white/60"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="mt-4 overflow-hidden rounded-2xl border border-gray-100">
-            {driverCodes.length ? (
-              driverCodes.slice(0, 6).map((code) => (
+            {filteredDriverCodes.length ? (
+              filteredDriverCodes.slice(0, 8).map((code) => (
                 <div
                   key={code.id}
                   className="grid gap-2 border-b border-gray-100 px-4 py-3 text-sm last:border-b-0"
@@ -1048,7 +1129,7 @@ export default function AdminPage() {
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {code.status}
+                    {driverCodeStatusLabel(code)}
                   </span>
                   <button
                     type="button"
@@ -1056,13 +1137,13 @@ export default function AdminPage() {
                     disabled={adminRole !== "admin" || code.status !== "active"}
                     className="self-start rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-40"
                   >
-                    Revoke
+                    {code.status === "active" ? "Revoke + archive" : "Stored"}
                   </button>
                 </div>
               ))
             ) : (
               <div className="p-5 text-center text-sm text-navy/55">
-                No database-backed driver codes yet.
+                No driver codes in this view.
               </div>
             )}
           </div>
@@ -1070,17 +1151,19 @@ export default function AdminPage() {
 
           </aside>
 
-          <section className="min-w-0 space-y-4">
+          <section id="booking-cleanup-queue" className="min-w-0 space-y-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-navy/45">
                   Dispatch queue
                 </p>
-                <h2 className="text-xl font-bold text-navy">Bookings to manage</h2>
+                <h2 className="text-xl font-bold text-navy">
+                  {cleanupOnly ? "Cleanup queue" : "Bookings to manage"}
+                </h2>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-xs font-semibold text-navy/45">
-                  Showing {filtered.length} {archiveView} booking
+                  Showing {filtered.length} {cleanupOnly ? "cleanup" : archiveView} booking
                   {filtered.length === 1 ? "" : "s"}
                 </p>
                 <p className="text-xs text-navy/40">
@@ -1100,7 +1183,10 @@ export default function AdminPage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setArchiveView(value)}
+                onClick={() => {
+                  setArchiveView(value);
+                  setCleanupOnly(false);
+                }}
                 className={`rounded-lg px-3 py-2 transition-colors ${
                   archiveView === value
                     ? "bg-white text-navy shadow-sm shadow-navy/5"
@@ -1109,8 +1195,26 @@ export default function AdminPage() {
               >
                 {label}
               </button>
-            ))}
+              ))}
           </div>
+          {cleanupOnly && (
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Only showing stale pending bookings. Update the date/status or
+                archive old test records to clear this queue.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCleanupOnly(false);
+                  setStatus("all");
+                }}
+                className="self-start rounded-lg bg-white px-2.5 py-1.5 font-bold text-yellow-900 shadow-sm shadow-yellow-900/5 sm:self-auto"
+              >
+                Clear cleanup view
+              </button>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto_auto]">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-navy/40" />
@@ -1123,9 +1227,11 @@ export default function AdminPage() {
             </label>
             <select
               value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as Booking["status"] | "all")
-              }
+              onChange={(event) => {
+                const nextStatus = event.target.value as Booking["status"] | "all";
+                setStatus(nextStatus);
+                if (nextStatus !== "pending") setCleanupOnly(false);
+              }}
               className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
             >
               {statusOptions.map((option) => (
