@@ -158,6 +158,10 @@ export interface Booking {
   statusHistory?: BookingAuditEntry[];
   archivedAt?: string | null;
   archivedBy?: string | null;
+  externalProvider?: string;
+  externalReference?: string;
+  externalStatus?: string;
+  externalSyncedAt?: string;
   customerAccessToken?: string;
   customerUserId?: string;
   driverUserId?: string;
