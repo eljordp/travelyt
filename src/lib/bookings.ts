@@ -201,7 +201,14 @@ export function getBookingAccessToken(id: string): string | null {
 
 export function storeBookingAccessToken(id: string, accessToken?: string | null) {
   if (typeof window === "undefined" || !accessToken) return;
-  localStorage.setItem(`${ACCESS_PREFIX}${id}`, accessToken);
+  try {
+    localStorage.setItem(`${ACCESS_PREFIX}${id}`, accessToken);
+  } catch {
+    localStorage.removeItem(KEY);
+    try {
+      localStorage.setItem(`${ACCESS_PREFIX}${id}`, accessToken);
+    } catch {}
+  }
 }
 
 function storeAccessToken(booking: Booking) {
@@ -247,9 +254,27 @@ function readLocal(): Booking[] {
   }
 }
 
+function slimBookingForLocalCache(booking: Booking): Booking {
+  return {
+    ...booking,
+    proofs: booking.proofs.map((proof) => ({
+      ...proof,
+      dataUrl: proof.storagePath || "",
+    })),
+  };
+}
+
 function writeLocal(rows: Booking[], notify = true) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(rows));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(rows));
+  } catch {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(rows.map(slimBookingForLocalCache)));
+    } catch {
+      localStorage.removeItem(KEY);
+    }
+  }
   if (notify) notifyBookingsChanged();
 }
 
