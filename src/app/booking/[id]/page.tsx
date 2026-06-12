@@ -281,7 +281,7 @@ export default function BookingPage() {
                       >
                         View proof location
                         {p.location.accuracyMeters
-                          ? ` (${p.location.accuracyMeters}m accuracy)`
+                          ? ` (within about ${p.location.accuracyMeters} meters)`
                           : ""}
                       </a>
                     )}

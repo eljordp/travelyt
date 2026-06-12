@@ -839,7 +839,9 @@ export default function DriverJobPage() {
                   </div>
                   <div>
                     GPS {event.latitude}, {event.longitude}
-                    {event.accuracyMeters ? ` · ${event.accuracyMeters}m` : ""}
+                    {event.accuracyMeters
+                      ? ` · within about ${event.accuracyMeters} meters`
+                      : ""}
                   </div>
                 </a>
               ))}
