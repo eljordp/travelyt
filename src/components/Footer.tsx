@@ -80,11 +80,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/demo" className="hover:text-cyan transition-colors">
-                  Demo
-                </Link>
-              </li>
-              <li>
                 <Link href="/driver/apply" className="hover:text-cyan transition-colors">
                   Drive with us
                 </Link>

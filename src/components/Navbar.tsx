@@ -22,7 +22,6 @@ export default function Navbar() {
           <Link href="/pricing" className="hover:text-cyan transition-colors">Pricing</Link>
           <Link href="/airlines" className="hover:text-cyan transition-colors">Airlines</Link>
           <Link href="/trust" className="hover:text-cyan transition-colors">Trust</Link>
-          <Link href="/demo" className="hover:text-cyan transition-colors">Demo</Link>
           <Link href="/#faq" className="hover:text-cyan transition-colors">FAQ</Link>
           <Link href="/driver/apply" className="hover:text-cyan transition-colors">Drivers</Link>
           <Link href="/login?next=%2Fprofile" className="text-white/90 hover:text-white transition-colors">Customer Login</Link>
@@ -64,7 +63,6 @@ export default function Navbar() {
           <Link href="/pricing" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Pricing</Link>
           <Link href="/airlines" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Airlines</Link>
           <Link href="/trust" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Trust</Link>
-          <Link href="/demo" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Demo</Link>
           <Link href="/#faq" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>FAQ</Link>
           <Link href="/driver/apply" className="block py-2 hover:text-cyan" onClick={() => setOpen(false)}>Drivers</Link>
           <Link href="/login?next=%2Fprofile" className="block py-2 text-white/90 hover:text-white" onClick={() => setOpen(false)}>Customer Login</Link>

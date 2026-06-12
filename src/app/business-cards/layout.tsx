@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Driver Console",
-  description: "Travelyt courier console for baggage pickup, custody, and delivery workflows.",
-  alternates: {
-    canonical: "/driver",
-  },
+  title: "Business Cards",
+  description: "Internal Travelyt print-ready business card assets.",
   robots: {
     index: false,
     follow: false,
   },
 };
 
-export default function DriverLayout({
+export default function BusinessCardsLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

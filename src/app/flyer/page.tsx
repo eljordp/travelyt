@@ -44,7 +44,7 @@ export default function FlyerPage() {
               <div className="text-2xl font-bold tracking-tight">Travelyt</div>
             </div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
-              Pre-Launch · 2026
+              Pilot Routes · 2026
             </div>
           </div>
 

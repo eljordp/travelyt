@@ -15,7 +15,6 @@ import {
   SERVICE_LABELS,
 } from "@/lib/bookings";
 import {
-  DRIVER_OPTIONS,
   driverInitials,
   driverNameMatches,
 } from "@/lib/drivers";
@@ -139,8 +138,8 @@ export default function DriverDashboard() {
     setDriver(null);
   }
 
-  function resetDemo() {
-    if (!confirm("Clear local demo cache on this device? Backend bookings stay intact.")) return;
+  function resetLocalSession() {
+    if (!confirm("Clear the local courier session on this device? Backend bookings stay intact.")) return;
     clearLocalBookings();
     localStorage.removeItem(DRIVER_KEY);
     clearDriverAccessCode();
@@ -204,7 +203,7 @@ export default function DriverDashboard() {
                   id="driver-name"
                   value={customDriverName}
                   onChange={(event) => setCustomDriverName(event.target.value)}
-                  placeholder="Daniel Gyanor"
+                  placeholder="Your courier name"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                 />
               </div>
@@ -215,21 +214,6 @@ export default function DriverDashboard() {
                 Continue
               </button>
             </form>
-            {DRIVER_OPTIONS.map((profile) => (
-              <button
-                key={profile.name}
-                onClick={() => chooseDriver(profile.name)}
-                className="w-full text-left px-5 py-4 rounded-xl border border-gray-100 hover:border-[#ff6868] hover:bg-[#ff6868]/5 transition-all cursor-pointer flex items-center gap-3"
-              >
-                <div className="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center font-bold text-sm">
-                  {driverInitials(profile.name)}
-                </div>
-                <div>
-                  <div className="font-semibold text-navy">{profile.name}</div>
-                  <div className="text-xs text-navy/70">Courier · {profile.role}</div>
-                </div>
-              </button>
-            ))}
           </div>
           <div className="rounded-2xl border border-dashed border-navy/15 bg-white/60 p-5 text-center text-sm text-navy/70">
             Not a courier yet?{" "}
@@ -237,7 +221,7 @@ export default function DriverDashboard() {
               href="/driver/apply"
               className="font-semibold text-[#ff6868] underline"
             >
-              Apply to drive with Travelyt
+              Apply to drive
             </Link>
           </div>
         </div>
@@ -317,11 +301,11 @@ export default function DriverDashboard() {
                 </Link>
                 <button
                   type="button"
-                  onClick={resetDemo}
+                  onClick={resetLocalSession}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-navy transition-colors hover:bg-navy/5"
                 >
                   <Settings className="h-4 w-4" strokeWidth={2} />
-                  Reset local demo cache
+                  Reset local session
                 </button>
                 <button
                   type="button"

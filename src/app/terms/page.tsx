@@ -50,7 +50,7 @@ const sections = [
   },
   {
     title: "Launch status and payment",
-    body: "Travelyt is onboarding early customers, partners, and launch markets. Users can request service, see an estimated total, and pay through secure third-party checkout where available. Payment reserves the request; Travelyt still confirms operational availability, timing, pricing, coverage, and service-area constraints before custody begins. If a route cannot be served, Travelyt may modify, cancel, or refund the request as appropriate.",
+    body: "Travelyt is onboarding customers, partners, and service markets in phases. Users can request service, see an estimated total, and pay through secure third-party checkout where available. Payment reserves the request; Travelyt still confirms operational availability, timing, pricing, coverage, and service-area constraints before custody begins. If a route cannot be served, Travelyt may modify, cancel, or refund the request as appropriate.",
   },
 ];
 
@@ -67,9 +67,8 @@ export default function TermsPage() {
             Terms of Service
           </h1>
           <p className="text-navy/70 leading-relaxed mb-10">
-            These terms provide a plain-language operating baseline for the
-            current Travelyt site. They should be reviewed and finalized by
-            counsel before broad paid public launch.
+            These terms explain how Travelyt quotes, confirms, and operates
+            baggage pickup, custody, tracking, and delivery services.
           </p>
 
           <div className="space-y-8">

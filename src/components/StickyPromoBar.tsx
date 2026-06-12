@@ -44,7 +44,20 @@ const PROMOS: Promo[] = [
 const ROTATE_MS = 7000;
 const STORAGE_KEY = "travelyt_sticky_promo_dismissed";
 
-const HIDDEN_PREFIXES = ["/admin", "/driver", "/booking", "/quote", "/profile"];
+const HIDDEN_PREFIXES = [
+  "/admin",
+  "/booking",
+  "/business-cards",
+  "/demo",
+  "/driver",
+  "/flyer",
+  "/login",
+  "/profile",
+  "/quote",
+  "/register",
+  "/reset-password",
+  "/track",
+];
 
 export default function StickyPromoBar() {
   const pathname = usePathname();
@@ -87,17 +100,17 @@ export default function StickyPromoBar() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-3 sm:px-6 sm:pb-5"
+      className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-2 sm:px-6 sm:pb-5"
       role="region"
       aria-label="Current Travelyt offers"
     >
-      <div className="mx-auto flex max-w-5xl items-center gap-3 rounded-2xl bg-navy/95 px-4 py-3 text-white shadow-2xl shadow-navy/40 backdrop-blur sm:px-5 sm:py-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/20 text-[#ff6868]">
+      <div className="mx-auto flex max-w-5xl items-center gap-2 rounded-xl bg-navy/95 px-3 py-2.5 text-white shadow-2xl shadow-navy/40 backdrop-blur sm:gap-3 sm:rounded-2xl sm:px-5 sm:py-4">
+        <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/20 text-[#ff6868] sm:flex">
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#ff6868] sm:text-[10px]">
             {promo.eyebrow}
           </p>
           <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -130,13 +143,13 @@ export default function StickyPromoBar() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss offers"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="mx-auto mt-2 flex max-w-5xl justify-center gap-1.5">
+      <div className="mx-auto mt-2 hidden max-w-5xl justify-center gap-1.5 sm:flex">
         {PROMOS.map((_, i) => (
           <button
             key={i}

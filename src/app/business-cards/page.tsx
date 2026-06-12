@@ -43,7 +43,7 @@ export default function BusinessCardsPage() {
 
       <div className="card-screen-wrap min-h-screen bg-[#1a1a1a] py-10 px-4">
         {/* Screen-only controls */}
-        <div className="card-controls max-w-[8in] mx-auto mb-6 flex items-center justify-between text-white/70 text-xs">
+        <div className="card-controls max-w-[8in] mx-auto mb-6 flex flex-wrap items-center justify-between gap-2 text-white/70 text-xs">
           <span>Print-ready business card · 3.5&quot; × 2&quot; (US standard)</span>
           <button
             onClick={() => window.print()}
@@ -54,7 +54,7 @@ export default function BusinessCardsPage() {
         </div>
 
         {/* Card pair: Front + Back side by side */}
-        <div className="card-pair mx-auto flex items-start justify-center gap-8 flex-wrap">
+        <div className="card-pair mx-auto flex w-full max-w-[8in] flex-wrap items-start justify-center gap-8">
           {/* FRONT */}
           <div className="card-face card-face-front shadow-2xl">
             <div className="card-bleed-guide" />
@@ -96,22 +96,21 @@ export default function BusinessCardsPage() {
               <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
             </div>
 
-            {/* Middle: Name + role */}
+            {/* Middle: team identity */}
             <div className="absolute left-[0.28in] top-[0.55in]">
               <p className="text-[11pt] font-bold leading-tight tracking-tight text-white">
-                [ Full Name ]
+                Travelyt Operations
               </p>
               <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
-                [ Role / Title ]
+                Baggage Service Team
               </p>
             </div>
 
             {/* Bottom: contact */}
             <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in] flex items-end justify-between gap-3">
               <div className="space-y-[0.04in] text-[8pt] text-white/85 leading-tight">
-                <p>[ +1 (000) 000-0000 ]</p>
-                <p>[ name@travelyt.com ]</p>
-                <p className="text-white/65">travelyt.app</p>
+                <p>support@travelyt.us</p>
+                <p className="text-white/65">travelyt.us</p>
               </div>
 
               <p className="text-[6.5pt] text-right text-white/60 max-w-[1.2in] leading-tight italic">
@@ -130,7 +129,7 @@ export default function BusinessCardsPage() {
             For a print shop, export this page as PDF (Cmd/Ctrl+P → Save as PDF) and request &quot;double-sided business card, 3.5×2 inch, no bleed required.&quot;
           </p>
           <p>
-            Replace <span className="font-mono text-white/70">[ Full Name ]</span>, <span className="font-mono text-white/70">[ Role / Title ]</span>, <span className="font-mono text-white/70">[ phone ]</span>, and <span className="font-mono text-white/70">[ email ]</span> per team member before printing. Update <span className="font-mono text-white/70">travelyt.app</span> when the real domain lands.
+            This generic operations card is ready for internal print tests. Duplicate it for named team members only after confirming the exact title, email, and phone number to print.
           </p>
         </div>
       </div>

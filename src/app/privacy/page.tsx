@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 const LAST_UPDATED = "May 30, 2026";
-const CONTACT_EMAIL = "privacy@travelyt.app";
+const CONTACT_EMAIL = "privacy@travelyt.us";
 
 const sections: { title: string; body: string }[] = [
   {
@@ -148,8 +148,7 @@ export default function PrivacyPage() {
           </div>
 
           <p className="mt-12 text-sm text-navy/50">
-            This summary is written for clarity and operational use. Final
-            review by counsel is recommended before broad commercial rollout.
+            Questions about this policy can be sent to {CONTACT_EMAIL}.
           </p>
         </div>
       </main>

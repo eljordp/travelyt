@@ -96,16 +96,16 @@ function TrackPageInner() {
             Use the exact tracking link from your Travelyt confirmation. If you
             need help, support can resend the secure link.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/support"
-              className="inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white hover:bg-navy/90"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white hover:bg-navy/90"
             >
               Contact support <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/quote"
-              className="inline-flex items-center gap-2 rounded-xl bg-navy/5 px-5 py-3 text-sm font-bold text-navy hover:bg-navy/10"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy/5 px-5 py-3 text-sm font-bold text-navy hover:bg-navy/10"
             >
               Start a request
             </Link>

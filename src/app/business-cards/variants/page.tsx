@@ -118,18 +118,17 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute left-[0.28in] top-[0.55in]">
                   <p className="text-[11pt] font-bold leading-tight tracking-tight text-[#081546]">
-                    [ Full Name ]
+                    Travelyt Operations
                   </p>
                   <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
-                    [ Role / Title ]
+                    Baggage Service Team
                   </p>
                 </div>
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
-                    <p>[ +1 (000) 000-0000 ]</p>
-                    <p>[ name@travelyt.com ]</p>
-                    <p className="text-[#081546]/60">travelyt.app</p>
+                    <p>support@travelyt.us</p>
+                    <p className="text-[#081546]/60">travelyt.us</p>
                   </div>
                 </div>
               </div>
@@ -169,7 +168,7 @@ export default function BusinessCardVariantsPage() {
                   <div className="mt-[0.18in]">
                     <p className="text-[7pt] uppercase tracking-[0.18em] text-[#081546]/55 font-semibold">Passenger</p>
                     <p className="text-[12pt] font-bold leading-tight text-[#081546] tracking-tight">
-                      [ Full Name ]
+                      Travelyt Operations
                     </p>
                   </div>
 
@@ -216,7 +215,7 @@ export default function BusinessCardVariantsPage() {
 
                     <div>
                       <p className="text-[6pt] uppercase tracking-[0.18em] text-white/55 font-semibold">Seat</p>
-                      <p className="text-[8pt] font-bold leading-tight text-white">[ Role ]</p>
+                      <p className="text-[8pt] font-bold leading-tight text-white">Service</p>
                     </div>
                   </div>
                 </div>
@@ -238,9 +237,8 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute left-[0.28in] right-[0.28in] bottom-[0.24in] flex items-end justify-between">
                   <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
-                    <p>[ +1 (000) 000-0000 ]</p>
-                    <p>[ name@travelyt.com ]</p>
-                    <p className="text-[#081546]/60">travelyt.app</p>
+                    <p>support@travelyt.us</p>
+                    <p className="text-[#081546]/60">travelyt.us</p>
                   </div>
 
                   <p className="text-[6pt] uppercase tracking-[0.2em] text-[#081546]/45 text-right max-w-[1in] leading-snug">
@@ -313,18 +311,17 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute left-[0.28in] top-[0.6in]">
                   <p className="text-[11pt] font-bold leading-tight tracking-tight text-white">
-                    [ Full Name ]
+                    Travelyt Operations
                   </p>
                   <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-white/85">
-                    [ Role / Title ]
+                    Baggage Service Team
                   </p>
                 </div>
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-white/95 leading-tight">
-                    <p>[ +1 (000) 000-0000 ]</p>
-                    <p>[ name@travelyt.com ]</p>
-                    <p className="text-white/75">travelyt.app</p>
+                    <p>support@travelyt.us</p>
+                    <p className="text-white/75">travelyt.us</p>
                   </div>
                 </div>
               </div>
@@ -391,10 +388,10 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute left-[0.28in] right-[0.28in] top-[0.55in]">
                   <p className="text-[11pt] font-bold leading-tight tracking-tight text-white">
-                    [ Full Name ]
+                    Travelyt Operations
                   </p>
                   <p className="mt-[0.02in] text-[8pt] font-medium uppercase tracking-[0.15em] text-[#ff6868]">
-                    [ Role / Title ]
+                    Baggage Service Team
                   </p>
                 </div>
 
@@ -402,9 +399,8 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-white/85 leading-tight">
-                    <p>[ +1 (000) 000-0000 ]</p>
-                    <p>[ name@travelyt.com ]</p>
-                    <p className="text-white/60">travelyt.app</p>
+                    <p>support@travelyt.us</p>
+                    <p className="text-white/60">travelyt.us</p>
                   </div>
                 </div>
               </div>
@@ -418,7 +414,7 @@ export default function BusinessCardVariantsPage() {
             <strong className="text-white/80">How to print one:</strong> Hit the &quot;Print this variant&quot; button on the card you want. The browser print dialog will only render that variant — pick &quot;Save as PDF&quot; for a print-shop file.
           </p>
           <p>
-            Cards are 3.5&quot; × 2&quot; US standard. Replace placeholders before printing.
+            Cards are 3.5&quot; × 2&quot; US standard. Confirm exact named contact details before printing personalized cards.
           </p>
         </div>
       </div>

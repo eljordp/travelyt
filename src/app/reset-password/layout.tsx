@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Driver Console",
-  description: "Travelyt courier console for baggage pickup, custody, and delivery workflows.",
+  title: "Reset Password",
+  description: "Reset access to your Travelyt account.",
   alternates: {
-    canonical: "/driver",
+    canonical: "/reset-password",
   },
   robots: {
     index: false,
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DriverLayout({
+export default function ResetPasswordLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
