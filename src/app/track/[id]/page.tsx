@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import LocationProofCard from "@/components/LocationProofCard";
 import {
   approveProof,
   type Booking,
@@ -26,6 +27,7 @@ import {
   subscribe,
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
+import { latestLocationEvent } from "@/lib/ops-rules";
 
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
 
@@ -116,6 +118,7 @@ function TrackPageInner() {
   const current = statusIndex(booking.status);
   const latestSeal = [...booking.proofs].reverse().find((proof) => proof.sealId)?.sealId;
   const paid = Boolean(booking.paidAt || booking.status !== "pending");
+  const lastLocation = latestLocationEvent(booking);
 
   return (
     <div className="min-h-screen bg-[#f6f7fb] text-navy">
@@ -149,32 +152,44 @@ function TrackPageInner() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-navy/60">
-              Trip details
-            </h2>
-            <div className="mt-5 space-y-3 text-sm">
-              <Row label="Service" value={SERVICE_LABELS[booking.service]} />
-              <Row label="Airport" value={booking.airport} />
-              <Row
-                label={booking.service === "arrival" ? "Delivery" : "Pickup"}
-                value={booking.address}
-              />
-              <Row label="Date" value={booking.date} />
-              {booking.flight && <Row label="Flight" value={booking.flight} />}
-              <Row
-                label="Bags"
-                value={`${booking.bags} bag${booking.bags === 1 ? "" : "s"}`}
-              />
-              {booking.driverName && <Row label="Courier" value={booking.driverName} />}
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-navy/60">
+                Trip details
+              </h2>
+              <div className="mt-5 space-y-3 text-sm">
+                <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+                <Row label="Airport" value={booking.airport} />
+                <Row
+                  label={booking.service === "arrival" ? "Delivery" : "Pickup"}
+                  value={booking.address}
+                />
+                <Row label="Date" value={booking.date} />
+                {booking.flight && <Row label="Flight" value={booking.flight} />}
+                <Row
+                  label="Bags"
+                  value={`${booking.bags} bag${booking.bags === 1 ? "" : "s"}`}
+                />
+                {booking.driverName && <Row label="Courier" value={booking.driverName} />}
+              </div>
+              <div className="mt-5 border-t border-gray-100 pt-5">
+                <Row label="Estimate" value={formatPrice(booking.priceCents)} />
+                <p className="mt-3 text-xs leading-relaxed text-navy/55">
+                  Includes service within {INCLUDED_DISTANCE_MILES} miles of the
+                  airport. Final confirmation happens before payment is collected.
+                </p>
+              </div>
             </div>
-            <div className="mt-5 border-t border-gray-100 pt-5">
-              <Row label="Estimate" value={formatPrice(booking.priceCents)} />
-              <p className="mt-3 text-xs leading-relaxed text-navy/55">
-                Includes service within {INCLUDED_DISTANCE_MILES} miles of the
-                airport. Final confirmation happens before payment is collected.
-              </p>
-            </div>
+            {lastLocation && (
+              <LocationProofCard
+                label={lastLocation.label}
+                latitude={lastLocation.latitude}
+                longitude={lastLocation.longitude}
+                accuracyMeters={lastLocation.accuracyMeters}
+                capturedAt={lastLocation.capturedAt}
+                actorName={lastLocation.actorName}
+              />
+            )}
           </div>
         </section>
 
@@ -273,6 +288,18 @@ function TrackPageInner() {
                           <p className="mt-2 text-xs leading-relaxed text-navy/65">
                             {proof.note}
                           </p>
+                        )}
+                        {proof.location && (
+                          <LocationProofCard
+                            label={`${proofTitle(proof.kind)} location`}
+                            latitude={proof.location.latitude}
+                            longitude={proof.location.longitude}
+                            accuracyMeters={proof.location.accuracyMeters}
+                            capturedAt={proof.timestamp}
+                            actorName={proof.driverName}
+                            className="mt-3"
+                            compact
+                          />
                         )}
                         {proof.approvedAt ? (
                           <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-700">

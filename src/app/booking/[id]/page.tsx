@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import AppChrome from "@/components/AppChrome";
+import LocationProofCard from "@/components/LocationProofCard";
 import { enableBookingPush, isNative } from "@/lib/native";
 import {
   approveProof,
@@ -273,17 +274,16 @@ export default function BookingPage() {
                       </div>
                     )}
                     {p.location && (
-                      <a
-                        href={`https://maps.google.com/?q=${p.location.latitude},${p.location.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 block text-xs font-semibold text-[#ff6868] hover:underline"
-                      >
-                        View proof location
-                        {p.location.accuracyMeters
-                          ? ` (within about ${p.location.accuracyMeters} meters)`
-                          : ""}
-                      </a>
+                      <LocationProofCard
+                        label={`${proofTitle(p.kind)} location`}
+                        latitude={p.location.latitude}
+                        longitude={p.location.longitude}
+                        accuracyMeters={p.location.accuracyMeters}
+                        capturedAt={p.timestamp}
+                        actorName={p.driverName}
+                        className="mt-3"
+                        compact
+                      />
                     )}
                     {p.approvedAt ? (
                       <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">
@@ -312,21 +312,14 @@ export default function BookingPage() {
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-3">
               Last custody location
             </h2>
-            <div className="rounded-xl border border-navy/10 bg-navy/[0.03] px-4 py-3 text-sm text-navy/70">
-              <div className="font-bold text-navy">{lastLocation.label}</div>
-              <div className="mt-1">
-                {new Date(lastLocation.capturedAt).toLocaleString()}
-                {lastLocation.actorName ? ` · ${lastLocation.actorName}` : ""}
-              </div>
-              <a
-                href={`https://maps.google.com/?q=${lastLocation.latitude},${lastLocation.longitude}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex text-xs font-bold text-[#ff6868] underline"
-              >
-                View on map
-              </a>
-            </div>
+            <LocationProofCard
+              label={lastLocation.label}
+              latitude={lastLocation.latitude}
+              longitude={lastLocation.longitude}
+              accuracyMeters={lastLocation.accuracyMeters}
+              capturedAt={lastLocation.capturedAt}
+              actorName={lastLocation.actorName}
+            />
           </div>
         )}
 

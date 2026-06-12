@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import AppChrome from "@/components/AppChrome";
+import LocationProofCard from "@/components/LocationProofCard";
 import {
   addProof,
   type Booking,
@@ -823,27 +824,17 @@ export default function DriverJobPage() {
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
               Location trail
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {[...(booking.locationEvents ?? [])].reverse().slice(0, 6).map((event) => (
-                <a
+                <LocationProofCard
                   key={event.id}
-                  href={`https://maps.google.com/?q=${event.latitude},${event.longitude}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-xl border border-navy/10 bg-navy/[0.03] px-4 py-3 text-xs text-navy/70"
-                >
-                  <div className="font-bold text-navy">{event.label}</div>
-                  <div>
-                    {new Date(event.capturedAt).toLocaleString()}
-                    {event.actorName ? ` · ${event.actorName}` : ""}
-                  </div>
-                  <div>
-                    GPS {event.latitude}, {event.longitude}
-                    {event.accuracyMeters
-                      ? ` · within about ${event.accuracyMeters} meters`
-                      : ""}
-                  </div>
-                </a>
+                  label={event.label}
+                  latitude={event.latitude}
+                  longitude={event.longitude}
+                  accuracyMeters={event.accuracyMeters}
+                  capturedAt={event.capturedAt}
+                  actorName={event.actorName}
+                />
               ))}
             </div>
           </div>
