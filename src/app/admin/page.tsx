@@ -41,6 +41,8 @@ import {
 } from "@/lib/bookings";
 import { getSlaAlerts, latestLocationEvent } from "@/lib/ops-rules";
 
+type DataView = "production" | "demo" | "all";
+
 interface OpsException {
   id: string;
   booking_id: string | null;
@@ -102,6 +104,66 @@ const statusColors: Record<Booking["status"], string> = {
 };
 
 const issueOptions = Object.keys(ISSUE_TYPE_LABELS) as BookingIssueType[];
+const PRELAUNCH_DEMO_CREATED_BEFORE = Date.parse("2026-06-12T08:30:00.000Z");
+const PRELAUNCH_DEMO_LABEL = "Jun 12, 2026 1:30 AM PT";
+
+const demoTextPatterns = [
+  /\bdemo\b/i,
+  /\btest\b/i,
+  /\btesting\b/i,
+  /\bsample\b/i,
+  /\bsandbox\b/i,
+  /\breview\b/i,
+  /\btraining\b/i,
+  /\bqa\b/i,
+  /\bgps\b/i,
+  /\bsticker\s*smith\b/i,
+  /\bstickersmith\b/i,
+  /\bapp store\b/i,
+  /\bapple review\b/i,
+];
+
+function bookingSearchText(booking: Booking) {
+  return [
+    booking.id,
+    booking.name,
+    booking.email,
+    booking.phone,
+    booking.airport,
+    booking.address,
+    booking.driverName,
+    booking.flight,
+    booking.notes,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isDemoBooking(booking: Booking) {
+  const created = Date.parse(booking.createdAt);
+  if (!Number.isNaN(created) && created < PRELAUNCH_DEMO_CREATED_BEFORE) {
+    return true;
+  }
+
+  const email = booking.email.toLowerCase();
+  if (/@(?:travelyt\.us|travelyt\.app)$/.test(email)) return true;
+
+  const text = bookingSearchText(booking);
+  return demoTextPatterns.some((pattern) => pattern.test(text));
+}
+
+function matchesDataView(booking: Booking, view: DataView) {
+  if (view === "all") return true;
+  const demo = isDemoBooking(booking);
+  return view === "demo" ? demo : !demo;
+}
+
+function dataViewLabel(view: DataView) {
+  if (view === "demo") return "demo/test";
+  if (view === "all") return "all";
+  return "production";
+}
 
 function isArchivedDriverCode(code: DriverAccessCode) {
   return code.status !== "active";
@@ -266,6 +328,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Booking["status"] | "all">("all");
+  const [dataView, setDataView] = useState<DataView>("production");
   const [archiveView, setArchiveView] = useState<"active" | "archived" | "all">(
     "active"
   );
@@ -563,6 +626,7 @@ export default function AdminPage() {
   }
 
   function openStaleCleanupQueue() {
+    setDataView("production");
     setArchiveView("active");
     setStatus("pending");
     setQuery("");
@@ -577,6 +641,7 @@ export default function AdminPage() {
   const filtered = useMemo(() => {
     const clean = query.trim().toLowerCase();
     return bookings.filter((booking) => {
+      if (!matchesDataView(booking, dataView)) return false;
       const archived = Boolean(booking.archivedAt);
       if (archiveView === "active" && archived) return false;
       if (archiveView === "archived" && !archived) return false;
@@ -584,22 +649,11 @@ export default function AdminPage() {
       const matchesStatus = status === "all" || booking.status === status;
       const matchesQuery =
         !clean ||
-        [
-          booking.id,
-          booking.name,
-          booking.email,
-          booking.phone,
-          booking.airport,
-          booking.address,
-          booking.driverName,
-          booking.flight,
-        ]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(clean));
+        bookingSearchText(booking).includes(clean);
 
       return matchesStatus && matchesQuery;
     });
-  }, [archiveView, bookings, cleanupOnly, query, status]);
+  }, [archiveView, bookings, cleanupOnly, dataView, query, status]);
 
   const filteredDriverCodes = useMemo(
     () =>
@@ -613,7 +667,9 @@ export default function AdminPage() {
   );
 
   const metrics = useMemo(() => {
-    const operationalBookings = bookings.filter((booking) => !booking.archivedAt);
+    const operationalBookings = bookings.filter(
+      (booking) => !booking.archivedAt && matchesDataView(booking, dataView)
+    );
     const active = operationalBookings.filter(
       (booking) => !TERMINAL_STATUSES.includes(booking.status)
     );
@@ -626,22 +682,44 @@ export default function AdminPage() {
     const slaRisk = operationalBookings.filter((booking) => getSlaAlerts(booking).length > 0);
 
     return [
-      { label: "Live bookings", value: `${operationalBookings.length}`, icon: BriefcaseBusiness },
+      { label: `${dataViewLabel(dataView)} bookings`, value: `${operationalBookings.length}`, icon: BriefcaseBusiness },
       { label: "Active", value: `${active.length}`, icon: Truck },
       { label: "Awaiting driver", value: `${paid.length}`, icon: Package },
       { label: "Pipeline", value: formatPrice(revenueCents), icon: CheckCircle2 },
       { label: "SLA risk", value: `${slaRisk.length}`, icon: Clock3 },
       { label: "Bags", value: `${bags}`, icon: Users },
     ];
-  }, [bookings]);
+  }, [bookings, dataView]);
 
   const archivedCount = useMemo(
-    () => bookings.filter((booking) => booking.archivedAt).length,
-    [bookings]
+    () =>
+      bookings.filter(
+        (booking) => booking.archivedAt && matchesDataView(booking, dataView)
+      ).length,
+    [bookings, dataView]
   );
 
   const stalePending = useMemo(
-    () => bookings.filter((booking) => isStalePending(booking)),
+    () =>
+      bookings.filter(
+        (booking) =>
+          matchesDataView(booking, "production") && isStalePending(booking)
+      ),
+    [bookings]
+  );
+
+  const productionCount = useMemo(
+    () => bookings.filter((booking) => !booking.archivedAt && !isDemoBooking(booking)).length,
+    [bookings]
+  );
+
+  const demoCount = useMemo(
+    () => bookings.filter((booking) => !booking.archivedAt && isDemoBooking(booking)).length,
+    [bookings]
+  );
+
+  const demoArchivedCount = useMemo(
+    () => bookings.filter((booking) => booking.archivedAt && isDemoBooking(booking)).length,
     [bookings]
   );
 
@@ -694,7 +772,7 @@ export default function AdminPage() {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `travelyt-bookings-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `travelyt-${dataView}-bookings-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -885,6 +963,70 @@ export default function AdminPage() {
           })}
         </div>
 
+        <div className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-navy/45">
+                Data scope
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-navy/65">
+                Production stats exclude pre-launch and obvious test records.
+                Demo/test records stay stored for review and can be purged at
+                launch.
+              </p>
+            </div>
+            <div className="grid min-w-full grid-cols-3 gap-2 rounded-xl bg-navy/[0.03] p-1 text-xs font-bold text-navy lg:min-w-[420px]">
+              {([
+                ["production", `Production ${productionCount}`],
+                ["demo", `Demo/test ${demoCount}`],
+                ["all", `All ${bookings.filter((booking) => !booking.archivedAt).length}`],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setDataView(value);
+                    setCleanupOnly(false);
+                  }}
+                  className={`rounded-lg px-2 py-2 transition-colors ${
+                    dataView === value
+                      ? "bg-white text-navy shadow-sm shadow-navy/5"
+                      : "text-navy/55 hover:bg-white/60"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-900">
+            Demo/test means records created before {PRELAUNCH_DEMO_LABEL},
+            internal Travelyt customer emails, or bookings with obvious test
+            wording. This is a reporting separation only; it does not delete or
+            hide records from audit history.
+          </div>
+          {demoCount + demoArchivedCount > 0 && (
+            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {demoCount} active and {demoArchivedCount} archived demo/test
+                record{demoCount + demoArchivedCount === 1 ? "" : "s"} are
+                separated from production reporting.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDataView("demo");
+                  setArchiveView("all");
+                  setCleanupOnly(false);
+                }}
+                className="self-start rounded-lg bg-yellow-900 px-2.5 py-1.5 font-bold text-white shadow-sm shadow-yellow-900/5 sm:self-auto"
+              >
+                Review demo records
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)] xl:items-start">
           <aside className="space-y-4 xl:sticky xl:top-24">
 
@@ -897,9 +1039,9 @@ export default function AdminPage() {
                 {stalePending.length === 1 ? "" : "s"} need cleanup.
               </p>
               <p className="mt-1 leading-relaxed">
-                They are hidden from the driver board. Open the cleanup queue,
-                then update the travel date, move the status forward, or archive
-                old test records so they stay stored but out of operations.
+                These are production-scope records only. Open the cleanup
+                queue, then update the travel date, move the status forward, or
+                archive stale records so they stay stored but out of operations.
               </p>
               <button
                 type="button"
@@ -1163,11 +1305,11 @@ export default function AdminPage() {
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-xs font-semibold text-navy/45">
-                  Showing {filtered.length} {cleanupOnly ? "cleanup" : archiveView} booking
+                  Showing {filtered.length} {cleanupOnly ? "cleanup" : `${dataViewLabel(dataView)} ${archiveView}`} booking
                   {filtered.length === 1 ? "" : "s"}
                 </p>
                 <p className="text-xs text-navy/40">
-                  {archivedCount} archived trial/closed record
+                  {archivedCount} archived {dataViewLabel(dataView)} record
                   {archivedCount === 1 ? "" : "s"}
                 </p>
               </div>
@@ -1308,6 +1450,7 @@ function BookingCard({
   const [issueResolution, setIssueResolution] = useState(
     booking.issueResolution ?? ""
   );
+  const demoBooking = isDemoBooking(booking);
   const stale = isStalePending(booking);
   const identityReady = Boolean(
     booking.customerIdentityVerifiedAt && booking.driverIdentityVerifiedAt
@@ -1345,6 +1488,11 @@ function BookingCard({
             {stale && (
               <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800">
                 Past date
+              </span>
+            )}
+            {demoBooking && (
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                Demo/test
               </span>
             )}
             {slaAlerts.length > 0 && (
