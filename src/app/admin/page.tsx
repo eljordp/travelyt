@@ -70,6 +70,30 @@ interface DriverAccessCode {
   revokedBy?: string;
 }
 
+interface PartnerIntegration {
+  id: string;
+  name: string;
+  kind: string;
+  environment: "manual" | "sandbox" | "production";
+  capabilities: string[];
+  auth_type: string;
+  active: boolean;
+  notes?: string | null;
+}
+
+interface PartnerEvent {
+  id: string;
+  provider_id: string;
+  booking_id?: string | null;
+  external_reference?: string | null;
+  direction: "inbound" | "outbound";
+  event_type: string;
+  status: string;
+  payload?: Record<string, unknown>;
+  error_message?: string | null;
+  created_at: string;
+}
+
 const statusOptions: Array<Booking["status"] | "all"> = [
   "all",
   "pending",
@@ -106,6 +130,8 @@ const statusColors: Record<Booking["status"], string> = {
 const issueOptions = Object.keys(ISSUE_TYPE_LABELS) as BookingIssueType[];
 const PRELAUNCH_DEMO_CREATED_BEFORE = Date.parse("2026-06-12T08:30:00.000Z");
 const PRELAUNCH_DEMO_LABEL = "Jun 12, 2026 1:30 AM PT";
+const PARTNER_INTEGRATIONS_ENABLED =
+  process.env.NEXT_PUBLIC_PARTNER_INTEGRATIONS_ENABLED === "true";
 
 const demoTextPatterns = [
   /\bdemo\b/i,
@@ -324,6 +350,16 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [exceptions, setExceptions] = useState<OpsException[]>([]);
   const [driverCodes, setDriverCodes] = useState<DriverAccessCode[]>([]);
+  const [partnerIntegrations, setPartnerIntegrations] = useState<PartnerIntegration[]>([]);
+  const [partnerEvents, setPartnerEvents] = useState<PartnerEvent[]>([]);
+  const [partnerMigrationRequired, setPartnerMigrationRequired] = useState(false);
+  const [partnerEventProvider, setPartnerEventProvider] = useState("stasher");
+  const [partnerEventBooking, setPartnerEventBooking] = useState("");
+  const [partnerEventReference, setPartnerEventReference] = useState("");
+  const [partnerEventType, setPartnerEventType] = useState("manual_note");
+  const [partnerEventStatus, setPartnerEventStatus] = useState("manual");
+  const [partnerEventNote, setPartnerEventNote] = useState("");
+  const [savingPartnerEvent, setSavingPartnerEvent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -367,6 +403,7 @@ export default function AdminPage() {
           await loadBookings();
           await loadExceptions();
           await loadDriverCodes();
+          if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
         }
       } catch (err) {
         if (!cancelled) {
@@ -468,6 +505,116 @@ export default function AdminPage() {
     } catch {}
   }
 
+  async function loadPartnerIntegrations() {
+    if (!PARTNER_INTEGRATIONS_ENABLED) return;
+
+    try {
+      const response = await fetch("/api/partner-integrations", {
+        credentials: "same-origin",
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        migrationRequired?: boolean;
+        integrations?: PartnerIntegration[];
+        events?: PartnerEvent[];
+      };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not load partner integrations.");
+      }
+      setPartnerIntegrations(data.integrations ?? []);
+      setPartnerEvents(data.events ?? []);
+      setPartnerMigrationRequired(Boolean(data.migrationRequired));
+      const firstProviderId = data.integrations?.[0]?.id;
+      if (firstProviderId) {
+        setPartnerEventProvider((current) => current || firstProviderId);
+      }
+    } catch (err) {
+      setPartnerMigrationRequired(false);
+      setError(err instanceof Error ? err.message : "Could not load partner integrations.");
+    }
+  }
+
+  async function togglePartnerIntegration(id: string, active: boolean) {
+    if (!PARTNER_INTEGRATIONS_ENABLED) return;
+
+    setError("");
+    try {
+      const response = await fetch("/api/partner-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id, active }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        integration?: PartnerIntegration;
+        migrationRequired?: boolean;
+      };
+      if (!response.ok || !data.integration) {
+        if (data.migrationRequired) setPartnerMigrationRequired(true);
+        throw new Error(data.error || "Could not update partner integration.");
+      }
+      setPartnerIntegrations((rows) =>
+        rows.map((row) => (row.id === id ? data.integration! : row))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update partner integration.");
+    }
+  }
+
+  async function recordPartnerEvent() {
+    if (!PARTNER_INTEGRATIONS_ENABLED) return;
+
+    if (!partnerEventProvider) {
+      setError("Select a partner before recording an event.");
+      return;
+    }
+    if (!partnerEventType.trim()) {
+      setError("Enter an event type before recording a partner event.");
+      return;
+    }
+    setSavingPartnerEvent(true);
+    setError("");
+    try {
+      const response = await fetch("/api/partner-integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          providerId: partnerEventProvider,
+          bookingId: partnerEventBooking,
+          externalReference: partnerEventReference,
+          eventType: partnerEventType,
+          status: partnerEventStatus,
+          direction: "outbound",
+          payload: { note: partnerEventNote },
+        }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        event?: PartnerEvent;
+        migrationRequired?: boolean;
+      };
+      if (!response.ok || !data.event) {
+        if (data.migrationRequired) setPartnerMigrationRequired(true);
+        throw new Error(data.error || "Could not record partner event.");
+      }
+      setPartnerEvents((rows) => [data.event!, ...rows]);
+      setPartnerEventBooking("");
+      setPartnerEventReference("");
+      setPartnerEventType("manual_note");
+      setPartnerEventStatus("manual");
+      setPartnerEventNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not record partner event.");
+    } finally {
+      setSavingPartnerEvent(false);
+    }
+  }
+
   async function login() {
     setLoading(true);
     setError("");
@@ -498,6 +645,7 @@ export default function AdminPage() {
       await loadBookings();
       await loadExceptions();
       await loadDriverCodes();
+      if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
     } finally {
@@ -555,6 +703,9 @@ export default function AdminPage() {
     setBookings([]);
     setExceptions([]);
     setDriverCodes([]);
+    setPartnerIntegrations([]);
+    setPartnerEvents([]);
+    setPartnerMigrationRequired(false);
     setGeneratedDriverCode("");
   }
 
@@ -1126,6 +1277,102 @@ export default function AdminPage() {
           </div>
         )}
 
+          {PARTNER_INTEGRATIONS_ENABLED && (
+            <div className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-[#ff6868]" strokeWidth={2} />
+                    <h2 className="font-bold text-navy">Partner integrations</h2>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-navy/55">
+                    Provider adapters for airlines, storage, travel partners, and
+                    future systems. Partners stay inactive until credentials and
+                    terms are real.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void loadPartnerIntegrations()}
+                  className="self-start rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {partnerMigrationRequired && (
+                <div className="mb-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-xs leading-relaxed text-yellow-900">
+                  Apply Supabase migration{" "}
+                  <code className="font-bold">018_partner_integration_layer.sql</code>{" "}
+                  before saving events or activating providers.
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {partnerIntegrations.length ? (
+                  partnerIntegrations.map((integration) => (
+                    <div
+                      key={integration.id}
+                      className="rounded-xl border border-gray-100 bg-[#f8f9fc] p-3 text-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-navy">
+                            {integration.name}
+                          </div>
+                          <div className="mt-0.5 text-xs text-navy/50">
+                            {integration.kind} · {integration.environment} ·{" "}
+                            {integration.auth_type}
+                          </div>
+                        </div>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                            integration.active
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {integration.active ? "active" : "inactive"}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {integration.capabilities.slice(0, 5).map((capability) => (
+                          <span
+                            key={capability}
+                            className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-navy/55"
+                          >
+                            {capability}
+                          </span>
+                        ))}
+                      </div>
+                      {integration.notes && (
+                        <p className="mt-2 text-xs leading-relaxed text-navy/60">
+                          {integration.notes}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void togglePartnerIntegration(
+                            integration.id,
+                            !integration.active
+                          )
+                        }
+                        disabled={adminRole !== "admin" || partnerMigrationRequired}
+                        className="mt-3 rounded-lg bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-40"
+                      >
+                        {integration.active ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-navy/10 p-4 text-sm text-navy/55">
+                    No partner integrations loaded.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -1294,6 +1541,140 @@ export default function AdminPage() {
           </aside>
 
           <section id="booking-cleanup-queue" className="min-w-0 space-y-4">
+            {PARTNER_INTEGRATIONS_ENABLED && (
+              <div className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-navy/45">
+                    Partner event log
+                  </p>
+                  <h2 className="text-xl font-bold text-navy">
+                    Integration activity
+                  </h2>
+                  <p className="mt-1 text-sm text-navy/60">
+                    Manual and API events from systems like United, Royal
+                    Jordanian, Stasher, and future partners.
+                  </p>
+                </div>
+                <span className="self-start rounded-full bg-navy/5 px-3 py-1.5 text-xs font-bold text-navy/60">
+                  {partnerEvents.length} recent event
+                  {partnerEvents.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                <div className="rounded-2xl border border-gray-100 bg-[#f8f9fc] p-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                    <select
+                      value={partnerEventProvider}
+                      onChange={(event) => setPartnerEventProvider(event.target.value)}
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                    >
+                      {partnerIntegrations.map((integration) => (
+                        <option key={integration.id} value={integration.id}>
+                          {integration.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={partnerEventBooking}
+                      onChange={(event) => setPartnerEventBooking(event.target.value)}
+                      placeholder="Booking ID optional"
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                    />
+                    <input
+                      value={partnerEventReference}
+                      onChange={(event) => setPartnerEventReference(event.target.value)}
+                      placeholder="External reference optional"
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                    />
+                    <input
+                      value={partnerEventType}
+                      onChange={(event) => setPartnerEventType(event.target.value)}
+                      placeholder="Event type"
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                    />
+                    <input
+                      value={partnerEventStatus}
+                      onChange={(event) => setPartnerEventStatus(event.target.value)}
+                      placeholder="Status"
+                      className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                    />
+                    <textarea
+                      value={partnerEventNote}
+                      onChange={(event) => setPartnerEventNote(event.target.value)}
+                      placeholder="Manual note, API result, partner response, or next step"
+                      className="min-h-24 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 sm:col-span-2 lg:col-span-1"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void recordPartnerEvent()}
+                    disabled={savingPartnerEvent || partnerMigrationRequired}
+                    className="mt-3 w-full rounded-xl bg-[#ff6868] px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {savingPartnerEvent ? "Saving..." : "Record partner event"}
+                  </button>
+                  {partnerMigrationRequired && (
+                    <p className="mt-2 text-xs text-yellow-800">
+                      Event saving unlocks after the partner migration is applied.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {partnerEvents.length ? (
+                    partnerEvents.slice(0, 6).map((event) => (
+                      <div
+                        key={event.id}
+                        className="rounded-2xl border border-gray-100 bg-[#f8f9fc] p-3 text-sm"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${
+                              event.direction === "inbound"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-purple-100 text-purple-700"
+                            }`}
+                          >
+                            {event.direction}
+                          </span>
+                          <span className="font-semibold text-navy">
+                            {event.provider_id}
+                          </span>
+                          <span className="text-xs text-navy/45">
+                            {event.event_type} · {event.status}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-navy/55">
+                          {formatAuditTime(event.created_at)}
+                          {event.booking_id ? ` · ${event.booking_id}` : ""}
+                          {event.external_reference
+                            ? ` · ${event.external_reference}`
+                            : ""}
+                        </div>
+                        {event.error_message && (
+                          <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                            {event.error_message}
+                          </p>
+                        )}
+                        {event.payload?.note ? (
+                          <p className="mt-2 text-xs leading-relaxed text-navy/65">
+                            {String(event.payload.note)}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-navy/15 bg-white/60 p-6 text-center text-sm text-navy/55">
+                      No partner events yet. Start with manual notes while APIs
+                      are being approved.
+                    </div>
+                  )}
+                </div>
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-navy/45">
@@ -1387,6 +1768,7 @@ export default function AdminPage() {
                 void loadBookings();
                 void loadExceptions();
                 void loadDriverCodes();
+                void loadPartnerIntegrations();
               }}
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"

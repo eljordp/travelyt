@@ -53,6 +53,10 @@ export interface BookingRow {
   status_history: BookingAuditEntry[] | null;
   archived_at?: string | null;
   archived_by?: string | null;
+  external_provider?: string | null;
+  external_reference?: string | null;
+  external_status?: string | null;
+  external_synced_at?: string | null;
   customer_access_token: string | null;
   customer_user_id: string | null;
   driver_user_id: string | null;
@@ -105,6 +109,10 @@ export function rowToBooking(row: BookingRow): Booking {
     statusHistory: Array.isArray(row.status_history) ? row.status_history : [],
     archivedAt: row.archived_at ?? undefined,
     archivedBy: row.archived_by ?? undefined,
+    externalProvider: row.external_provider ?? undefined,
+    externalReference: row.external_reference ?? undefined,
+    externalStatus: row.external_status ?? undefined,
+    externalSyncedAt: row.external_synced_at ?? undefined,
     customerAccessToken: row.customer_access_token ?? undefined,
     customerUserId: row.customer_user_id ?? undefined,
     driverUserId: row.driver_user_id ?? undefined,
@@ -158,6 +166,10 @@ export function bookingToInsert(
     location_events: booking.locationEvents ?? [],
     proofs: booking.proofs,
     status_history: booking.statusHistory ?? [],
+    external_provider: booking.externalProvider ?? null,
+    external_reference: booking.externalReference ?? null,
+    external_status: booking.externalStatus ?? null,
+    external_synced_at: booking.externalSyncedAt ?? null,
     customer_access_token:
       booking.customerAccessToken ??
       crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8),
@@ -240,6 +252,18 @@ export function bookingPatchToRowPatch(patch: Partial<Booking>) {
   if (patch.statusHistory !== undefined) row.status_history = patch.statusHistory;
   if (patch.archivedAt !== undefined) row.archived_at = patch.archivedAt ?? null;
   if (patch.archivedBy !== undefined) row.archived_by = patch.archivedBy ?? null;
+  if (patch.externalProvider !== undefined) {
+    row.external_provider = patch.externalProvider ?? null;
+  }
+  if (patch.externalReference !== undefined) {
+    row.external_reference = patch.externalReference ?? null;
+  }
+  if (patch.externalStatus !== undefined) {
+    row.external_status = patch.externalStatus ?? null;
+  }
+  if (patch.externalSyncedAt !== undefined) {
+    row.external_synced_at = patch.externalSyncedAt ?? null;
+  }
   if (patch.customerAccessToken !== undefined) {
     row.customer_access_token = patch.customerAccessToken ?? null;
   }
