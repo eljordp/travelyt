@@ -11,7 +11,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { calcPriceBreakdown } from "@/lib/pricing";
 import { getAdminSession, isFullAdminSession, isOpsSession } from "@/lib/admin-auth";
-import { canonicalDriverName } from "@/lib/drivers";
+import { canonicalDriverName, driverNameMatches } from "@/lib/drivers";
 import {
   authorizeDriverRequest,
   type DriverAuthorization,
@@ -153,7 +153,17 @@ function isPastTravelDate(value: string) {
   return !Number.isNaN(parsed) && parsed < today.getTime();
 }
 
-function driverCanSeeInList(row: BookingRow) {
+function driverMatchesBooking(row: BookingRow, driverAuth?: DriverAuthorization | null) {
+  return Boolean(
+    driverAuth?.ok &&
+      row.driver_name &&
+      driverAuth.driverName &&
+      driverNameMatches(row.driver_name, driverAuth.driverName)
+  );
+}
+
+function driverCanSeeInList(row: BookingRow, driverName?: string) {
+  if (!driverNameMatches(row.driver_name, driverName)) return false;
   if (row.archived_at) return false;
   if (row.status === "pending") return false;
   if (row.status === "cancelled" || row.status === "issue") return false;
@@ -660,7 +670,17 @@ export async function GET(request: Request) {
       .maybeSingle<BookingRow>();
 
     if (error) return bad("Could not load booking.", 500);
-    if (data && !canReadBooking(request, data, user?.id, accessToken, driverAuth.ok)) {
+    const driverCanRead = data ? driverMatchesBooking(data, driverAuth) : false;
+    if (
+      data &&
+      !canReadBooking(
+        request,
+        data,
+        user?.id,
+        accessToken,
+        isDriverOnly ? driverCanRead : driverAuth.ok
+      )
+    ) {
       return bad("You do not have access to this booking.", 403);
     }
     const ownsOrToken =
@@ -692,7 +712,7 @@ export async function GET(request: Request) {
 
   if (error) return bad("Could not load bookings.", 500);
   const rows = ((data ?? []) as BookingRow[]).filter((row) => {
-    if (isDriverOnly) return driverCanSeeInList(row);
+    if (isDriverOnly) return driverCanSeeInList(row, driverAuth.driverName);
     if (row.archived_at && (!includeArchived || !opsAuthorized(request))) {
       return false;
     }
@@ -914,11 +934,27 @@ export async function PATCH(request: Request) {
         if (patch.status === "assigned" && existing.status !== "paid") {
           return bad("Only confirmed paid bookings can be assigned.", 409);
         }
-        if (
-          patch.status === "accepted" &&
-          !["paid", "assigned"].includes(existing.status)
-        ) {
-          return bad("Only confirmed or assigned bookings can be accepted.", 409);
+        if (patch.status === "assigned") {
+          return bad("Operations must assign bookings before drivers can accept them.", 403);
+        }
+        if (!driverMatchesBooking(existing, driverAuth)) {
+          await recordOpsException(
+            supabase,
+            id,
+            "DRIVER_UNASSIGNED_ACCESS",
+            "Driver attempted to act on a booking that was not assigned to them.",
+            "critical",
+            {
+              requestedDriver: patch.driverName,
+              assignedDriver: existing.driver_name,
+              authorizedDriver: driverAuth.driverName,
+              requestedStatus: patch.status,
+            }
+          );
+          return bad("This booking must be assigned to your driver profile before you can update it.", 403);
+        }
+        if (patch.status === "accepted" && existing.status !== "assigned") {
+          return bad("Travelyt dispatch must assign this booking before driver acceptance.", 409);
         }
         if (patch.status === "en_route" && existing.status !== "accepted") {
           return bad("Driver must accept the job before starting route.", 409);
@@ -940,7 +976,6 @@ export async function PATCH(request: Request) {
         }
         if (
           patch.status &&
-          patch.status !== "assigned" &&
           patch.status !== "accepted" &&
           patch.status !== "en_route" &&
           patch.status !== "arrived" &&
@@ -973,12 +1008,11 @@ export async function PATCH(request: Request) {
     if (requiresDriver && !opsAuthorized(request)) {
       const nextStatus = patch.status;
       if (nextStatus === "assigned" || nextStatus === "accepted") {
-        const assignedDriver = patch.driverName || driverAuth.driverName;
+        const assignedDriver = existing.driver_name || driverAuth.driverName;
         if (!assignedDriver) return bad("Select the driver assigned to this access code.", 403);
         if (
           nextStatus === "accepted" &&
-          existing.driver_name &&
-          canonicalDriverName(existing.driver_name) !== canonicalDriverName(assignedDriver)
+          !driverMatchesBooking(existing, driverAuth)
         ) {
           return bad("This booking is assigned to a different driver.", 403);
         }
