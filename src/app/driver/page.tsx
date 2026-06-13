@@ -320,13 +320,13 @@ export default function DriverDashboard() {
           </div>
         </div>
 
-        <Section title="My active jobs" empty="Nothing assigned yet — claim one below.">
+        <Section title="My active jobs" empty="Nothing assigned yet. Dispatch must assign a confirmed job before it appears here.">
           {mine.map((b) => (
             <JobCard key={b.id} booking={b} />
           ))}
         </Section>
 
-        <Section title="Available pickups" empty="No new jobs right now.">
+        <Section title="Dispatch queue" empty="No dispatch-released jobs right now.">
           {available.map((b) => (
             <JobCard key={b.id} booking={b} />
           ))}

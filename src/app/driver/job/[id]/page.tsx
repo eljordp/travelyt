@@ -196,7 +196,7 @@ export default function DriverJobPage() {
     }
 
     setLocationStatus("denied");
-    setError("Allow location access before confirming custody.");
+    setError("Allow location access before continuing. Travelyt needs a GPS checkpoint for this step.");
     if (booking) {
       void recordClientOpsException(
         booking.id,
@@ -510,6 +510,12 @@ export default function DriverJobPage() {
         </div>
 
         {/* Action area */}
+        {error && !showCamera && (
+          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+            {error}
+          </p>
+        )}
+
         {isPending && (
           <div className="bg-white rounded-2xl border border-dashed border-navy/15 p-5 text-sm text-navy/70 text-center">
             Payment or manual confirmation is still pending. This booking is
@@ -518,17 +524,9 @@ export default function DriverJobPage() {
           </div>
         )}
 
-        {booking.status === "paid" && !booking.driverName && (
-          <button
-            onClick={acceptJob}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
-          >
-            Accept this job
-          </button>
-        )}
-
         {booking.status === "assigned" && isMine && (
           <button
+            type="button"
             onClick={acceptJob}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
           >
@@ -538,6 +536,7 @@ export default function DriverJobPage() {
 
         {booking.status === "accepted" && isMine && (
           <button
+            type="button"
             onClick={markEnRoute}
             disabled={locationStatus === "working"}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 cursor-pointer"
@@ -548,6 +547,7 @@ export default function DriverJobPage() {
 
         {booking.status === "en_route" && isMine && (
           <button
+            type="button"
             onClick={markArrived}
             disabled={locationStatus === "working"}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 cursor-pointer"
