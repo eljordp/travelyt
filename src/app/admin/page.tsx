@@ -337,6 +337,15 @@ function auditTitle(entry: NonNullable<Booking["statusHistory"]>[number]) {
   if (entry.action === "archive_toggle") {
     return `${actor} updated archive visibility`;
   }
+  if (entry.action === "backup_note") {
+    return `${actor} added backup ops note`;
+  }
+  if (entry.action === "backup_status") {
+    return `${actor} logged backup status`;
+  }
+  if (entry.action === "backup_proof") {
+    return `${actor} logged fallback proof`;
+  }
   const from = entry.fromStatus ? STATUS_LABELS[entry.fromStatus] : "Unknown";
   const to = entry.toStatus ? STATUS_LABELS[entry.toStatus] : "Unknown";
   return `${actor} changed status from ${from} to ${to}`;

@@ -75,7 +75,10 @@ export interface BookingAuditEntry {
     | "status_change"
     | "manual_review_override"
     | "proof_added"
-    | "archive_toggle";
+    | "archive_toggle"
+    | "backup_note"
+    | "backup_status"
+    | "backup_proof";
   fromStatus?: BookingStatus;
   toStatus?: BookingStatus;
   actorRole: "admin" | "dispatcher" | "driver" | "customer" | "system";
