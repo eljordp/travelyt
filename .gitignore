@@ -48,6 +48,9 @@ next-env.d.ts
 # internal docs — pitches, LOIs, attorney briefs, etc. Repo is public.
 docs/
 
+# emergency ops exports contain live customer/job PII
+ops-backups/
+
 # Capacitor native artifacts
 /ios/App/Pods/
 /ios/App/build/
