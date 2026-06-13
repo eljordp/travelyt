@@ -831,6 +831,11 @@ export async function PATCH(request: Request) {
       patch.archivedAt !== undefined &&
         (patch.archivedAt ?? null) !== (existing.archived_at ?? null)
     );
+    const manualReviewPatch = Boolean(
+      patch.customerIdentityVerifiedAt !== undefined ||
+        patch.driverIdentityVerifiedAt !== undefined ||
+        patch.restrictedItemsAttestedAt !== undefined
+    );
     const requiresOpsStatus = Boolean(
       archiveChanged ||
         (statusChanged &&
@@ -853,6 +858,10 @@ export async function PATCH(request: Request) {
 
     if (requiresOpsStatus && !opsAuthorized(request)) {
       return bad("Operations access is required to set this booking status.", 403);
+    }
+
+    if (manualReviewPatch && !opsAuthorized(request)) {
+      return bad("Operations access is required to update manual ID/bag review.", 403);
     }
 
     if (customerClosing && !opsAuthorized(request)) {
