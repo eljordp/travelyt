@@ -188,15 +188,26 @@ function redactForDriver(row: BookingRow) {
   };
 }
 
-async function signedProofUrls(booking: Booking) {
-  if (!booking.proofs.some((proof) => proof.storagePath)) return booking;
+function proofWithResponseDataUrl(
+  proof: Booking["proofs"][number],
+  dataUrl: string
+): Booking["proofs"][number] {
+  return {
+    ...proof,
+    dataUrl,
+  };
+}
 
+async function signedProofUrls(booking: Booking) {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return booking;
 
   const proofs = await Promise.all(
     booking.proofs.map(async (proof) => {
-      if (!proof.storagePath) return proof;
+      if (!proof.storagePath || !supabase) {
+        return proof.dataUrl?.startsWith("data:")
+          ? proofWithResponseDataUrl(proof, "")
+          : proof;
+      }
 
       const { data, error } = await supabase.storage
         .from(proofBucket)
@@ -204,10 +215,10 @@ async function signedProofUrls(booking: Booking) {
 
       if (error || !data?.signedUrl) {
         console.error("Supabase proof signed URL failed", error);
-        return proof;
+        return proofWithResponseDataUrl(proof, "");
       }
 
-      return { ...proof, dataUrl: data.signedUrl };
+      return proofWithResponseDataUrl(proof, data.signedUrl);
     })
   );
 

@@ -24,6 +24,7 @@ import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 import { latestLocationEvent } from "@/lib/ops-rules";
 
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
+const BOOKING_REFRESH_MS = 30_000;
 
 export default function BookingPage() {
   const params = useParams<{ id: string }>();
@@ -47,21 +48,29 @@ export default function BookingPage() {
   useEffect(() => {
     if (!params?.id) return;
     let cancelled = false;
-    const refresh = async () => {
+    const refresh = async (force = false) => {
+      if (!force && document.visibilityState === "hidden") return;
       const result = await getBooking(params.id);
       if (!cancelled) setBooking(result);
     };
     let interval: ReturnType<typeof setInterval> | undefined;
     const handle = window.setTimeout(() => {
-      refresh().finally(() => {
+      refresh(true).finally(() => {
         if (!cancelled) setLoading(false);
       });
-      interval = setInterval(refresh, 1500);
+      interval = setInterval(() => {
+        void refresh();
+      }, BOOKING_REFRESH_MS);
     }, 0);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refresh(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     const unsub = subscribe(refresh);
     return () => {
       cancelled = true;
       window.clearTimeout(handle);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsub();
       if (interval) clearInterval(interval);
     };

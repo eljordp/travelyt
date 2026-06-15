@@ -30,6 +30,7 @@ import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 import { latestLocationEvent } from "@/lib/ops-rules";
 
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
+const BOOKING_REFRESH_MS = 30_000;
 
 export default function TrackPage() {
   return (
@@ -53,21 +54,29 @@ function TrackPageInner() {
     if (!id) return;
     let cancelled = false;
 
-    async function refresh() {
+    async function refresh(force = false) {
+      if (!force && document.visibilityState === "hidden") return;
       const result = await getBooking(id, accessToken);
       if (!cancelled) setBooking(result);
     }
 
-    void refresh().finally(() => {
+    void refresh(true).finally(() => {
       if (!cancelled) setLoading(false);
     });
 
-    const interval = setInterval(refresh, 5000);
+    const interval = setInterval(() => {
+      void refresh();
+    }, BOOKING_REFRESH_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refresh(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     const unsub = subscribe(refresh);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsub();
     };
   }, [id, accessToken]);
