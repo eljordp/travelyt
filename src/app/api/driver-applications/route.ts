@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { createDriverAccessCode } from "@/lib/driver-access-server";
+
+const APPLICATION_COLUMNS =
+  "id, full_name, email, phone, city, state, vehicle_make_model, license_plate, drivers_license_state, drivers_license_last4, availability, referral_source, notes, status, reviewed_at, reviewed_by, created_at";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -138,6 +143,144 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, error: "We could not save your application." },
       { status: 400 }
+    );
+  }
+}
+
+export async function GET(request: Request) {
+  const limited = rateLimit(request, "driver-applications:get", 60);
+  if (limited) return limited;
+
+  const session = getAdminSession(request);
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, error: "Admin access is required." },
+      { status: 401 }
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return NextResponse.json(
+      { ok: false, error: "Driver applications backend is not configured." },
+      { status: 500 }
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("driver_applications")
+    .select(APPLICATION_COLUMNS)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Could not load driver applications", error);
+    return NextResponse.json(
+      { ok: false, error: "Could not load driver applications." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, applications: data ?? [] });
+}
+
+export async function PATCH(request: Request) {
+  const limited = rateLimit(request, "driver-applications:patch", 20);
+  if (limited) return limited;
+
+  const session = getAdminSession(request);
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, error: "Admin access is required." },
+      { status: 401 }
+    );
+  }
+  if (!isFullAdminSession(request)) {
+    return NextResponse.json(
+      { ok: false, error: "Only admin can review driver applications." },
+      { status: 403 }
+    );
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return NextResponse.json(
+      { ok: false, error: "Driver applications backend is not configured." },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const body = (await request.json()) as {
+      id?: string;
+      action?: "approve" | "reject" | "reviewing";
+    };
+    const id = body.id?.trim();
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: "Missing application ID." },
+        { status: 400 }
+      );
+    }
+    const statusMap = {
+      approve: "approved",
+      reject: "rejected",
+      reviewing: "reviewing",
+    } as const;
+    if (!body.action || !(body.action in statusMap)) {
+      return NextResponse.json(
+        { ok: false, error: "Unsupported review action." },
+        { status: 400 }
+      );
+    }
+
+    const { data: application, error: loadError } = await supabase
+      .from("driver_applications")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (loadError || !application) {
+      return NextResponse.json(
+        { ok: false, error: "Application not found." },
+        { status: 404 }
+      );
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("driver_applications")
+      .update({
+        status: statusMap[body.action],
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: session.email ?? null,
+      })
+      .eq("id", id)
+      .select(APPLICATION_COLUMNS)
+      .single();
+    if (updateError) {
+      console.error("Could not update driver application", updateError);
+      return NextResponse.json(
+        { ok: false, error: "Could not update application." },
+        { status: 500 }
+      );
+    }
+
+    let oneTimeCode: string | undefined;
+    if (body.action === "approve") {
+      const created = await createDriverAccessCode({
+        driverName: application.full_name,
+        driverEmail: application.email,
+        driverPhone: application.phone ?? undefined,
+        role: "driver",
+        createdBy: session.email,
+      });
+      oneTimeCode = created.code;
+    }
+
+    return NextResponse.json({ ok: true, application: updated, oneTimeCode });
+  } catch (error) {
+    console.error("Could not review driver application", error);
+    return NextResponse.json(
+      { ok: false, error: "Could not review application." },
+      { status: 500 }
     );
   }
 }

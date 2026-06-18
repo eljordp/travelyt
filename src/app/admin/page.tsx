@@ -70,6 +70,26 @@ interface DriverAccessCode {
   revokedBy?: string;
 }
 
+interface DriverApplication {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  city: string;
+  state: string;
+  vehicle_make_model: string;
+  license_plate: string;
+  drivers_license_state: string;
+  drivers_license_last4: string;
+  availability: string;
+  referral_source?: string | null;
+  notes?: string | null;
+  status: "pending" | "reviewing" | "approved" | "rejected" | "withdrawn";
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  created_at: string;
+}
+
 interface PartnerIntegration {
   id: string;
   name: string;
@@ -359,6 +379,9 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [exceptions, setExceptions] = useState<OpsException[]>([]);
   const [driverCodes, setDriverCodes] = useState<DriverAccessCode[]>([]);
+  const [applications, setApplications] = useState<DriverApplication[]>([]);
+  const [appBusyId, setAppBusyId] = useState<string | null>(null);
+  const [appCode, setAppCode] = useState<{ id: string; code: string } | null>(null);
   const [partnerIntegrations, setPartnerIntegrations] = useState<PartnerIntegration[]>([]);
   const [partnerEvents, setPartnerEvents] = useState<PartnerEvent[]>([]);
   const [partnerMigrationRequired, setPartnerMigrationRequired] = useState(false);
@@ -412,6 +435,7 @@ export default function AdminPage() {
           await loadBookings();
           await loadExceptions();
           await loadDriverCodes();
+          await loadApplications();
           if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
         }
       } catch (err) {
@@ -512,6 +536,51 @@ export default function AdminPage() {
       };
       if (response.ok && data.accessCodes) setDriverCodes(data.accessCodes);
     } catch {}
+  }
+
+  async function loadApplications() {
+    try {
+      const response = await fetch("/api/driver-applications", {
+        credentials: "same-origin",
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        applications?: DriverApplication[];
+      };
+      if (response.ok && data.applications) setApplications(data.applications);
+    } catch {}
+  }
+
+  async function reviewApplication(id: string, action: "approve" | "reject") {
+    setAppBusyId(id);
+    setError("");
+    try {
+      const response = await fetch("/api/driver-applications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id, action }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        oneTimeCode?: string;
+      };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not update application.");
+      }
+      if (data.oneTimeCode) {
+        setAppCode({ id, code: data.oneTimeCode });
+        await loadDriverCodes();
+      }
+      await loadApplications();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not update application."
+      );
+    } finally {
+      setAppBusyId(null);
+    }
   }
 
   async function loadPartnerIntegrations() {
@@ -654,6 +723,7 @@ export default function AdminPage() {
       await loadBookings();
       await loadExceptions();
       await loadDriverCodes();
+      await loadApplications();
       if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
@@ -942,7 +1012,9 @@ export default function AdminPage() {
       <AppChrome
         title="Admin"
         contentWidthClassName="max-w-7xl"
-        hideBottomNavOnDesktop
+        homeHref="/admin"
+        action={null}
+        showBottomNav={false}
       >
         <div className="space-y-5">
           <div>
@@ -1023,7 +1095,9 @@ export default function AdminPage() {
     <AppChrome
       title="Admin"
       contentWidthClassName="max-w-7xl"
-      hideBottomNavOnDesktop
+      homeHref="/admin"
+      action={null}
+      showBottomNav={false}
     >
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4">
@@ -1189,6 +1263,141 @@ export default function AdminPage() {
 
         <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)] xl:items-start">
           <aside className="space-y-4 xl:sticky xl:top-24">
+
+          <div className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
+            <div className="mb-4 flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <UserRound className="h-5 w-5 text-[#ff6868]" strokeWidth={2} />
+                  <h2 className="font-bold text-navy">Driver applications</h2>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-navy/55">
+                  People who applied at travelyt.us/driver/apply. Approve to
+                  auto-create their one-time sign-in code.
+                </p>
+              </div>
+              <button
+                onClick={() => void loadApplications()}
+                className="self-start rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-navy/45">
+              {applications.length} total ·{" "}
+              {
+                applications.filter(
+                  (a) => a.status === "pending" || a.status === "reviewing"
+                ).length
+              }{" "}
+              awaiting review
+            </p>
+
+            {applications.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-navy/10 p-4 text-sm text-navy/55">
+                No applications yet.
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {applications.map((app) => (
+                  <div
+                    key={app.id}
+                    className="rounded-xl border border-navy/10 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-navy">
+                          {app.full_name}
+                        </p>
+                        <a
+                          href={`mailto:${app.email}`}
+                          className="block truncate text-xs text-navy/55 hover:text-[#ff6868]"
+                        >
+                          {app.email}
+                        </a>
+                        {app.phone && (
+                          <p className="text-xs text-navy/55">{app.phone}</p>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          app.status === "approved"
+                            ? "bg-green-100 text-green-700"
+                            : app.status === "rejected" ||
+                                app.status === "withdrawn"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {app.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 grid gap-0.5 text-xs text-navy/60">
+                      <p>
+                        {app.city}, {app.state} · {app.availability}
+                      </p>
+                      <p>
+                        {app.vehicle_make_model} · plate {app.license_plate}
+                      </p>
+                      <p>
+                        License {app.drivers_license_state} ••
+                        {app.drivers_license_last4}
+                      </p>
+                      {app.referral_source && (
+                        <p>Heard via: {app.referral_source}</p>
+                      )}
+                      {app.notes && (
+                        <p className="italic">&ldquo;{app.notes}&rdquo;</p>
+                      )}
+                    </div>
+
+                    {appCode && appCode.id === app.id && (
+                      <div className="mt-2 rounded-lg border border-green-100 bg-green-50 p-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-green-700">
+                          One-time sign-in code
+                        </p>
+                        <code className="mt-1 block rounded bg-white px-2 py-1 text-sm font-bold text-navy">
+                          {appCode.code}
+                        </code>
+                        <p className="mt-1 text-[10px] text-green-700">
+                          Share with the driver now — shown once.
+                        </p>
+                      </div>
+                    )}
+
+                    {(app.status === "pending" ||
+                      app.status === "reviewing") &&
+                      adminRole === "admin" && (
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            onClick={() =>
+                              void reviewApplication(app.id, "approve")
+                            }
+                            disabled={appBusyId === app.id}
+                            className="flex-1 rounded-lg bg-[#ff6868] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#ff5252] disabled:opacity-60"
+                          >
+                            {appBusyId === app.id
+                              ? "Working…"
+                              : "Approve + create code"}
+                          </button>
+                          <button
+                            onClick={() =>
+                              void reviewApplication(app.id, "reject")
+                            }
+                            disabled={appBusyId === app.id}
+                            className="rounded-lg bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-60"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
         {stalePending.length > 0 && (
           <div className="flex gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
