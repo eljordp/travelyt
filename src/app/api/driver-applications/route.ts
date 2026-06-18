@@ -8,6 +8,68 @@ import { createDriverAccessCode } from "@/lib/driver-access-server";
 const APPLICATION_COLUMNS =
   "id, full_name, email, phone, city, state, vehicle_make_model, license_plate, drivers_license_state, drivers_license_last4, availability, referral_source, notes, status, reviewed_at, reviewed_by, created_at";
 
+const resendApiKey = process.env.RESEND_API_KEY;
+const driverNotifyEmail =
+  process.env.DRIVER_NOTIFY_EMAIL ||
+  process.env.NOTIFY_EMAIL ||
+  process.env.LEAD_NOTIFY_EMAIL;
+const notifyFromEmail =
+  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
+
+async function sendApplicationNotification(application: {
+  fullName: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  vehicleMakeModel: string;
+  availability: string;
+}) {
+  if (!resendApiKey || !driverNotifyEmail) return;
+
+  const text = [
+    "New Travelyt driver application",
+    "",
+    `Name:         ${application.fullName}`,
+    `Email:        ${application.email}`,
+    `Phone:        ${application.phone || "(none)"}`,
+    `Location:     ${application.city}, ${application.state}`,
+    `Vehicle:      ${application.vehicleMakeModel}`,
+    `Availability: ${application.availability}`,
+    "",
+    "Review and approve in the admin portal:",
+    "https://travelyt.us/admin",
+  ].join("\n");
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: notifyFromEmail,
+        to: driverNotifyEmail
+          .split(",")
+          .map((address) => address.trim())
+          .filter(Boolean),
+        subject: `New Travelyt driver application: ${application.fullName}`,
+        reply_to: application.email,
+        text,
+      }),
+    });
+    if (!response.ok) {
+      console.error(
+        "Resend driver application notification failed",
+        await response.text()
+      );
+    }
+  } catch (error) {
+    console.error("Resend driver application notification error", error);
+  }
+}
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ApplicationBody = {
@@ -137,6 +199,16 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    await sendApplicationNotification({
+      fullName,
+      email,
+      phone,
+      city,
+      state,
+      vehicleMakeModel,
+      availability,
+    });
 
     return NextResponse.json({ ok: true });
   } catch {
