@@ -20,6 +20,27 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Product Surfaces
+
+Travelyt runs three separate role surfaces on the same backend:
+
+- Customer website/app: `/`, `/quote`, `/profile`, `/booking/*`, and the
+  current App Store shell at `https://travelyt.us`.
+- Driver web app: `/driver`, `/driver/job/*`, and `/driver/apply`. The driver
+  surface has its own app chrome and does not appear inside the customer app
+  bottom navigation.
+- Admin back office: `/admin`, protected by admin auth, with no customer or
+  driver bottom navigation.
+
+Use `driver.travelyt.us` as the first driver URL and `admin.travelyt.us` as the
+back-office URL when DNS is ready. `src/proxy.ts` already routes those hosts to
+the right same-backend surfaces. Do not buy a separate driver domain until
+there is a brand, legal, or recruiting reason for it.
+
+The driver iOS/Android app should be a separate Capacitor/native target later
+with its own bundle ID, App Store listing, permissions copy, and review flow.
+The current `Travelyt` App Store app remains the customer app.
+
 ## Environment
 
 Create a local `.env.local` when testing notification flows:

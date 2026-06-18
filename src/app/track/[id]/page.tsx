@@ -32,6 +32,13 @@ import { latestLocationEvent } from "@/lib/ops-rules";
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
 const BOOKING_REFRESH_MS = 30_000;
 
+type TrackBag = {
+  id: string;
+  badge_code: string;
+  label: string | null;
+  status: string;
+};
+
 export default function TrackPage() {
   return (
     <Suspense fallback={<TrackShell>Loading tracking...</TrackShell>}>
@@ -46,9 +53,30 @@ function TrackPageInner() {
   const [booking, setBooking] = useState<Booking | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [approvingProof, setApprovingProof] = useState<number | null>(null);
+  const [bags, setBags] = useState<TrackBag[]>([]);
 
   const id = params?.id;
   const accessToken = searchParams.get("token") || searchParams.get("accessToken");
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const query = new URLSearchParams({ bookingId: id });
+        if (accessToken) query.set("token", accessToken);
+        const res = await fetch(`/api/custody?${query.toString()}`, {
+          credentials: "same-origin",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { bags?: TrackBag[] };
+        if (!cancelled && Array.isArray(data.bags)) setBags(data.bags);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, accessToken]);
 
   useEffect(() => {
     if (!id) return;
@@ -245,6 +273,39 @@ function TrackPageInner() {
               })}
             </div>
           </div>
+
+          {bags.length > 0 && (
+            <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 sm:p-6">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-navy/60">
+                Your bag badges
+              </h2>
+              <p className="mt-2 text-sm text-navy/60">
+                Each bag carries a tamper-evident badge. Open one to verify its
+                full custody history, sealed end to end.
+              </p>
+              <div className="mt-4 grid gap-2">
+                {bags.map((bag) => (
+                  <Link
+                    key={bag.id}
+                    href={`/badge/${bag.badge_code}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-3 transition-colors hover:border-[#ff6868]/40 hover:bg-[#ff6868]/[0.03]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-sm font-bold text-navy">
+                        {bag.badge_code}
+                      </p>
+                      <p className="text-xs text-navy/50">
+                        {bag.label ?? "Bag"} · {bag.status.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#c41e2a]">
+                      Verify <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

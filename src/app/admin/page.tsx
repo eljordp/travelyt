@@ -70,6 +70,15 @@ interface DriverAccessCode {
   revokedBy?: string;
 }
 
+interface BookingBag {
+  id: string;
+  booking_id: string;
+  badge_code: string;
+  label: string | null;
+  status: "issued" | "in_custody" | "handed_off" | "delivered" | "exception";
+  created_at: string;
+}
+
 interface DriverApplication {
   id: string;
   full_name: string;
@@ -2050,6 +2059,52 @@ function BookingCard({
   const [issueResolution, setIssueResolution] = useState(
     booking.issueResolution ?? ""
   );
+  const [bags, setBags] = useState<BookingBag[] | null>(null);
+  const [bagsBusy, setBagsBusy] = useState(false);
+  const [bagsError, setBagsError] = useState("");
+
+  async function loadBags() {
+    setBagsBusy(true);
+    setBagsError("");
+    try {
+      const response = await fetch(
+        `/api/custody?bookingId=${encodeURIComponent(booking.id)}`,
+        { credentials: "same-origin" }
+      );
+      const data = (await response.json()) as { bags?: BookingBag[] };
+      if (!response.ok) throw new Error("Could not load bags.");
+      setBags(data.bags ?? []);
+    } catch (err) {
+      setBagsError(err instanceof Error ? err.message : "Could not load bags.");
+    } finally {
+      setBagsBusy(false);
+    }
+  }
+
+  async function issueBadges() {
+    setBagsBusy(true);
+    setBagsError("");
+    try {
+      const response = await fetch("/api/custody", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          action: "issue",
+          bookingId: booking.id,
+          count: booking.bags,
+        }),
+      });
+      const data = (await response.json()) as { bags?: BookingBag[]; error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not issue badges.");
+      await loadBags();
+    } catch (err) {
+      setBagsError(err instanceof Error ? err.message : "Could not issue badges.");
+    } finally {
+      setBagsBusy(false);
+    }
+  }
+
   const demoBooking = isDemoBooking(booking);
   const stale = isStalePending(booking);
   const identityReady = Boolean(
@@ -2322,6 +2377,92 @@ function BookingCard({
         >
           {custodyReady ? "Custody ready" : "Admin override: mark review complete"}
         </button>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-navy/70" strokeWidth={2} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-navy/60">
+              Bags &amp; badges
+            </span>
+          </div>
+          {bags === null ? (
+            <button
+              onClick={() => void loadBags()}
+              disabled={bagsBusy}
+              className="rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-50"
+            >
+              {bagsBusy ? "Loading…" : "View badges"}
+            </button>
+          ) : (
+            <button
+              onClick={() => void loadBags()}
+              disabled={bagsBusy}
+              className="rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          )}
+        </div>
+
+        <p className="mb-3 text-xs leading-relaxed text-navy/55">
+          Mint a tamper-evident badge per bag. Each badge is a scannable,
+          hash-chained custody record at{" "}
+          <span className="font-mono">travelyt.us/badge/CODE</span>.
+        </p>
+
+        {bagsError && (
+          <p className="mb-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+            {bagsError}
+          </p>
+        )}
+
+        {bags !== null && bags.length === 0 && (
+          <p className="mb-3 text-xs text-navy/55">
+            No badges issued yet for this booking&rsquo;s {booking.bags} bag
+            {booking.bags > 1 ? "s" : ""}.
+          </p>
+        )}
+
+        {bags !== null && bags.length > 0 && (
+          <div className="mb-3 grid gap-2">
+            {bags.map((bag) => (
+              <div
+                key={bag.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-navy/10 bg-white px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-sm font-bold text-navy">
+                    {bag.badge_code}
+                  </p>
+                  <p className="text-[11px] text-navy/50">
+                    {bag.label ?? "Bag"} · {bag.status.replace(/_/g, " ")}
+                  </p>
+                </div>
+                <Link
+                  href={`/badge/${bag.badge_code}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1 rounded-lg bg-navy/5 px-2.5 py-1.5 text-xs font-bold text-navy transition-colors hover:bg-navy/10"
+                >
+                  Open <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {bags !== null && bags.length === 0 && (
+          <button
+            onClick={() => void issueBadges()}
+            disabled={disabled || bagsBusy}
+            className="rounded-xl bg-[#ff6868] px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {bagsBusy
+              ? "Issuing…"
+              : `Issue ${booking.bags} badge${booking.bags > 1 ? "s" : ""}`}
+          </button>
+        )}
       </div>
 
       <div className="mt-4 rounded-2xl border border-red-100 bg-red-50/60 p-4">

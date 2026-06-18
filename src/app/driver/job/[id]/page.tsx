@@ -3,8 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import AppChrome from "@/components/AppChrome";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Camera,
+  CheckCircle2,
+  Circle,
+  Clock3,
+  MapPin,
+  ShieldCheck,
+} from "lucide-react";
+import DriverChrome from "@/components/DriverChrome";
 import LocationProofCard from "@/components/LocationProofCard";
 import {
   addProof,
@@ -12,12 +21,15 @@ import {
   formatPrice,
   getBooking,
   getBookingStatusLabel,
+  getDriverAccessCode,
   getLastApiFailureMessage,
+  getStoredDriverName,
   recordClientOpsException,
   SERVICE_LABELS,
   subscribe,
   updateBooking,
 } from "@/lib/bookings";
+import type { CustodyEventType } from "@/lib/custody";
 import { driverNameMatches } from "@/lib/drivers";
 import { captureCurrentLocation, captureProofPhoto, isNative } from "@/lib/native";
 
@@ -50,7 +62,7 @@ function DriverJobChrome({
   title?: string;
 }) {
   return (
-    <AppChrome
+    <DriverChrome
       title={title}
       action={
         <Link
@@ -64,7 +76,7 @@ function DriverJobChrome({
       }
     >
       {children}
-    </AppChrome>
+    </DriverChrome>
   );
 }
 
@@ -209,6 +221,39 @@ export default function DriverJobPage() {
     return undefined;
   }
 
+  // Append a custody event to every bag's tamper-evident ledger. Non-blocking:
+  // ledger logging must never break the booking proof flow.
+  async function logCustody(
+    eventType: CustodyEventType,
+    location?: ProofLocation
+  ) {
+    if (!booking) return;
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const code = getDriverAccessCode();
+      if (code) headers["x-travelyt-driver-code"] = code;
+      const name = getStoredDriverName();
+      if (name) headers["x-travelyt-driver-name"] = name;
+      await fetch("/api/custody", {
+        method: "POST",
+        headers,
+        credentials: "same-origin",
+        body: JSON.stringify({
+          action: "scan_booking",
+          bookingId: booking.id,
+          eventType,
+          actorRole: "driver",
+          lat: location?.latitude ?? null,
+          lng: location?.longitude ?? null,
+        }),
+      });
+    } catch {
+      // Intentionally swallowed — see note above.
+    }
+  }
+
   async function acceptJob() {
     if (!booking) return;
     const updated = await updateBooking(booking.id, {
@@ -284,6 +329,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
+    void logCustody("picked_up", location);
     clearPhoto();
   }
 
@@ -329,6 +375,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
+    void logCustody("security_handoff", location);
     clearPhoto();
     if (updated?.status === "delivered") {
       setTimeout(() => router.push("/driver"), 800);
@@ -374,6 +421,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
+    void logCustody("picked_up", location);
     clearPhoto();
   }
 
@@ -404,6 +452,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
+    void logCustody("delivered", location);
     clearPhoto();
     setTimeout(() => router.push("/driver"), 800);
   }
@@ -451,196 +500,269 @@ export default function DriverJobPage() {
       needsAirportRelease ||
       needsAirlineHandoff ||
       needsDeliveryPhoto);
+  const proofActionTitle = needsPickupPhoto
+    ? "Seal proof"
+    : needsAirportRelease
+      ? "Airport release proof"
+      : needsAirlineHandoff
+        ? "Airline handoff proof"
+        : "Delivery proof";
+  const proofActionBody = needsPickupPhoto
+    ? "Attach the seal, enter the printed seal code, then capture a clear bag photo with GPS."
+    : needsAirportRelease
+      ? "Capture the bags at the airport release point and record who released them to Travelyt."
+      : needsAirlineHandoff
+        ? "Capture the sealed bags at the airline handoff point and record who accepted them."
+        : "Capture the final delivery photo with the seals intact.";
+  const currentStep = (() => {
+    if (isPending) {
+      return {
+        key: "wait",
+        eyebrow: "Waiting",
+        title: "Travelyt must confirm this booking",
+        body: "Customer details stay hidden until payment or manual approval is complete.",
+        tone: "neutral" as const,
+      };
+    }
+    if (!isMine && !terminalStatus) {
+      return {
+        key: "other_driver",
+        eyebrow: "Assigned elsewhere",
+        title: `Assigned to ${booking.driverName ?? "another courier"}`,
+        body: "This job is visible for context, but it is not assigned to your driver profile.",
+        tone: "neutral" as const,
+      };
+    }
+    if (terminalStatus) {
+      return {
+        key: "done",
+        eyebrow: "Closed",
+        title: getBookingStatusLabel(booking),
+        body: "This job is no longer active for courier action. Contact Travelyt ops before moving bags.",
+        tone: booking.status === "issue" || booking.status === "cancelled" ? ("blocked" as const) : ("done" as const),
+      };
+    }
+    if (custodyBlocked) {
+      return {
+        key: "custody",
+        eyebrow: "Ops review needed",
+        title: "Manual ID/bag review is not complete",
+        body: "Ask admin to clear custody readiness before pickup or airport release.",
+        tone: "blocked" as const,
+      };
+    }
+    if (booking.status === "assigned") {
+      return {
+        key: "accept",
+        eyebrow: "Current step",
+        title: "Accept the assigned job",
+        body: "Lock this job to your courier profile before heading out.",
+        tone: "active" as const,
+      };
+    }
+    if (booking.status === "accepted") {
+      return {
+        key: "route",
+        eyebrow: "Current step",
+        title: "Start route",
+        body: "Capture GPS when you begin moving toward the custody location.",
+        tone: "active" as const,
+      };
+    }
+    if (booking.status === "en_route") {
+      return {
+        key: "arrive",
+        eyebrow: "Current step",
+        title: "Mark arrived",
+        body: "Capture arrival GPS at the pickup, airport, or delivery location.",
+        tone: "active" as const,
+      };
+    }
+    if (showCamera) {
+      return {
+        key: needsAirlineHandoff
+          ? "handoff"
+          : needsDeliveryPhoto
+            ? "delivery"
+            : "custody",
+        eyebrow: "Current step",
+        title: proofActionTitle,
+        body: proofActionBody,
+        tone: "active" as const,
+      };
+    }
+    if (sealApprovalRequired) {
+      return {
+        key: "seal_approval",
+        eyebrow: "Waiting",
+        title: "Customer seal approval",
+        body: "The seal photo is on file. Customer approval is required before airline handoff.",
+        tone: "waiting" as const,
+      };
+    }
+    if (booking.status === "delivery_pending") {
+      return {
+        key: "customer_confirm",
+        eyebrow: "Waiting",
+        title: "Customer confirmation",
+        body: "Delivery proof is on file. The customer must confirm receipt from their tracking page.",
+        tone: "waiting" as const,
+      };
+    }
+    return {
+      key: "wait",
+      eyebrow: "Waiting",
+      title: "No driver action right now",
+      body: "Keep this job visible and wait for Travelyt ops to release the next step.",
+      tone: "neutral" as const,
+    };
+  })();
+  const workflowSteps = getWorkflowSteps({
+    booking,
+    currentKey: currentStep.key,
+    currentTone: currentStep.tone,
+    isDepartureService,
+    isArrivalService,
+    latestSealProof,
+  });
 
   return (
     <DriverJobChrome>
-      <div className="mx-auto max-w-2xl">
-        <Link
-          href="/driver"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-bold text-navy/70 transition-colors hover:text-navy"
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2.2} />
-          Back to jobs
-        </Link>
-
-        <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8 mb-6">
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
-              <p className="text-xs text-navy/70 uppercase tracking-wider font-semibold mb-1">
-                {booking.id}
+      <div className="mx-auto max-w-2xl space-y-5">
+        <section className={currentStepClassName(currentStep.tone)}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff6868]">
+                {currentStep.eyebrow}
               </p>
-              <h1 className="text-2xl font-bold text-navy">{customerName}</h1>
-              {customerPhone ? (
-                <a href={`tel:${customerPhone}`} className="text-sm text-[#ff6868] font-semibold hover:underline">
-                  {customerPhone}
-                </a>
-              ) : (
-                <p className="text-sm font-semibold text-navy/55">
-                  Contact hidden until confirmed
-                </p>
-              )}
+              <h1 className="mt-2 text-3xl font-bold leading-tight text-navy">
+                {currentStep.title}
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-navy/70">
+                {currentStep.body}
+              </p>
             </div>
-            <span className="text-xs font-semibold text-[#ff6868] bg-[#ff6868]/10 px-2.5 py-1 rounded-full">
+            <span className="shrink-0 rounded-full bg-navy/5 px-3 py-1 text-xs font-bold text-navy/65">
               {getBookingStatusLabel(booking)}
             </span>
           </div>
 
-          <div className="space-y-3 text-sm border-t border-gray-100 pt-5">
-            <Row label="Service" value={SERVICE_LABELS[booking.service]} />
-            <Row label={booking.service === "arrival" ? "Delivery" : "Pickup"} value={jobAddress} />
-            <Row label="Airport" value={booking.airport} />
-            <Row label="Date" value={booking.date} />
-            {booking.flightTime && (
-              <Row
-                label={booking.service === "arrival" ? "Arrival" : "Departure"}
-                value={booking.flightTime}
-              />
+          <div className="mt-5 grid gap-3 rounded-xl bg-white/70 p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="min-w-0">
+              <p className="truncate font-bold text-navy">{customerName}</p>
+              <p className="mt-0.5 truncate text-xs font-semibold text-navy/55">
+                {booking.id} · {SERVICE_LABELS[booking.service]} · {booking.bags} bag
+                {booking.bags > 1 ? "s" : ""}
+              </p>
+            </div>
+            {customerPhone ? (
+              <a
+                href={`tel:${customerPhone}`}
+                className="inline-flex items-center justify-center rounded-xl bg-navy px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Call customer
+              </a>
+            ) : (
+              <span className="rounded-xl bg-navy/5 px-4 py-2.5 text-center text-xs font-bold text-navy/55">
+                Contact hidden
+              </span>
             )}
-            {booking.flight && <Row label="Flight" value={booking.flight} />}
-            <Row label="Bags" value={`${booking.bags}`} />
-            {jobNotes && <Row label="Notes" value={jobNotes} />}
           </div>
 
-          <div className="border-t border-gray-100 mt-5 pt-5 flex justify-between text-sm">
-            <span className="text-navy/70">Your payout</span>
-            <span className="font-bold text-navy">
-              {isPending ? "Pending confirmation" : formatPrice(Math.round(booking.priceCents * 0.65))}
-            </span>
-          </div>
-        </div>
-
-        {/* Action area */}
-        {error && !showCamera && (
-          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
-            {error}
-          </p>
-        )}
-
-        {isPending && (
-          <div className="bg-white rounded-2xl border border-dashed border-navy/15 p-5 text-sm text-navy/70 text-center">
-            Payment or manual confirmation is still pending. This booking is
-            visible for planning, but it cannot be accepted until it is confirmed
-            by Travelyt.
-          </div>
-        )}
-
-        {booking.status === "assigned" && isMine && (
-          <button
-            type="button"
-            onClick={acceptJob}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
-          >
-            Accept assigned job
-          </button>
-        )}
-
-        {booking.status === "accepted" && isMine && (
-          <button
-            type="button"
-            onClick={markEnRoute}
-            disabled={locationStatus === "working"}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 cursor-pointer"
-          >
-            {locationStatus === "working" ? "Capturing route GPS..." : "Start route"}
-          </button>
-        )}
-
-        {booking.status === "en_route" && isMine && (
-          <button
-            type="button"
-            onClick={markArrived}
-            disabled={locationStatus === "working"}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 cursor-pointer"
-          >
-            {locationStatus === "working" ? "Capturing arrival GPS..." : "Mark arrived"}
-          </button>
-        )}
-
-        {!isMine && booking.status === "paid" && booking.driverName && (
-          <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70 text-center">
-            Assigned to {booking.driverName}.
-          </div>
-        )}
-
-        {!isMine && !isPending && booking.status !== "paid" && !terminalStatus && (
-          <div className="bg-navy/5 rounded-2xl p-5 text-sm text-navy/70 text-center">
-            Assigned to {booking.driverName ?? "another courier"}.
-          </div>
-        )}
-
-        {terminalStatus && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm leading-relaxed text-red-800">
-            <div className="font-bold">{getBookingStatusLabel(booking)}</div>
-            <p className="mt-1">
-              This job is no longer active for courier action. Contact Travelyt
-              ops before moving bags or changing custody.
+          {error && !showCamera && (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+              {error}
             </p>
-          </div>
-        )}
+          )}
 
-        {booking.status === "delivery_pending" && isMine && (
-          <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 text-sm leading-relaxed text-orange-900">
-            <div className="font-bold">Waiting for customer confirmation</div>
-            <p className="mt-1">
+          {isPending && (
+            <StatusNotice>
+              Payment or manual confirmation is still pending. This booking
+              cannot be accepted until Travelyt confirms it.
+            </StatusNotice>
+          )}
+
+          {booking.status === "assigned" && isMine && (
+            <PrimaryActionButton onClick={acceptJob} icon={CheckCircle2}>
+              Accept job
+            </PrimaryActionButton>
+          )}
+
+          {booking.status === "accepted" && isMine && (
+            <PrimaryActionButton
+              onClick={markEnRoute}
+              disabled={locationStatus === "working"}
+              icon={MapPin}
+            >
+              {locationStatus === "working" ? "Capturing route GPS..." : "Start route"}
+            </PrimaryActionButton>
+          )}
+
+          {booking.status === "en_route" && isMine && (
+            <PrimaryActionButton
+              onClick={markArrived}
+              disabled={locationStatus === "working"}
+              icon={MapPin}
+            >
+              {locationStatus === "working" ? "Capturing arrival GPS..." : "Mark arrived"}
+            </PrimaryActionButton>
+          )}
+
+          {!isMine && !terminalStatus && (
+            <StatusNotice>
+              Assigned to {booking.driverName ?? "another courier"}.
+            </StatusNotice>
+          )}
+
+          {terminalStatus && (
+            <StatusNotice tone={currentStep.tone === "blocked" ? "danger" : "done"}>
+              {currentStep.body}
+            </StatusNotice>
+          )}
+
+          {booking.status === "delivery_pending" && isMine && (
+            <StatusNotice tone="waiting">
               Delivery proof is on file. The customer must confirm receipt from
               their Travelyt tracking page before this job closes.
-            </p>
-          </div>
-        )}
+            </StatusNotice>
+          )}
 
-        {custodyBlocked && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm leading-relaxed text-red-800">
-            <div className="font-bold">
-              Driver cannot start because manual ID/bag review is not complete.
+          {custodyBlocked && (
+            <div className="mt-4 rounded-xl border border-red-100 bg-red-50 p-4 text-sm leading-relaxed text-red-800">
+              <div className="flex items-center gap-2 font-bold">
+                <AlertTriangle className="h-4 w-4" strokeWidth={2.2} />
+                Ops review needed
+              </div>
+              <ul className="mt-3 space-y-1 text-xs">
+                {blockers.map((blocker) => (
+                  <li key={blocker}>- {blocker}</li>
+                ))}
+              </ul>
             </div>
-            <p className="mt-1">
-              Ask admin to use the custody readiness override before pickup or
-              airport release.
-            </p>
-            <ul className="mt-3 space-y-1 text-xs">
-              {blockers.map((blocker) => (
-                <li key={blocker}>- {blocker}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+          )}
 
-        {sealApprovalRequired && (
-          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 text-sm leading-relaxed text-yellow-900">
-            <div className="font-bold">Waiting for customer seal approval</div>
-            <p className="mt-1">
-              The customer must approve the seal proof before you can continue
-              to airline handoff. This protects chain of custody before the
-              bags leave the pickup location.
-            </p>
-          </div>
-        )}
+          {sealApprovalRequired && (
+            <StatusNotice tone="waiting">
+              The customer must approve the seal proof before airline handoff.
+            </StatusNotice>
+          )}
+        </section>
 
         {showCamera && (
-          <div className="bg-white rounded-2xl shadow-lg shadow-navy/5 p-6 md:p-8">
-            <h2 className="font-bold text-navy mb-2">
-              {needsPickupPhoto
-                ? "Seal proof"
-                : needsAirportRelease
-                  ? "Airport release proof"
-                : needsAirlineHandoff
-                  ? "Airline handoff proof"
-                  : "Delivery proof"}
+          <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6">
+            <h2 className="flex items-center gap-2 font-bold text-navy">
+              <Camera className="h-5 w-5 text-[#ff6868]" strokeWidth={2.2} />
+              {proofActionTitle}
             </h2>
-            <p className="text-sm text-navy/70 mb-5">
-              Take a clear photo of {booking.bags} bag{booking.bags > 1 ? "s" : ""}{" "}
-              {needsPickupPhoto
-                ? "after the tamper-evident seal is attached. Make sure the seal number is visible."
-                : needsAirportRelease
-                  ? "at the airport release point. Capture the bags and record who released them to Travelyt."
-                : needsAirlineHandoff
-                  ? "at the airline handoff point. Capture the sealed bags and any permitted handoff context."
-                  : "at the delivery point with seals intact."}
+            <p className="mt-2 text-sm leading-relaxed text-navy/70">
+              {proofActionBody}
             </p>
-            <div className="mb-5 rounded-xl border border-navy/10 bg-navy/[0.03] p-4 text-xs leading-relaxed text-navy/70">
-              Location is required for custody events. When you confirm,
-              Travelyt stores the current GPS coordinates, timestamp, and
-              accuracy with the photo proof.
+            <div className="my-5 flex gap-3 rounded-xl border border-navy/10 bg-navy/[0.03] p-4 text-xs leading-relaxed text-navy/70">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy/45" strokeWidth={2.2} />
+              <span>
+                GPS is captured when you confirm. Travelyt stores location,
+                timestamp, and accuracy with this proof.
+              </span>
             </div>
             {needsPickupPhoto && (
               <div className="mb-4">
@@ -738,10 +860,10 @@ export default function DriverJobPage() {
                 <button
                   type="button"
                   onClick={captureNative}
-                  className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#ff6868] hover:bg-[#ff6868]/5 transition-all cursor-pointer"
+                  className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-navy/20 py-12 text-center transition-all hover:border-[#ff6868] hover:bg-[#ff6868]/5"
                 >
-                  <span className="text-3xl block mb-2">📷</span>
-                  <span className="text-sm font-semibold text-navy">Open camera</span>
+                  <Camera className="mb-3 h-8 w-8 text-[#ff6868]" strokeWidth={1.8} />
+                  <span className="text-sm font-bold text-navy">Open camera</span>
                   <span className="block text-xs text-navy/70 mt-1">
                     Native camera with auto-orientation
                   </span>
@@ -756,9 +878,9 @@ export default function DriverJobPage() {
                     onChange={onFile}
                     className="hidden"
                   />
-                  <span className="block w-full text-center py-12 rounded-xl border-2 border-dashed border-navy/20 hover:border-[#ff6868] hover:bg-[#ff6868]/5 transition-all cursor-pointer">
-                    <span className="text-3xl block mb-2">📷</span>
-                    <span className="text-sm font-semibold text-navy">Tap to capture</span>
+                  <span className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-navy/20 py-12 text-center transition-all hover:border-[#ff6868] hover:bg-[#ff6868]/5">
+                    <Camera className="mb-3 h-8 w-8 text-[#ff6868]" strokeWidth={1.8} />
+                    <span className="text-sm font-bold text-navy">Tap to capture</span>
                     <span className="block text-xs text-navy/70 mt-1">
                       Camera on mobile · File picker on desktop
                     </span>
@@ -796,7 +918,7 @@ export default function DriverJobPage() {
                           : markDelivered
                     }
                     disabled={locationStatus === "working"}
-                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff6868] text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
+                    className="flex-[2] rounded-xl bg-[#ff6868] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
                     {locationStatus === "working"
                       ? "Capturing location..."
@@ -819,8 +941,64 @@ export default function DriverJobPage() {
           </div>
         )}
 
+        <WorkflowProgress steps={workflowSteps} />
+
+        <section className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-navy/45">
+                Job details
+              </p>
+              <h2 className="mt-1 text-xl font-bold text-navy">{customerName}</h2>
+              {customerPhone ? (
+                <a
+                  href={`tel:${customerPhone}`}
+                  className="text-sm font-bold text-[#ff6868] hover:underline"
+                >
+                  {customerPhone}
+                </a>
+              ) : (
+                <p className="text-sm font-semibold text-navy/55">
+                  Contact hidden until confirmed
+                </p>
+              )}
+            </div>
+            <span className="rounded-full bg-[#ff6868]/10 px-2.5 py-1 text-xs font-bold text-[#ff6868]">
+              {booking.id}
+            </span>
+          </div>
+
+          <div className="space-y-3 border-t border-gray-100 pt-5 text-sm">
+            <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+            <Row
+              label={booking.service === "arrival" ? "Delivery" : "Pickup"}
+              value={jobAddress}
+            />
+            <Row label="Airport" value={booking.airport} />
+            <Row label="Date" value={booking.date} />
+            {booking.flightTime && (
+              <Row
+                label={booking.service === "arrival" ? "Arrival" : "Departure"}
+                value={booking.flightTime}
+              />
+            )}
+            {booking.flight && <Row label="Flight" value={booking.flight} />}
+            <Row label="Bags" value={`${booking.bags}`} />
+            {jobNotes && <Row label="Notes" value={jobNotes} />}
+          </div>
+
+          <div className="mt-5 flex justify-between border-t border-gray-100 pt-5 text-sm">
+            <span className="text-navy/70">Your payout</span>
+            <span className="font-bold text-navy">
+              {isPending
+                ? "Pending confirmation"
+                : formatPrice(Math.round(booking.priceCents * 0.65))}
+            </span>
+          </div>
+        </section>
+
         {(booking.locationEvents?.length ?? 0) > 0 && (
-          <div className="mt-6 bg-white rounded-2xl shadow-lg shadow-navy/5 p-6">
+          <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6">
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
               Location trail
             </h2>
@@ -842,7 +1020,7 @@ export default function DriverJobPage() {
 
         {/* Existing proofs */}
         {booking.proofs.length > 0 && (
-          <div className="mt-6 bg-white rounded-2xl shadow-lg shadow-navy/5 p-6">
+          <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6">
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
               Proofs on file
             </h2>
@@ -885,6 +1063,261 @@ export default function DriverJobPage() {
         )}
       </div>
     </DriverJobChrome>
+  );
+}
+
+type StepTone = "active" | "blocked" | "done" | "neutral" | "waiting";
+type WorkflowStepState = "blocked" | "current" | "done" | "pending";
+type WorkflowStep = {
+  id: string;
+  label: string;
+  state: WorkflowStepState;
+};
+
+function currentStepClassName(tone: StepTone) {
+  if (tone === "blocked") {
+    return "rounded-2xl border border-red-100 bg-red-50 p-5 shadow-sm shadow-red-100/60 md:p-6";
+  }
+  if (tone === "waiting") {
+    return "rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm shadow-yellow-100/60 md:p-6";
+  }
+  if (tone === "done") {
+    return "rounded-2xl border border-green-100 bg-green-50 p-5 shadow-sm shadow-green-100/60 md:p-6";
+  }
+  return "rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6";
+}
+
+function getWorkflowSteps({
+  booking,
+  currentKey,
+  currentTone,
+  isDepartureService,
+  isArrivalService,
+  latestSealProof,
+}: {
+  booking: Booking;
+  currentKey: string;
+  currentTone: StepTone;
+  isDepartureService: boolean;
+  isArrivalService: boolean;
+  latestSealProof?: Booking["proofs"][number];
+}): WorkflowStep[] {
+  const steps: Array<Omit<WorkflowStep, "state">> = [
+    { id: "accept", label: "Accept" },
+    { id: "route", label: "Route" },
+    { id: "arrive", label: "Arrive" },
+    {
+      id: "custody",
+      label: booking.service === "arrival" ? "Airport release" : "Seal pickup",
+    },
+  ];
+
+  if (isDepartureService) {
+    steps.push(
+      { id: "seal_approval", label: "Seal approval" },
+      { id: "handoff", label: "Airline handoff" }
+    );
+  }
+  if (isArrivalService) {
+    steps.push(
+      { id: "delivery", label: "Delivery proof" },
+      { id: "customer_confirm", label: "Customer confirms" }
+    );
+  }
+
+  return steps.map((step) => {
+    if (step.id === currentKey) {
+      const state: WorkflowStepState =
+        currentTone === "blocked" ? "blocked" : "current";
+      return {
+        ...step,
+        state,
+      };
+    }
+    const state: WorkflowStepState = workflowStepDone(
+      step.id,
+      booking,
+      latestSealProof
+    )
+      ? "done"
+      : "pending";
+    return {
+      ...step,
+      state,
+    };
+  });
+}
+
+function workflowStepDone(
+  stepId: string,
+  booking: Booking,
+  latestSealProof?: Booking["proofs"][number]
+) {
+  const status = booking.status;
+  const acceptedOrLater = [
+    "accepted",
+    "en_route",
+    "arrived",
+    "picked_up",
+    "in_transit",
+    "delivery_pending",
+    "delivered",
+    "closed",
+  ].includes(status);
+  const routedOrLater = [
+    "en_route",
+    "arrived",
+    "picked_up",
+    "in_transit",
+    "delivery_pending",
+    "delivered",
+    "closed",
+  ].includes(status);
+  const arrivedOrLater = [
+    "arrived",
+    "picked_up",
+    "in_transit",
+    "delivery_pending",
+    "delivered",
+    "closed",
+  ].includes(status);
+  const custodyOrLater = [
+    "picked_up",
+    "in_transit",
+    "delivery_pending",
+    "delivered",
+    "closed",
+  ].includes(status);
+
+  if (stepId === "accept") return acceptedOrLater;
+  if (stepId === "route") return routedOrLater;
+  if (stepId === "arrive") return arrivedOrLater;
+  if (stepId === "custody") return custodyOrLater;
+  if (stepId === "seal_approval") {
+    return (
+      Boolean(latestSealProof?.approvedAt) ||
+      ["in_transit", "delivery_pending", "delivered", "closed"].includes(status)
+    );
+  }
+  if (stepId === "handoff") {
+    return ["in_transit", "delivery_pending", "delivered", "closed"].includes(status);
+  }
+  if (stepId === "delivery") {
+    return ["delivery_pending", "closed"].includes(status);
+  }
+  if (stepId === "customer_confirm") return status === "closed";
+  return false;
+}
+
+function WorkflowProgress({ steps }: { steps: WorkflowStep[] }) {
+  return (
+    <section className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-navy/55" strokeWidth={2.1} />
+        <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-navy/60">
+          Workflow
+        </h2>
+      </div>
+      <ol className="space-y-3">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-center gap-3">
+            <StepIcon state={step.state} />
+            <span
+              className={`min-w-0 flex-1 text-sm font-semibold ${
+                step.state === "pending" ? "text-navy/45" : "text-navy"
+              }`}
+            >
+              {step.label}
+            </span>
+            {step.state === "current" && (
+              <span className="rounded-full bg-[#ff6868]/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#ff6868]">
+                Now
+              </span>
+            )}
+            {step.state === "blocked" && (
+              <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-red-700">
+                Hold
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function StepIcon({ state }: { state: WorkflowStepState }) {
+  if (state === "done") {
+    return (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
+        <CheckCircle2 className="h-4 w-4" strokeWidth={2.4} />
+      </span>
+    );
+  }
+  if (state === "blocked") {
+    return (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+        <AlertTriangle className="h-4 w-4" strokeWidth={2.4} />
+      </span>
+    );
+  }
+  if (state === "current") {
+    return (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff6868]/10 text-[#ff6868]">
+        <Clock3 className="h-4 w-4" strokeWidth={2.4} />
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy/5 text-navy/35">
+      <Circle className="h-4 w-4" strokeWidth={2.1} />
+    </span>
+  );
+}
+
+function PrimaryActionButton({
+  children,
+  disabled,
+  icon: Icon,
+  onClick,
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#ff6868] px-5 py-4 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+    >
+      <Icon className="h-5 w-5" strokeWidth={2.2} />
+      {children}
+    </button>
+  );
+}
+
+function StatusNotice({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "danger" | "done" | "neutral" | "waiting";
+}) {
+  const className =
+    tone === "danger"
+      ? "border-red-100 bg-red-50 text-red-800"
+      : tone === "done"
+        ? "border-green-100 bg-green-50 text-green-800"
+        : tone === "waiting"
+          ? "border-yellow-200 bg-yellow-50 text-yellow-900"
+          : "border-navy/10 bg-navy/[0.03] text-navy/70";
+  return (
+    <div className={`mt-4 rounded-xl border p-4 text-sm leading-relaxed ${className}`}>
+      {children}
+    </div>
   );
 }
 

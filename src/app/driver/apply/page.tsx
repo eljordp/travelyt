@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, DollarSign, ShieldCheck } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import DriverChrome from "@/components/DriverChrome";
 
 type Form = {
   fullName: string;
@@ -83,9 +82,8 @@ export default function DriverApplyPage() {
 
   if (status === "success") {
     return (
-      <div className="min-h-screen bg-[#f6f7fb]">
-        <Navbar />
-        <main className="mx-auto max-w-3xl px-6 pt-32 pb-20">
+      <DriverChrome title="Driver application" contentWidthClassName="max-w-4xl">
+        <div className="mx-auto max-w-3xl pt-8">
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm shadow-navy/5">
             <CheckCircle2 className="mx-auto h-14 w-14 text-[#ff6868]" strokeWidth={1.8} />
             <h1 className="mt-5 text-3xl font-bold text-navy">Application received</h1>
@@ -93,15 +91,14 @@ export default function DriverApplyPage() {
               {message}
             </p>
             <Link
-              href="/"
+              href="/driver"
               className="mt-7 inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-navy/90"
             >
-              Back to home <ArrowRight className="h-4 w-4" />
+              Back to driver login <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </DriverChrome>
     );
   }
 
@@ -109,9 +106,8 @@ export default function DriverApplyPage() {
     "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10";
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb]">
-      <Navbar />
-      <main className="mx-auto max-w-3xl px-6 pt-28 pb-20">
+    <DriverChrome title="Driver application" contentWidthClassName="max-w-4xl">
+      <div className="mx-auto max-w-3xl">
         <header className="mb-8">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
             Drive with Travelyt
@@ -343,9 +339,8 @@ export default function DriverApplyPage() {
             </button>
           </div>
         </form>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </DriverChrome>
   );
 }
 

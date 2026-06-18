@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
-import AppChrome from "@/components/AppChrome";
+import DriverChrome from "@/components/DriverChrome";
 import {
   type Booking,
   clearLocalBookings,
@@ -152,18 +152,18 @@ export default function DriverDashboard() {
 
   if (!mounted) {
     return (
-      <AppChrome title="Driver">
+      <DriverChrome title="Driver">
         <div className="rounded-2xl bg-white p-5 shadow-sm shadow-navy/5">
           <div className="h-4 w-32 rounded-full bg-navy/10" />
           <div className="mt-4 h-20 rounded-xl bg-navy/5" />
         </div>
-      </AppChrome>
+      </DriverChrome>
     );
   }
 
   if (!driver) {
     return (
-      <AppChrome title="Driver">
+      <DriverChrome title="Driver">
         <div className="space-y-5">
           <div>
             <h1 className="text-2xl font-bold text-navy">Courier Login</h1>
@@ -225,7 +225,7 @@ export default function DriverDashboard() {
             </Link>
           </div>
         </div>
-      </AppChrome>
+      </DriverChrome>
     );
   }
 
@@ -253,7 +253,7 @@ export default function DriverDashboard() {
   );
 
   return (
-    <AppChrome title="Driver">
+    <DriverChrome title="Driver">
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
@@ -364,7 +364,7 @@ export default function DriverDashboard() {
           </div>
         )}
       </div>
-    </AppChrome>
+    </DriverChrome>
   );
 }
 
