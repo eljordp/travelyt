@@ -1188,6 +1188,28 @@ export default function AdminPage() {
           </p>
         )}
 
+        <Link
+          href="/admin/seo"
+          className="flex flex-col gap-3 rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5 transition-colors hover:border-[#ff6868]/40 hover:bg-[#ff6868]/5 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/10 text-[#ff6868]">
+              <Search className="h-5 w-5" strokeWidth={2} />
+            </span>
+            <span>
+              <span className="block font-bold text-navy">SEO rankings</span>
+              <span className="mt-1 block text-sm leading-relaxed text-navy/60">
+                Separate tracker for Travelyt search terms, airport city pages,
+                local pack checks, and Search Console readiness.
+              </span>
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-2 self-start rounded-xl bg-navy px-3 py-2 text-xs font-bold text-white sm:self-auto">
+            Open SEO
+            <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
+          </span>
+        </Link>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {metrics.map((metric) => {
             const Icon = metric.icon;

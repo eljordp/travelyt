@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { trackLeadSubmission } from "@/lib/analytics";
 
 type LeadCaptureProps = {
   source: string;
@@ -70,6 +71,7 @@ export default function LeadCapture({
 
       setStatus("success");
       setMessage("You're on the list. We'll reach out with route availability.");
+      trackLeadSubmission({ source, interest });
       setEmail("");
     } catch {
       setStatus("error");

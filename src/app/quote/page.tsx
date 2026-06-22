@@ -31,6 +31,10 @@ import {
   validateFlightCutoff,
   validateTravelDateTime,
 } from "@/lib/booking-time";
+import {
+  trackBookingRequestCreated,
+  trackLeadSubmission,
+} from "@/lib/analytics";
 import AppChrome from "@/components/AppChrome";
 
 type ServiceType = "departure" | "arrival" | "both" | "";
@@ -281,6 +285,11 @@ export default function QuotePage() {
           },
         }),
       });
+      trackLeadSubmission({
+        source: "quote-contact-step",
+        service: form.service,
+        airport: form.airport,
+      });
     } catch {
       setCapturedLeadKey("");
     }
@@ -418,6 +427,14 @@ export default function QuotePage() {
             ? new Date().toISOString()
             : undefined,
         restrictedItemsAttestedAt: new Date().toISOString(),
+      });
+      trackBookingRequestCreated({
+        bookingId: b.id,
+        service: b.service,
+        airport: b.airport,
+        bags: b.bags,
+        value: b.priceCents / 100,
+        promoCode,
       });
       router.push(`/booking/${b.id}/pay`);
     } catch (err) {

@@ -13,6 +13,25 @@ import {
   SERVICE_LABELS,
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
+
+function purchaseTrackingKey(bookingId: string, checkoutSessionId: string | null) {
+  return `travelyt:purchase:${bookingId}:${checkoutSessionId || "confirmed"}`;
+}
+
+function wasPurchaseTracked(key: string) {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markPurchaseTracked(key: string) {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {}
+}
 
 export default function PayPage() {
   const params = useParams<{ id: string }>();
@@ -20,6 +39,7 @@ export default function PayPage() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [purchaseTracked, setPurchaseTracked] = useState(false);
   const [checkoutState] = useState(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("checkout");
@@ -87,6 +107,34 @@ export default function PayPage() {
     };
   }, [params?.id, checkoutState, checkoutSessionId]);
 
+  useEffect(() => {
+    if (
+      purchaseTracked ||
+      checkoutState !== "success" ||
+      !booking ||
+      booking.status === "pending"
+    ) {
+      return;
+    }
+
+    const trackingKey = purchaseTrackingKey(booking.id, checkoutSessionId);
+    if (wasPurchaseTracked(trackingKey)) {
+      setPurchaseTracked(true);
+      return;
+    }
+
+    trackPurchase({
+      bookingId: booking.id,
+      checkoutSessionId,
+      service: booking.service,
+      airport: booking.airport,
+      bags: booking.bags,
+      value: booking.priceCents / 100,
+    });
+    markPurchaseTracked(trackingKey);
+    setPurchaseTracked(true);
+  }, [booking, checkoutSessionId, checkoutState, purchaseTracked]);
+
   async function startCheckout() {
     if (!booking || checkoutLoading) return;
     setCheckoutError("");
@@ -109,6 +157,13 @@ export default function PayPage() {
       if (!response.ok || !data.url) {
         throw new Error(data.error || "Could not start checkout.");
       }
+      trackBeginCheckout({
+        bookingId: booking.id,
+        service: booking.service,
+        airport: booking.airport,
+        bags: booking.bags,
+        value: booking.priceCents / 100,
+      });
       window.location.href = data.url;
     } catch (error) {
       setCheckoutError(
