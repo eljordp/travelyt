@@ -113,14 +113,18 @@ function newDeliveryConfirmationCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function adminAuthorized(request: Request) {
+function legacyAdminCodeAuthorized(request: Request) {
+  if (process.env.TRAVELYT_ALLOW_ADMIN_CODE_HEADER !== "true") return false;
   const expected = process.env.TRAVELYT_ADMIN_ACCESS_CODE;
-  return isFullAdminSession(request) || Boolean(expected && request.headers.get("x-travelyt-admin-code") === expected);
+  return Boolean(expected && request.headers.get("x-travelyt-admin-code") === expected);
+}
+
+function adminAuthorized(request: Request) {
+  return isFullAdminSession(request) || legacyAdminCodeAuthorized(request);
 }
 
 function opsAuthorized(request: Request) {
-  const expected = process.env.TRAVELYT_ADMIN_ACCESS_CODE;
-  return isOpsSession(request) || Boolean(expected && request.headers.get("x-travelyt-admin-code") === expected);
+  return isOpsSession(request) || legacyAdminCodeAuthorized(request);
 }
 
 function tokenMatches(row: BookingRow, token?: string | null) {

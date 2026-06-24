@@ -30,11 +30,12 @@ function dispatcherPassword() {
 }
 
 function sessionSecret() {
-  return (
-    process.env.TRAVELYT_ADMIN_SESSION_SECRET ||
-    process.env.TRAVELYT_ADMIN_PASSWORD ||
-    process.env.TRAVELYT_DRIVER_ACCESS_CODE
-  );
+  const explicit = process.env.TRAVELYT_ADMIN_SESSION_SECRET;
+  if (explicit) return explicit;
+
+  if (process.env.NODE_ENV === "production") return undefined;
+
+  return process.env.TRAVELYT_ADMIN_PASSWORD || process.env.TRAVELYT_DRIVER_ACCESS_CODE;
 }
 
 function supabaseAuthConfigured() {
