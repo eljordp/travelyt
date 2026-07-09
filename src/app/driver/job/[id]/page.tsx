@@ -31,7 +31,7 @@ import {
 } from "@/lib/bookings";
 import type { CustodyEventType } from "@/lib/custody";
 import { driverNameMatches } from "@/lib/drivers";
-import { captureCurrentLocation, captureProofPhoto, isNative } from "@/lib/native";
+import { captureCurrentLocation, captureProofPhoto, compressProofPhoto, isNative } from "@/lib/native";
 
 const DRIVER_KEY = "travelyt:driver";
 type ProofLocation = NonNullable<Booking["proofs"][number]["location"]>;
@@ -175,7 +175,9 @@ export default function DriverJobPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
-      if (typeof result === "string") setPendingPhoto(result);
+      if (typeof result === "string") {
+        void compressProofPhoto(result).then(setPendingPhoto);
+      }
     };
     reader.readAsDataURL(file);
   }

@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 import type { AdminRole } from "@/lib/admin-auth";
-import { rowToBooking, type BookingRow } from "@/lib/booking-mappers";
+import {
+  BOOKING_LIST_SELECT_COLUMNS,
+  BOOKING_SELECT_COLUMNS,
+  rowToBooking,
+  type BookingRow,
+} from "@/lib/booking-mappers";
 import type { Booking, BookingAuditEntry, BookingStatus } from "@/lib/bookings";
 import {
   BACKUP_ACTIVE_STATUSES,
@@ -82,13 +87,13 @@ export async function listBackupBookings() {
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*")
+    .select(BOOKING_LIST_SELECT_COLUMNS)
     .order("travel_date", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(200);
 
   if (error) throw error;
-  return ((data ?? []) as BookingRow[])
+  return ((data ?? []) as unknown as BookingRow[])
     .map(rowToBooking)
     .filter(
       (booking) =>
@@ -100,7 +105,7 @@ export async function getBackupBooking(id: string) {
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*")
+    .select(BOOKING_SELECT_COLUMNS)
     .eq("id", id)
     .maybeSingle<BookingRow>();
 

@@ -28,7 +28,14 @@ export async function getRequestUser(request: Request): Promise<User | null> {
   const token = auth?.startsWith("Bearer ") ? auth.slice("Bearer ".length) : "";
   if (!supabase || !token) return null;
 
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error) return null;
-  return data.user ?? null;
+  // A stale, malformed, or unverifiable session must degrade to guest —
+  // never take the whole request down with a 500.
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error) return null;
+    return data.user ?? null;
+  } catch (err) {
+    console.warn("getRequestUser failed; treating request as guest", err);
+    return null;
+  }
 }

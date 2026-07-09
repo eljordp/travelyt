@@ -300,6 +300,10 @@ async function apiJson<T>(
 ): Promise<T | null> {
   lastApiFailureStatus = undefined;
   lastApiFailureMessage = "";
+  // Hard timeout so a dead connection surfaces as a visible, retryable error
+  // instead of a spinner that hangs forever mid-booking or mid-pickup.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25_000);
   try {
     const headers = {
       ...(await authHeaders()),
@@ -309,6 +313,7 @@ async function apiJson<T>(
       ...init,
       headers,
       credentials: init?.credentials ?? "same-origin",
+      signal: init?.signal ?? controller.signal,
     });
     if (!res.ok) {
       lastApiFailureStatus = res.status;
@@ -324,10 +329,15 @@ async function apiJson<T>(
       return null;
     }
     return (await res.json()) as T;
-  } catch {
+  } catch (err) {
     lastApiFailureStatus = 0;
-    lastApiFailureMessage = "Network connection failed. Try again.";
+    lastApiFailureMessage =
+      err instanceof DOMException && err.name === "AbortError"
+        ? "Request timed out. Check your connection and try again."
+        : "Network connection failed. Try again.";
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

@@ -8,6 +8,66 @@ import type {
   ServiceType,
 } from "@/lib/bookings";
 
+export const BOOKING_SELECT_COLUMNS = [
+  "id",
+  "service",
+  "airport",
+  "address",
+  "travel_date",
+  "flight_time",
+  "flight",
+  "bags",
+  "customer_name",
+  "email",
+  "phone",
+  "notes",
+  "declared_value_cents",
+  "coverage_election",
+  "coverage_accepted_at",
+  "restricted_items_attested_at",
+  "customer_identity_verified_at",
+  "driver_identity_verified_at",
+  "status",
+  "price_cents",
+  "created_at",
+  "paid_at",
+  "assigned_at",
+  "accepted_at",
+  "en_route_at",
+  "arrived_at",
+  "driver_name",
+  "picked_up_at",
+  "delivery_pending_at",
+  "delivered_at",
+  "closed_at",
+  "delivery_confirmation_code",
+  "customer_confirmed_at",
+  "customer_signature_name",
+  "issue_type",
+  "issue_notes",
+  "issue_opened_at",
+  "issue_resolved_at",
+  "issue_resolution",
+  "location_events",
+  "proofs",
+  "status_history",
+  "archived_at",
+  "archived_by",
+  "external_provider",
+  "external_reference",
+  "external_status",
+  "external_synced_at",
+  "customer_access_token",
+  "customer_user_id",
+  "driver_user_id",
+  "source",
+].join(",");
+
+export const BOOKING_LIST_SELECT_COLUMNS = BOOKING_SELECT_COLUMNS
+  .split(",")
+  .filter((column) => column !== "proofs")
+  .join(",");
+
 export interface BookingRow {
   id: string;
   service: ServiceType;

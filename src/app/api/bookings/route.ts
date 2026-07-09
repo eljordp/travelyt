@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Buffer } from "node:buffer";
 import {
+  BOOKING_LIST_SELECT_COLUMNS,
+  BOOKING_SELECT_COLUMNS,
   bookingPatchToRowPatch,
   bookingToInsert,
   rowToBooking,
@@ -213,9 +215,12 @@ async function signedProofUrls(booking: Booking) {
           : proof;
       }
 
+      // 24h expiry: proof files are immutable, and a stable URL lets the
+      // browser/CDN cache actually work across a day of ops instead of
+      // re-downloading every photo on each refresh (egress hygiene).
       const { data, error } = await supabase.storage
         .from(proofBucket)
-        .createSignedUrl(proof.storagePath, 60 * 60);
+        .createSignedUrl(proof.storagePath, 60 * 60 * 24);
 
       if (error || !data?.signedUrl) {
         console.error("Supabase proof signed URL failed", error);
@@ -282,7 +287,9 @@ async function storeProofImage(
     .from(proofBucket)
     .upload(storagePath, parsed.buffer, {
       contentType: parsed.contentType,
-      cacheControl: "3600",
+      // Proof files have content-unique names and never change — let the
+      // storage CDN cache them for a year instead of re-fetching hourly.
+      cacheControl: "31536000",
       upsert: false,
     });
 
@@ -293,7 +300,7 @@ async function storeProofImage(
 
   const { data: signed } = await supabase.storage
     .from(proofBucket)
-    .createSignedUrl(storagePath, 60 * 60);
+    .createSignedUrl(storagePath, 60 * 60 * 24);
 
   return {
     ...proof,
@@ -680,7 +687,7 @@ export async function GET(request: Request) {
   if (id) {
     const { data, error } = await supabase
       .from("bookings")
-      .select("*")
+      .select(BOOKING_SELECT_COLUMNS)
       .eq("id", id)
       .maybeSingle<BookingRow>();
 
@@ -712,7 +719,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("bookings")
-    .select("*")
+    .select(BOOKING_LIST_SELECT_COLUMNS)
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -726,7 +733,7 @@ export async function GET(request: Request) {
   const { data, error } = await query;
 
   if (error) return bad("Could not load bookings.", 500);
-  const rows = ((data ?? []) as BookingRow[]).filter((row) => {
+  const rows = ((data ?? []) as unknown as BookingRow[]).filter((row) => {
     if (isDriverOnly) return driverCanSeeInList(row, driverAuth.driverName);
     if (row.archived_at && (!includeArchived || !opsAuthorized(request))) {
       return false;
