@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import NativeBoot from "@/components/NativeBoot";
 import SiteAnalytics from "@/components/SiteAnalytics";
@@ -60,8 +61,9 @@ export default function RootLayout({
     >
       {GA4_MEASUREMENT_ID ? (
         <head>
-          <script
+          <Script
             id="travelyt-ga4"
+            strategy="beforeInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 window.dataLayer = window.dataLayer || [];
@@ -84,8 +86,9 @@ export default function RootLayout({
               `,
             }}
           />
-          <script
-            async
+          <Script
+            id="travelyt-ga4-loader"
+            strategy="afterInteractive"
             src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA4_MEASUREMENT_ID)}`}
           />
         </head>
