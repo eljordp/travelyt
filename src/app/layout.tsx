@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import NativeBoot from "@/components/NativeBoot";
 import SiteAnalytics from "@/components/SiteAnalytics";
+import AnalyticsConsent from "@/components/AnalyticsConsent";
 import StickyPromoBar from "@/components/StickyPromoBar";
 import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <NativeBoot />
         <SiteAnalytics />
+        <AnalyticsConsent />
         {children}
         <StickyPromoBar />
       </body>

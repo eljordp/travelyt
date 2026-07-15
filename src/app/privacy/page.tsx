@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-const LAST_UPDATED = "May 30, 2026";
+const LAST_UPDATED = "July 15, 2026";
 const CONTACT_EMAIL = "privacy@travelyt.us";
 
 const sections: { title: string; body: string }[] = [
@@ -48,7 +48,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Cookies and local storage",
     body:
-      "Travelyt uses essential cookies and local storage to support login state, save in-progress quotes, remember preferences, and protect against abuse. We may also use analytics tools that set cookies to measure aggregate usage. You can control cookies through your browser settings; disabling essential cookies may prevent parts of Travelyt from working.",
+      "Travelyt uses essential cookies and local storage to support login state, save in-progress quotes, remember preferences, and protect against abuse. With your permission, we use Google Analytics to measure aggregate website usage and understand which pages and services are useful. Analytics storage is denied by default until you select Accept analytics. You can select Decline or change your choice by clearing Travelyt site data in your browser. Disabling essential cookies may prevent parts of Travelyt from working.",
   },
   {
     title: "Data retention",

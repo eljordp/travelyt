@@ -8,6 +8,7 @@ export const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "
 const INTERNAL_VERIFICATION_SOURCE = "codex";
 const INTERNAL_VERIFICATION_MEDIUM = "verification";
 const DEV_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+const SUPPRESSED_PATH_PREFIXES = ["/admin", "/backup", "/driver", "/demo"];
 
 declare global {
   interface Window {
@@ -23,19 +24,16 @@ function cleanParams(params: AnalyticsParams) {
   );
 }
 
+export function isSuppressedAnalyticsPath(pathname: string) {
+  return SUPPRESSED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 export function shouldSuppressAnalytics(pathname?: string) {
   if (typeof window === "undefined") return false;
   if (DEV_HOSTNAMES.has(window.location.hostname)) return true;
 
   const path = pathname ?? window.location.pathname;
-  if (
-    path.startsWith("/admin") ||
-    path.startsWith("/backup") ||
-    path.startsWith("/driver") ||
-    path.startsWith("/demo")
-  ) {
-    return true;
-  }
+  if (isSuppressedAnalyticsPath(path)) return true;
 
   const params = new URLSearchParams(window.location.search);
   const source = params.get("utm_source")?.toLowerCase();
@@ -78,7 +76,7 @@ export function trackLeadSubmission(params: {
   service?: string | null;
   airport?: string | null;
 }) {
-  trackEvent("generate_lead", {
+  trackEvent("lead_captured", {
     source: params.source,
     interest: params.interest || undefined,
     service: params.service || undefined,
@@ -103,12 +101,17 @@ export function trackBookingRequestCreated(params: {
     currency: "USD",
     promo_code: params.promoCode || undefined,
   });
-  trackEvent("generate_lead", {
-    source: "quote-submit",
-    service: params.service,
-    airport: params.airport,
-    value: params.value,
-    currency: "USD",
+}
+
+export type AnalyticsConsent = "granted" | "denied";
+
+export function updateAnalyticsConsent(consent: AnalyticsConsent) {
+  if (!ensureGtag()) return;
+  window.gtag?.("consent", "update", {
+    analytics_storage: consent,
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
   });
 }
 
