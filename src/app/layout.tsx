@@ -5,6 +5,7 @@ import NativeBoot from "@/components/NativeBoot";
 import SiteAnalytics from "@/components/SiteAnalytics";
 import AnalyticsConsent from "@/components/AnalyticsConsent";
 import StickyPromoBar from "@/components/StickyPromoBar";
+import { GA4_MEASUREMENT_ID } from "@/lib/analytics";
 import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
 const inter = Inter({
@@ -50,11 +51,45 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const measurementId = JSON.stringify(GA4_MEASUREMENT_ID);
+
   return (
     <html
       lang="en"
       className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
+      {GA4_MEASUREMENT_ID ? (
+        <head>
+          <script
+            id="travelyt-ga4"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = window.gtag || function(){window.dataLayer.push(arguments);};
+                var travelytAnalyticsConsent = 'denied';
+                try {
+                  if (window.localStorage.getItem('travelyt_analytics_consent') === 'granted') {
+                    travelytAnalyticsConsent = 'granted';
+                  }
+                } catch (error) {}
+                window.gtag('consent', 'default', {
+                  analytics_storage: travelytAnalyticsConsent,
+                  ad_storage: 'denied',
+                  ad_user_data: 'denied',
+                  ad_personalization: 'denied',
+                  wait_for_update: 500
+                });
+                window.gtag('js', new Date());
+                window.gtag('config', ${measurementId}, { send_page_view: false });
+              `,
+            }}
+          />
+          <script
+            async
+            src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA4_MEASUREMENT_ID)}`}
+          />
+        </head>
+      ) : null}
       <body className="min-h-full flex flex-col">
         <NativeBoot />
         <SiteAnalytics />

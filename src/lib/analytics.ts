@@ -1,5 +1,3 @@
-"use client";
-
 export type AnalyticsValue = string | number | boolean | null | undefined;
 export type AnalyticsParams = Record<string, AnalyticsValue>;
 
