@@ -109,7 +109,7 @@ export default function BusinessCardsPage() {
             {/* Bottom: contact */}
             <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in] flex items-end justify-between gap-3">
               <div className="space-y-[0.04in] text-[8pt] text-white/85 leading-tight">
-                <p>support@travelyt.us</p>
+                <p>info@travelyt.us</p>
                 <p className="text-white/65">travelyt.us</p>
               </div>
 

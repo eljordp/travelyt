@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   },
 };
 
-const SUPPORT_EMAIL = "support@travelyt.us";
-const PRIVACY_EMAIL = "privacy@travelyt.us";
+const SUPPORT_EMAIL = "info@travelyt.us";
+const PRIVACY_EMAIL = "careers@travelyt.us";
 
 export default function SupportPage() {
   return (

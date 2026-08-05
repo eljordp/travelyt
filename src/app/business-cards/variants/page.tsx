@@ -127,7 +127,7 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
-                    <p>support@travelyt.us</p>
+                    <p>info@travelyt.us</p>
                     <p className="text-[#081546]/60">travelyt.us</p>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute left-[0.28in] right-[0.28in] bottom-[0.24in] flex items-end justify-between">
                   <div className="space-y-[0.04in] text-[8pt] text-[#081546]/85 leading-tight">
-                    <p>support@travelyt.us</p>
+                    <p>info@travelyt.us</p>
                     <p className="text-[#081546]/60">travelyt.us</p>
                   </div>
 
@@ -320,7 +320,7 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-white/95 leading-tight">
-                    <p>support@travelyt.us</p>
+                    <p>info@travelyt.us</p>
                     <p className="text-white/75">travelyt.us</p>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export default function BusinessCardVariantsPage() {
 
                 <div className="absolute bottom-[0.22in] left-[0.28in] right-[0.28in]">
                   <div className="space-y-[0.04in] text-[8pt] text-white/85 leading-tight">
-                    <p>support@travelyt.us</p>
+                    <p>info@travelyt.us</p>
                     <p className="text-white/60">travelyt.us</p>
                   </div>
                 </div>

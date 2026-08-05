@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 const LAST_UPDATED = "July 15, 2026";
-const CONTACT_EMAIL = "privacy@travelyt.us";
+const CONTACT_EMAIL = "info@travelyt.us";
 
 const sections: { title: string; body: string }[] = [
   {
