@@ -106,41 +106,17 @@ export default function WebsiteHome() {
         <HeroCarousel />
 
         <section
-          className="rounded-3xl bg-navy px-6 py-6 text-white shadow-sm shadow-navy/10 sm:px-8"
-          aria-label="Download Travelyt"
+          className="rounded-2xl border border-amber-300/70 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-950"
+          aria-label="Pilot service status"
         >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
-                Now on the App Store
-              </p>
-              <h2 className="mt-2 text-2xl font-bold leading-tight sm:text-3xl">
-                Download Travelyt and request luggage help from your phone.
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-white/70">
-                Share the app with travelers who want pickup, handoff, arrival
-                delivery, and live bag status for supported launch routes.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <a
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-navy transition-colors hover:bg-white/90"
-              >
-                <Download className="h-4 w-4" strokeWidth={2} />
-                Download on App Store
-              </a>
-              <Link
-                href="/quote"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
-              >
-                Start online <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
+          <p className="font-bold">Pilot service status</p>
+          <p className="mt-1">
+            A quote is a service request, not a confirmed airline check-in.
+            Departure service is available only after Travelyt verifies the
+            dated flight, route, and airline-designated handoff point. Travelyt
+            does not bypass passenger check-in, security screening, or airline
+            acceptance requirements.
+          </p>
         </section>
 
         <section>
@@ -178,9 +154,10 @@ export default function WebsiteHome() {
               Sealed and tracked from door to gate.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-navy/65">
-              Every Travelyt booking moves through a chain of custody you can
-              watch in real time — from doorstep pickup to the moment your
-              airline accepts it as your checked baggage.
+              Confirmed pilot bookings create a timestamped custody record from
+              doorstep pickup to a documented handoff. Airline acceptance,
+              screening, and loading remain controlled by the airline, airport,
+              and their authorized handlers.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
@@ -189,11 +166,11 @@ export default function WebsiteHome() {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Live status as your bag clears the airport and boards your flight.
+                Status updates only after a documented custody or airline event.
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Photo proof when it&apos;s handed off to the airline and delivered.
+                Photo proof at the confirmed handoff point and final delivery.
               </li>
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
@@ -214,8 +191,9 @@ export default function WebsiteHome() {
 
           <BagStatus
             current="checked_in"
-            bookingId="TVT-001"
-            route="Home → LAX"
+            bookingId="Illustrative flow"
+            route="Door → confirmed handoff"
+            illustrative
           />
         </section>
 
@@ -226,10 +204,12 @@ export default function WebsiteHome() {
                 First time? Here&apos;s the idea.
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
-                You pack the bag. We do everything in between.
+                You pack the bag. We document every step we are approved to perform.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-navy/65">
-                Most travelers in the US have never used a baggage service before. It&apos;s simple: we collect your luggage at home, move it through the airport on your flight, and meet you at your destination. You travel without the bags.
+                For a confirmed route, we collect your luggage, record its
+                condition and seal, and move it to the approved airport handoff
+                point. Arrival delivery is a separate, route-dependent service.
               </p>
             </div>
 
@@ -266,7 +246,7 @@ export default function WebsiteHome() {
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy/65">
               <span className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
-                Sealed and insured
+                Coverage terms confirmed before pickup
               </span>
               <span className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />

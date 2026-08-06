@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ShieldCheck, Tag, Trophy, X } from "lucide-react";
+import { ArrowRight, ShieldCheck, Tag, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { isNative } from "@/lib/native";
 
@@ -28,16 +28,9 @@ const PROMOS: Promo[] = [
   {
     icon: ShieldCheck,
     eyebrow: "Every bag",
-    text: "Sealed, weighed, tracked, and insured — door to gate.",
+    text: "Sealed, weighed, and tracked through documented custody.",
     cta: "See how it works",
     href: "/trust",
-  },
-  {
-    icon: Trophy,
-    eyebrow: "World Cup window",
-    text: "Pilot routes opening for the summer — reserve a service slot.",
-    cta: "Reserve a slot",
-    href: "/quote",
   },
 ];
 
