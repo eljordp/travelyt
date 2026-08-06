@@ -39,6 +39,7 @@ const STORAGE_KEY = "travelyt_sticky_promo_dismissed";
 
 const HIDDEN_PREFIXES = [
   "/admin",
+  "/airlines",
   "/booking",
   "/business-cards",
   "/demo",

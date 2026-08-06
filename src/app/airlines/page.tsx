@@ -1,102 +1,139 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import {
+  ArrowRight,
+  BadgeCheck,
+  ClipboardCheck,
+  Home,
+  LockKeyhole,
+  MapPin,
+  PlaneTakeoff,
+  ScanLine,
+  ShieldCheck,
+  TrendingUp,
+  UserCheck,
+  Users,
+  Workflow,
+} from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Airline Baggage Prep",
+  title: "For Airlines — Baggage as a Service",
   description:
-    "Travelyt weighs, seals, and prepares bags around airline baggage rules, then delivers them straight to your airline at the airport.",
+    "Travelyt partners with airlines to move baggage off-airport under documented chain of custody — fewer counter queues, a premium ancillary product, and acceptance that stays fully under airline control.",
   alternates: {
     canonical: "/airlines",
   },
   openGraph: {
-    title: "Airline Baggage Prep | Travelyt",
+    title: "For Airlines | Travelyt",
     description:
-      "See how Travelyt prepares luggage for major airline baggage policies and airport handoff.",
+      "Off-airport baggage under documented custody. Your check-in rules, your acceptance, your screening — our drivers, seals, and ledger.",
     url: "/airlines",
   },
 };
 
-const airlines = [
+const heroCallouts = [
   {
-    name: "American Airlines",
-    code: "AA",
-    bags: "2 checked bags (23kg/50lb each)",
-    fee: "$35 first bag, $45 second",
-    hubs: ["DFW", "CLT", "MIA", "ORD", "PHX", "LAX", "JFK"],
+    title: "Fewer counter queues",
+    desc: "Bags collected off-airport arrive prepped and documented, easing peak-hour pressure at check-in.",
+    icon: <Users className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    name: "Delta Air Lines",
-    code: "DL",
-    bags: "2 checked bags (23kg/50lb each)",
-    fee: "$35 first bag, $45 second",
-    hubs: ["ATL", "MSP", "DTW", "SLC", "SEA", "JFK", "LAX"],
+    title: "Documented custody",
+    desc: "Every handoff is a logged event: verified ID, seal, weight, photo — a documented, append-only record.",
+    icon: <ClipboardCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    name: "United Airlines",
-    code: "UA",
-    bags: "2 checked bags (23kg/50lb each)",
-    fee: "$35 first bag, $45 second",
-    hubs: ["ORD", "DEN", "IAH", "EWR", "SFO", "IAD", "LAX"],
+    title: "A premium ancillary",
+    desc: "Door-to-gate baggage is a product your passengers pay for — without touching your fare structure.",
+    icon: <TrendingUp className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    name: "Southwest Airlines",
-    code: "WN",
-    bags: "2 free checked bags (23kg/50lb each)",
-    fee: "Free (first 2 bags)",
-    hubs: ["DAL", "MDW", "BWI", "DEN", "LAS", "PHX", "HOU"],
-  },
-  {
-    name: "JetBlue Airways",
-    code: "B6",
-    bags: "Varies by fare (0-2 free)",
-    fee: "$35-$40 if not included",
-    hubs: ["JFK", "BOS", "FLL", "MCO", "LAX"],
-  },
-  {
-    name: "Alaska Airlines",
-    code: "AS",
-    bags: "2 checked bags (23kg/50lb each)",
-    fee: "$35 first bag, $45 second",
-    hubs: ["SEA", "PDX", "SFO", "LAX", "ANC"],
-  },
-  {
-    name: "Spirit Airlines",
-    code: "NK",
-    bags: "Checked bags available",
-    fee: "$31-$55+ (varies by route/timing)",
-    hubs: ["FLL", "MCO", "ATL", "DFW", "LAS"],
-  },
-  {
-    name: "Frontier Airlines",
-    code: "F9",
-    bags: "Checked bags available",
-    fee: "$30-$52+ (varies)",
-    hubs: ["DEN", "MCO", "ATL", "LAS", "PHX"],
+    title: "Passengers arrive lighter",
+    desc: "Hands-free travelers move faster through your terminal and start their trip with your brand.",
+    icon: <PlaneTakeoff className="w-6 h-6" strokeWidth={1.5} />,
   },
 ];
 
-const features = [
+const stages = [
   {
-    title: "We know the rules for every airline",
-    desc: "Weight limits, size restrictions, and fee schedules vary by carrier. We prep each bag to match your airline's policy so nothing gets flagged on arrival at the airport.",
+    n: "1",
+    title: "Off-airport collection",
+    desc: "An ID-verified Travelyt agent collects the bag at the passenger's door. The bag is weighed, photographed, and sealed with a numbered tamper-evident seal — condition and weight on file before it moves.",
+    icon: <Home className="w-7 h-7" strokeWidth={1.5} />,
   },
   {
-    title: "Oversized and sports equipment",
-    desc: "Golf clubs, skis, surfboards, strollers. We handle the odd-shaped stuff and route it with the same care as a regular suitcase — priced transparently up front.",
+    n: "2",
+    title: "Documented custody",
+    desc: "In transit, the bag is bound to a per-bag badge identity. Scan events, seal checks, and photos write to a documented, append-only custody log — who touched the bag, where, and when, with no untracked gap.",
+    icon: <MapPin className="w-7 h-7" strokeWidth={1.5} />,
   },
   {
-    title: "Direct delivery to your airline",
-    desc: "We drive your bags to the airport and hand them off to your airline for your flight. You walk in with nothing to carry.",
-  },
-  {
-    title: "Digital bag receipts",
-    desc: "You get a digital receipt the moment each bag is picked up and sealed — tracking number, weight, photo, and seal ID. Everything stays in your account.",
+    n: "3",
+    title: "Carrier-controlled acceptance",
+    desc: "The bag is delivered to your designated handoff point with its full custody record. Your team accepts it under your rules — screening, acceptance, and loading remain exactly where they belong: with you.",
+    icon: <BadgeCheck className="w-7 h-7" strokeWidth={1.5} />,
   },
 ];
 
-export default function AirlinesPage() {
+const opsChecklist = [
+  {
+    title: "Tamper-evident seals + photo record",
+    desc: "Numbered seals applied at the door, verified at handoff. Condition photos at every custody event.",
+    icon: <LockKeyhole className="w-6 h-6" strokeWidth={1.5} />,
+  },
+  {
+    title: "Timestamped custody checkpoints",
+    desc: "Route start, pickup, transit, and handoff each produce a timestamped custody event; live GPS tracking layers in as the service scales.",
+    icon: <MapPin className="w-6 h-6" strokeWidth={1.5} />,
+  },
+  {
+    title: "Append-only chain-of-custody log",
+    desc: "A complete digital audit trail per bag, available to your operations and security teams for every pilot movement.",
+    icon: <ClipboardCheck className="w-6 h-6" strokeWidth={1.5} />,
+  },
+  {
+    title: "ID-verified, vetted agents",
+    desc: "Every agent is identity-verified, background-checked, and trained on sealing and custody procedure.",
+    icon: <UserCheck className="w-6 h-6" strokeWidth={1.5} />,
+  },
+  {
+    title: "Insured transport",
+    desc: "Bags move under insurance coverage bound before any live custody, operating within TSA and airport-authority rules.",
+    icon: <ShieldCheck className="w-6 h-6" strokeWidth={1.5} />,
+  },
+  {
+    title: "Integration-light pilot",
+    desc: "Pilots run on manifests and status updates — no re-architecture of your systems required to start. Deeper integration only when a pilot earns it.",
+    icon: <Workflow className="w-6 h-6" strokeWidth={1.5} />,
+  },
+];
+
+const pillars = [
+  {
+    label: "Commercial",
+    title: "A baggage product worth selling",
+    desc: "Door-to-gate handling is a premium service your passengers already want. It creates an ancillary line and a loyalty story without discounting a single fare.",
+  },
+  {
+    label: "Operations",
+    title: "Pressure off the peak",
+    desc: "Every bag that arrives documented and prepped is queue time your counters get back. Off-airport collection moves work out of your terminal's busiest hour.",
+  },
+  {
+    label: "Customer experience",
+    title: "Your brand, hands-free",
+    desc: "The passenger's trip starts calm at their front door and stays that way through your terminal. The experience carries your service standard, not ours.",
+  },
+  {
+    label: "Security & compliance",
+    title: "Proof before acceptance",
+    desc: "The custody ledger exists to answer the exact question regulators and your security team ask: who touched this bag, when, and can you prove it.",
+  },
+];
+
+export default function AirlinesPartnerPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -104,75 +141,220 @@ export default function AirlinesPage() {
       {/* Hero */}
       <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
         <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Airline Baggage Rules</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
+          <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">
+            For Airlines
+          </span>
+          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">
+            Baggage as a growth line, not a cost center.
+          </h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — then deliver it straight to your airline at the airport.
+            Travelyt moves baggage off-airport under documented chain of custody
+            — easing your counters, adding a premium ancillary product, and
+            leaving acceptance, screening, and loading fully under your control.
           </p>
-          <p className="text-navy/70 max-w-2xl mx-auto text-sm mt-6">
-            Travelyt is an independent baggage logistics service. We are not affiliated with, endorsed by, or partnered with any airline unless explicitly stated. Airline names and logos are used here only to describe their baggage policies.
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+            <a
+              href="mailto:info@travelyt.us?subject=Pilot%20briefing%20request"
+              className="inline-flex items-center justify-center gap-2 bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:opacity-90 transition-opacity"
+            >
+              Request a pilot briefing
+              <ArrowRight className="w-4 h-4" strokeWidth={2} />
+            </a>
+            <a
+              href="#custody"
+              className="inline-flex items-center justify-center gap-2 bg-white border border-navy/10 text-navy px-8 py-4 rounded-full font-bold hover:shadow-lg hover:shadow-navy/5 transition-all"
+            >
+              See how custody works
+            </a>
+          </div>
+          <p className="text-navy/50 max-w-2xl mx-auto text-sm mt-8">
+            Travelyt is an independent baggage logistics service, currently
+            operating supervised pilot routes. We are not affiliated with,
+            endorsed by, or partnered with any airline unless explicitly stated.
           </p>
         </div>
       </section>
 
-      {/* Airline Grid */}
-      <section className="py-16">
+      {/* Benefit callouts */}
+      <section className="py-14">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {airlines.map((airline) => (
-              <div key={airline.code} className="border border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:shadow-navy/5 transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-navy">{airline.name}</h3>
-                    <span className="text-xs font-mono text-navy/70">{airline.code}</span>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-navy/70">Checked bag allowance</span>
-                    <span className="text-navy/70 font-medium">{airline.bags}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-navy/70">Airline baggage fee</span>
-                    <span className="text-navy/70 font-medium">{airline.fee}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-navy/70">Major hubs</span>
-                    <span className="text-navy/70 font-medium">{airline.hubs.join(", ")}</span>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {heroCallouts.map((c) => (
+              <div
+                key={c.title}
+                className="border border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:shadow-navy/5 transition-all"
+              >
+                <div className="text-[#ff6868] mb-3">{c.icon}</div>
+                <h3 className="font-bold text-navy mb-1">{c.title}</h3>
+                <p className="text-sm text-navy/70 leading-relaxed">{c.desc}</p>
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
-            Airline fees are paid directly to the airline at check-in. Travelyt service fees are separate and cover pickup, transport, sealing, tracking, and insurance. Fee schedules above are summaries — check your airline&apos;s site for the current, complete terms.
-          </p>
         </div>
       </section>
 
-      {/* How we handle it */}
+      {/* 3-stage BaaS flow */}
+      <section id="custody" className="py-20 bg-[#f5f0ee] scroll-mt-24">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">
+              Baggage as a Service
+            </span>
+            <h2 className="text-3xl font-bold text-navy mt-3">
+              Three stages. One unbroken record.
+            </h2>
+            <p className="text-navy/70 max-w-2xl mx-auto mt-4">
+              The product underneath the service is a chain-of-custody ledger:
+              every time a bag changes hands, it becomes a verifiable event tied
+              to one bag, one ID-verified person, one time and place.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {stages.map((s) => (
+              <div key={s.n} className="bg-white rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="w-8 h-8 rounded-full bg-[#ff6868] text-white flex items-center justify-center font-bold text-sm">
+                    {s.n}
+                  </span>
+                  <span className="text-[#ff6868]">{s.icon}</span>
+                </div>
+                <h3 className="font-bold text-navy mb-2">{s.title}</h3>
+                <p className="text-sm text-navy/70 leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Check-in stays yours */}
+      <section className="py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="bg-navy rounded-3xl p-8 md:p-12 text-white">
+            <div className="max-w-3xl">
+              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">
+                The part that matters to your security team
+              </span>
+              <h2 className="text-3xl font-bold mt-3 mb-6">
+                Check-in stays yours. Provably.
+              </h2>
+              <div className="space-y-4 text-white/80 leading-relaxed">
+                <p>
+                  Travelyt does not bypass passenger check-in, TSA screening, or
+                  airline acceptance — and is not trying to. The workflow is
+                  initiated by Travelyt under a process the airline approves;
+                  the airline&apos;s own system issues the bag tags; and those
+                  tags remain inactive until the bag is accepted by the
+                  airline&apos;s authorized representative.
+                </p>
+                <p>
+                  What Travelyt adds is the piece the off-airport model has
+                  always been missing: verifiable proof that between the
+                  passenger&apos;s door and your acceptance point, the bag
+                  stayed bound to a verified traveler under documented custody,
+                  with no untracked gap.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+                {[
+                  { k: "Your system", v: "issues every bag tag" },
+                  { k: "Your team", v: "accepts every bag" },
+                  { k: "Your rules", v: "govern screening & loading" },
+                ].map((item) => (
+                  <div
+                    key={item.k}
+                    className="bg-white/5 border border-white/10 rounded-2xl p-4"
+                  >
+                    <div className="font-bold text-[#ff6868]">{item.k}</div>
+                    <div className="text-sm text-white/70">{item.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Built for airline operations */}
       <section className="py-20 bg-[#f5f0ee]">
         <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-navy text-center mb-12">How we handle airline baggage</h2>
+          <h2 className="text-3xl font-bold text-navy text-center mb-12">
+            Built for airline operations
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {features.map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-6">
-                <h3 className="font-bold text-navy mb-2">{f.title}</h3>
-                <p className="text-sm text-navy/70 leading-relaxed">{f.desc}</p>
+            {opsChecklist.map((f) => (
+              <div key={f.title} className="bg-white rounded-2xl p-6 flex gap-4">
+                <div className="text-[#ff6868] shrink-0 mt-1">{f.icon}</div>
+                <div>
+                  <h3 className="font-bold text-navy mb-2">{f.title}</h3>
+                  <p className="text-sm text-navy/70 leading-relaxed">{f.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 bg-navy text-white text-center">
-        <div className="max-w-2xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">Flying soon?</h2>
-          <p className="text-white/60 mb-8">Tell us your airline and we&apos;ll prep your bags to match.</p>
-          <Link href="/quote" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get Your Quote
-          </Link>
+      {/* Value pillars */}
+      <section className="py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl font-bold text-navy text-center mb-12">
+            Value across every function
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {pillars.map((p) => (
+              <div
+                key={p.label}
+                className="border border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:shadow-navy/5 transition-all"
+              >
+                <span className="text-xs font-semibold text-[#ff6868] uppercase tracking-wider">
+                  {p.label}
+                </span>
+                <h3 className="font-bold text-navy mt-2 mb-2">{p.title}</h3>
+                <p className="text-sm text-navy/70 leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pilot anchor */}
+      <section className="py-20 bg-[#f5f0ee]">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <ScanLine className="w-10 h-10 text-[#ff6868] mx-auto mb-4" strokeWidth={1.5} />
+          <h2 className="text-3xl font-bold text-navy mb-4">
+            We&apos;d rather show you a custody log than a logo wall.
+          </h2>
+          <p className="text-navy/70 max-w-2xl mx-auto leading-relaxed">
+            Travelyt is pilot-stage by design. Every launch route runs
+            supervised: dated flight verified, route confirmed, handoff point
+            designated by the airline, and every custody event documented from
+            doorstep to acceptance. A pilot briefing walks your team through the
+            live custody record of real movements — the proof, not the pitch.
+          </p>
+          <div className="mt-8">
+            <a
+              href="mailto:info@travelyt.us?subject=Pilot%20briefing%20request"
+              className="inline-flex items-center justify-center gap-2 bg-navy text-white px-8 py-4 rounded-full font-bold hover:opacity-90 transition-opacity"
+            >
+              Request a pilot briefing
+              <ArrowRight className="w-4 h-4" strokeWidth={2} />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Cross-link to consumer page */}
+      <section className="py-10 border-t border-gray-100">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <p className="text-navy/70">
+            Traveling, not partnering?{" "}
+            <Link
+              href="/airlines/baggage"
+              className="font-semibold text-[#ff6868] hover:underline"
+            >
+              See how we prep bags for your airline&apos;s baggage rules →
+            </Link>
+          </p>
         </div>
       </section>
 
