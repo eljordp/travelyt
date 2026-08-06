@@ -11,7 +11,7 @@ import {
   SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
-import { PILOT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
+import { AIRLINE_BAG_CUTOFF_MINUTES } from "@/lib/service-rules";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -88,7 +88,7 @@ const addons = [
   { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
   { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
   { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
-  { name: "Pilot Handoff Target", detail: `Launch departures target a documented airport handoff at least ${PILOT_HANDOFF_TARGET_MINUTES / 60} hours before departure. Airline and station rules may require an earlier handoff, and every request is manually confirmed.` },
+  { name: "Airline Cutoff", detail: `Departure handoff targets airline bag acceptance at least ${AIRLINE_BAG_CUTOFF_MINUTES} minutes before departure unless a specific airport or airline approves a shorter Travelyt cutoff` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
 ];
 

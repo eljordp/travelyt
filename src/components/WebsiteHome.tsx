@@ -105,20 +105,6 @@ export default function WebsiteHome() {
 
         <HeroCarousel />
 
-        <section
-          className="rounded-2xl border border-amber-300/70 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-950"
-          aria-label="Pilot service status"
-        >
-          <p className="font-bold">Pilot service status</p>
-          <p className="mt-1">
-            A quote is a service request, not a confirmed airline check-in.
-            Departure service is available only after Travelyt verifies the
-            dated flight, route, and airline-designated handoff point. Travelyt
-            does not bypass passenger check-in, security screening, or airline
-            acceptance requirements.
-          </p>
-        </section>
-
         <section>
           <div className="grid gap-4 sm:grid-cols-3">
             {services.map((service) => {
@@ -154,10 +140,9 @@ export default function WebsiteHome() {
               Sealed and tracked from door to gate.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-navy/65">
-              Confirmed pilot bookings create a timestamped custody record from
-              doorstep pickup to a documented handoff. Airline acceptance,
-              screening, and loading remain controlled by the airline, airport,
-              and their authorized handlers.
+              Every Travelyt booking moves through a chain of custody you can
+              watch in real time — from doorstep pickup to the moment your
+              airline accepts it as your checked baggage.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
@@ -166,11 +151,11 @@ export default function WebsiteHome() {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Status updates only after a documented custody or airline event.
+                Live status as your bag clears the airport and boards your flight.
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Photo proof at the confirmed handoff point and final delivery.
+                Photo proof when it&apos;s handed off to the airline and delivered.
               </li>
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
@@ -191,9 +176,8 @@ export default function WebsiteHome() {
 
           <BagStatus
             current="checked_in"
-            bookingId="Illustrative flow"
-            route="Door → confirmed handoff"
-            illustrative
+            bookingId="TVT-001"
+            route="Home → LAX"
           />
         </section>
 
@@ -204,12 +188,10 @@ export default function WebsiteHome() {
                 First time? Here&apos;s the idea.
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
-                You pack the bag. We document every step we are approved to perform.
+                You pack the bag. We do everything in between.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-navy/65">
-                For a confirmed route, we collect your luggage, record its
-                condition and seal, and move it to the approved airport handoff
-                point. Arrival delivery is a separate, route-dependent service.
+                Most travelers in the US have never used a baggage service before. It&apos;s simple: we collect your luggage at home, move it through the airport on your flight, and meet you at your destination. You travel without the bags.
               </p>
             </div>
 
@@ -246,7 +228,7 @@ export default function WebsiteHome() {
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy/65">
               <span className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
-                Coverage terms confirmed before pickup
+                Sealed and insured
               </span>
               <span className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
