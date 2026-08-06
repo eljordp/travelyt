@@ -93,7 +93,7 @@ export default function RootLayout({
           />
         </head>
       ) : null}
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-24 sm:pb-20">
         <NativeBoot />
         <SiteAnalytics />
         <AnalyticsConsent />
