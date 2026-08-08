@@ -5,7 +5,7 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const OUT_DIR = "/Users/jp/Desktop/Travelyt-First-Customer-Simulation";
+const OUT_DIR = path.resolve(process.argv[2] || "/Users/jp/Desktop/Travelyt-First-Customer-Simulation");
 const REPORT_PATH = path.join(OUT_DIR, "first-customer-operational-report.md");
 const RESULTS_PATH = path.join(OUT_DIR, "first-customer-operational-results.json");
 const execFileAsync = promisify(execFile);
@@ -414,17 +414,20 @@ function renderReport({ configChecks, flow }) {
   const critical = flow.issues.filter((issue) => issue.severity === "critical");
   const warnings = flow.issues.filter((issue) => issue.severity === "warning");
   const info = flow.issues.filter((issue) => issue.severity === "info");
-  const goNoGo = critical.length === 0 ? "GO FOR CONTROLLED FIRST CUSTOMER" : "NO-GO UNTIL CRITICAL ITEMS ARE FIXED";
+  const historicalDryRunVerdict = critical.length === 0 ? "GO FOR CONTROLLED FIRST CUSTOMER" : "NO-GO UNTIL CRITICAL ITEMS ARE FIXED";
 
-  return `# Travelyt First Customer Operational Simulation
+  return `# Travelyt First Customer Operational Simulation - SUPERSEDED
+
+> **SUPERSEDED - DO NOT CITE AS CURRENT PROOF.**
+> This artifact is retained only as a historical, non-production dry run. Current readiness is **CONDITIONAL NO-GO** until the integrated staging customer journey is completed and the remaining identity, airline, insurance, and physical-rehearsal gates are closed.
 
 Generated: ${new Date().toISOString()}
 
 Mode: non-production dry run. No live bookings, payments, emails, or Supabase records were created.
 
-## Go / No-Go
+## Historical Model Output - Not a Current Go / No-Go Decision
 
-**${goNoGo}**
+The old dry-run logic produced: **${historicalDryRunVerdict}**. That result is superseded and cannot authorize a customer, driver dispatch, custody transfer, payment, or airline handoff.
 
 - Critical blockers: ${critical.length}
 - Warnings: ${warnings.length}
@@ -483,6 +486,17 @@ async function main() {
   const report = renderReport({ configChecks, flow });
   const results = {
     generatedAt: new Date().toISOString(),
+    artifactStatus: "SUPERSEDED",
+    supersededAt: "2026-08-08",
+    currentReadiness: "CONDITIONAL_NO_GO",
+    useRestriction: "Historical non-production dry run only. Do not cite as current proof or operational authorization.",
+    remainingGates: [
+      "integrated staging customer journey",
+      "approved identity and liveness provider",
+      "RJ written ORD procedure and sandbox contract",
+      "bound insurance and COI",
+      "signed timed ORD dummy-bag rehearsal"
+    ],
     scenario: firstCustomer,
     productionEnvKeys: [...productionEnvKeys].sort(),
     configChecks,
