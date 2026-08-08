@@ -6,11 +6,11 @@ export default function Stats() {
     },
     {
       title: "Tracked end-to-end",
-      desc: "Every handoff logged. Every bag sealed. A live location you can check on your phone from pickup to drop-off.",
+      desc: "Every handoff logged. Every bag sealed. Location and proof recorded at custody milestones.",
     },
     {
-      title: "Fully insured",
-      desc: "Coverage on every bag we touch, with clear terms before pickup and declared-value options for higher-value items.",
+      title: "Coverage before custody",
+      desc: "Live service does not begin until coverage is bound for the final driver, vehicle, and custody model.",
     },
     {
       title: "Pre-launch — early access open",

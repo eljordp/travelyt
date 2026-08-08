@@ -22,18 +22,18 @@ export default function HowItWorks() {
     },
     {
       step: "03",
-      title: "We Deliver to Your Airline",
+      title: "Authorized Handoff",
       description:
-        "Your bag is driven straight to the airport and handed to TSA security for your flight. No counter, no shipping — your luggage goes on your plane.",
+        "Your bag moves to the receiving point approved by the participating airline and airport. The carrier controls acceptance, check-in, tagging, and screening.",
       icon: (
         <Map className="w-8 h-8" strokeWidth={1.5} />
       ),
     },
     {
       step: "04",
-      title: "Arrive Free",
+      title: "Acceptance Recorded",
       description:
-        "Walk through the airport hands-free. Your bag is already on your flight — or for arrivals, already on its way to your address.",
+        "Custody transfers only after the required receiving proof is recorded. A refusal, broken seal, or missing authorization enters the exception process.",
       icon: (
         <Check className="w-8 h-8" strokeWidth={1.5} />
       ),

@@ -28,6 +28,7 @@ import {
 } from "@/lib/promos";
 import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
+import { normalizeBookingPassengers } from "@/lib/passengers";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[+\d][\d\s().-]{6,}$/;
@@ -70,6 +71,10 @@ const ISSUE_TYPE_LABELS = {
   wrong_bag: "Wrong bag",
   driver_delay: "Driver delay",
   vehicle_issue: "Vehicle issue",
+  seal_compromised: "Seal compromised",
+  prohibited_item: "Prohibited item",
+  compliance_hold: "Compliance hold",
+  capacity_hold: "Capacity hold",
   lost_or_damaged_bag: "Lost or damaged bag",
   customer_unreachable: "Customer unreachable",
   airline_delay: "Airline delay",
@@ -179,6 +184,13 @@ function driverCanSeeInList(row: BookingRow, driverName?: string) {
 
 function redactForDriver(row: BookingRow) {
   const booking = rowToBooking(row);
+  // Drivers receive only the operational job record; passenger manifests and
+  // airline references stay in the customer/operations boundary.
+  delete booking.passengers;
+  delete booking.externalReference;
+  delete booking.customerAccessToken;
+  delete booking.deliveryConfirmationCode;
+  delete booking.customerUserId;
   if (row.status !== "pending") return booking;
   return {
     ...booking,
@@ -528,12 +540,14 @@ function validateBooking(
   if (!address) return "Address is required.";
   const dateError = validateTravelDateTime(date, body.flightTime);
   if (dateError) return dateError;
+  if (!flight) return "Flight number is required.";
   if (!flightTime) return "Select a flight time.";
   const cutoffError = validateFlightCutoff(
     date,
     flightTime,
     service,
-    distanceMiles
+    distanceMiles,
+    airport
   );
   if (cutoffError) return cutoffError;
   if (!bags || bags < 1) return "Need at least one bag.";
@@ -569,6 +583,7 @@ function validateBooking(
     flightTime,
     flight,
     bags,
+    passengers: Array.isArray(body.passengers) ? body.passengers : undefined,
     name,
     email,
     phone,
@@ -632,7 +647,7 @@ async function sendBookingEmail(booking: Booking, source: string) {
     `Time:     ${booking.flightTime || "(none)"}`,
     `Flight:   ${booking.flight || "(none)"}`,
     `Bags:     ${booking.bags}`,
-    `Declared value: ${booking.declaredValueCents ? formatPrice(booking.declaredValueCents) : "Standard coverage"}`,
+    `Declared value request: ${booking.declaredValueCents ? formatPrice(booking.declaredValueCents) : "None"}`,
     `Price:    ${formatPrice(booking.priceCents)}`,
     "",
     `Name:     ${booking.name}`,
@@ -779,6 +794,35 @@ export async function POST(request: Request) {
     validated.driverUserId = undefined;
     validated.driverIdentityVerifiedAt = undefined;
     validated.customerIdentityVerifiedAt = undefined;
+    let accountHolderVerifiedAt: string | undefined;
+    if (user?.id) {
+      const { data: identity, error: identityError } = await supabase
+        .from("identity_verifications")
+        .select("verified_at")
+        .eq("user_id", user.id)
+        .eq("role", "customer")
+        .eq("status", "verified")
+        .order("verified_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ verified_at: string | null }>();
+      if (identityError) {
+        console.error("Verified customer identity lookup failed", identityError);
+      } else if (identity?.verified_at) {
+        accountHolderVerifiedAt = identity.verified_at;
+        validated.customerIdentityVerifiedAt = accountHolderVerifiedAt;
+      }
+    }
+    const normalizedPassengers = normalizeBookingPassengers(validated.passengers, {
+      accountHolderName: validated.name,
+      totalBags: validated.bags,
+      travelDate: validated.date,
+      accountHolderVerifiedAt,
+    });
+    if ("error" in normalizedPassengers) return bad(normalizedPassengers.error);
+    if (normalizedPassengers.passengers.length > 1 && !user?.id) {
+      return bad("Sign in before adding and verifying multiple travelers under one booking.", 401);
+    }
+    validated.passengers = normalizedPassengers.passengers;
     validated.pickedUpAt = undefined;
     validated.deliveryPendingAt = undefined;
     validated.deliveredAt = undefined;
@@ -830,6 +874,7 @@ export async function PATCH(request: Request) {
       reason?: string;
       confirmationCode?: string;
       accessToken?: string;
+      offlineProofDigest?: string;
     };
     const id = body.id?.trim();
     if (!id) return bad("Missing booking ID.");
@@ -1276,6 +1321,18 @@ export async function PATCH(request: Request) {
         );
         rowPatch.location_events = nextEvents;
       }
+    }
+
+    if (storedProof && body.offlineProofDigest) {
+      if (!/^[a-f0-9]{64}$/i.test(body.offlineProofDigest)) return bad("Offline proof digest is invalid.", 409);
+      await recordOpsException(
+        supabase,
+        id,
+        "OFFLINE_PROOF_RECONCILED",
+        "Driver proof was captured offline and replayed through the authenticated custody endpoint.",
+        "info",
+        { proofKind: storedProof.kind, digest: body.offlineProofDigest }
+      );
     }
 
     const { data, error } = await supabase

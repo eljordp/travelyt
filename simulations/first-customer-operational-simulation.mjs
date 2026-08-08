@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile);
 
 const rules = {
   runAt: "2026-05-29T09:00:00-07:00",
-  airlineCutoffMinutes: 40,
+  travelytHandoffTargetMinutes: 180,
   includedDistanceMiles: 30,
   standardDistanceRateCents: 225,
   expressDistanceRateCents: 450,
@@ -291,7 +291,7 @@ function runFirstCustomerFlow(configChecks) {
   );
   const latestBookAt = new Date(
     new Date(firstCustomer.flightIso).getTime() -
-      (rules.airlineCutoffMinutes + operationalBufferMinutes) * 60_000
+      (rules.travelytHandoffTargetMinutes + operationalBufferMinutes) * 60_000
   );
   const requestAt = new Date(rules.runAt);
 
@@ -318,7 +318,7 @@ function runFirstCustomerFlow(configChecks) {
     issues.push({
       id: "FIRST-CUTOFF",
       severity: "critical",
-      detail: "First customer flight timing would miss the Travelyt operational buffer plus airline cutoff.",
+      detail: "First customer flight timing would miss the route buffer plus Travelyt's three-hour handoff target.",
       fix: "Move the first booking earlier or pick a later flight.",
     });
   }
@@ -362,7 +362,7 @@ function runFirstCustomerFlow(configChecks) {
     detail: "Customer approves seal proof before bags can continue to airline handoff.",
   });
 
-  const airlineAcceptAt = "2026-05-29T14:35:00-07:00";
+  const airlineAcceptAt = "2026-05-29T12:15:00-07:00";
   const minutesBeforeFlight = minutesBetween(
     airlineAcceptAt,
     firstCustomer.flightIso
@@ -370,15 +370,15 @@ function runFirstCustomerFlow(configChecks) {
   events.push({
     actor: "Driver + Airline",
     step: "Airline handoff",
-    result: minutesBeforeFlight >= rules.airlineCutoffMinutes ? "PASS" : "FAIL",
+    result: minutesBeforeFlight >= rules.travelytHandoffTargetMinutes ? "PASS" : "FAIL",
     detail: `United baggage services accepts bags ${minutesBeforeFlight} minutes before departure with employee name, organization, badge/reference, GPS, and photo.`,
   });
 
-  if (minutesBeforeFlight < rules.airlineCutoffMinutes) {
+  if (minutesBeforeFlight < rules.travelytHandoffTargetMinutes) {
     issues.push({
       id: "FIRST-AIRLINE-CUTOFF",
       severity: "critical",
-      detail: "Airline handoff missed the 40-minute cutoff.",
+      detail: "Carrier handoff missed Travelyt's three-hour controlled-launch target.",
       fix: "Dispatch pickup earlier or reject the booking.",
     });
   }
@@ -440,7 +440,7 @@ Mode: non-production dry run. No live bookings, payments, emails, or Supabase re
 - Declared value: ${money(firstCustomer.declaredValueCents)}
 - Driver: ${firstCustomer.driver}
 - Estimated customer price: ${money(flow.price.totalCents)}
-- Operational buffer used: ${flow.operationalBufferMinutes + rules.airlineCutoffMinutes} minutes before departure
+- Operational buffer used: ${flow.operationalBufferMinutes + rules.travelytHandoffTargetMinutes} minutes before departure
 
 ## End-To-End Result
 
@@ -462,7 +462,7 @@ Fix: ${issue.fix}
 ## First Customer Ops Checklist
 
 1. Confirm admin login works before the customer is live.
-2. Confirm the exact customer flight time leaves enough pickup + drive + 40-minute airline cutoff buffer.
+2. Confirm the exact customer flight time leaves enough pickup and drive time before Travelyt's three-hour handoff target; apply any earlier airline or station requirement.
 3. Verify customer phone/email and send the booking link.
 4. Manually confirm payment or written payment arrangement before releasing to driver.
 5. Mark customer ID, driver ID, and restricted-items review complete in admin.

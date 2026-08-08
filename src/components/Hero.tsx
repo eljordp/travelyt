@@ -57,7 +57,7 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-6">
         {/* Trust badges */}
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 text-xs sm:text-sm text-white/70">
-          {["Fully Insured", "GPS Checkpoints", "Sealed In Transit"].map((badge) => (
+          {["Coverage Required Before Launch", "Custody Checkpoints", "Sealed In Transit"].map((badge) => (
             <span key={badge} className="flex items-center gap-2">
               <CircleCheck className="w-5 h-5 text-cyan" fill="currentColor" strokeWidth={1.5} />
               {badge}
@@ -73,7 +73,7 @@ export default function Hero() {
             <span className="text-cyan">You move freely.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We pick up your luggage at your door and deliver it straight to your airline at the airport. Travel hands-free before you even reach the terminal.
+            We collect, seal, and transport bags for a carrier-authorized airport handoff. Service launches only where the airline procedure and custody coverage are confirmed.
           </p>
           <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
             Travel light, arrive smart.
@@ -146,14 +146,14 @@ export default function Hero() {
                 <Package className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Doorstep Pickup",
-              desc: "We come to your door, weigh and tag your bags, and deliver them to your airline at the airport. You arrive hands-free.",
+              desc: "We come to your door, weigh and seal your bags, then move them to the handoff point authorized by the participating airline and airport.",
             },
             {
               icon: (
                 <Globe2 className="w-8 h-8" strokeWidth={1.5} />
               ),
               title: "Arrival Delivery",
-              desc: "Walk off the plane, skip the carousel. We collect your bags after your flight and deliver them to your hotel or address.",
+              desc: "Post-flight bag collection and delivery are offered only where airline, airport, and release procedures have been approved.",
             },
             {
               icon: (

@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Airline Baggage Prep",
   description:
-    "Travelyt weighs, seals, and prepares bags around airline baggage rules, then delivers them straight to your airline at the airport.",
+    "Travelyt weighs, seals, and prepares bags around airline baggage rules, then tenders them only through an airline- and airport-authorized receiving process.",
   alternates: {
     canonical: "/airlines/baggage",
   },
@@ -87,8 +87,8 @@ const features = [
     desc: "Golf clubs, skis, surfboards, strollers. We handle the odd-shaped stuff and route it with the same care as a regular suitcase — priced transparently up front.",
   },
   {
-    title: "Direct delivery to your airline",
-    desc: "We drive your bags to the airport and hand them off to your airline for your flight. You walk in with nothing to carry.",
+    title: "Authorized carrier handoff",
+    desc: "We transport bags to the airport only when the participating airline has approved the receiving role, location, timing, tagging, screening, and exception process.",
   },
   {
     title: "Digital bag receipts",
@@ -107,7 +107,7 @@ export default function AirlinesPage() {
           <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Airline Baggage Rules</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Prepped for your airline</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Every airline has its own baggage policy. We weigh, tag, and prep each bag to match — then deliver it straight to your airline at the airport.
+            Every airline has its own baggage policy. We weigh, seal, and prepare each bag, then tender it only through a receiving process authorized by the participating airline and airport.
           </p>
           <p className="text-navy/70 max-w-2xl mx-auto text-sm mt-6">
             Travelyt is an independent baggage logistics service. We are not affiliated with, endorsed by, or partnered with any airline unless explicitly stated. Airline names and logos are used here only to describe their baggage policies.
@@ -145,7 +145,7 @@ export default function AirlinesPage() {
             ))}
           </div>
           <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
-            Airline fees are paid directly to the airline at check-in. Travelyt service fees are separate and cover pickup, transport, sealing, tracking, and insurance. Fee schedules above are summaries — check your airline&apos;s site for the current, complete terms.
+            Airline fees are paid directly to the airline at check-in. Travelyt service fees are separate and cover pickup, transport, sealing, and custody checkpoints. Any insurance is subject to a policy bound for the final operating model. Fee schedules above are summaries — check your airline&apos;s site for current, complete terms.
           </p>
         </div>
       </section>

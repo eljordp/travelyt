@@ -11,7 +11,7 @@ import {
   SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
-import { AIRLINE_BAG_CUTOFF_MINUTES } from "@/lib/service-rules";
+import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Travelyt Pricing",
     description:
-      "See base per-bag rates for Travelyt pickup, delivery, tracking, sealing, insured baggage transport, and distance-based route surcharges.",
+      "See base per-bag rates for Travelyt pickup, delivery, custody checkpoints, sealing, and distance-based route surcharges.",
     url: "/pricing",
   },
 };
@@ -39,9 +39,9 @@ const plans = [
       "Doorstep bag collection",
       "Weigh, tag, and seal",
       "GPS custody checkpoints",
-      "Curbside or terminal meet-up",
-      "Full insurance coverage",
-      "SMS & email updates",
+      "Approved carrier handoff point",
+      "Coverage subject to bound policy",
+      "Status updates; SMS/email where configured",
     ],
     cta: "Book Departure",
     href: "/quote?service=departure",
@@ -56,7 +56,7 @@ const plans = [
       "Post-flight bag collection",
       "Delivery to any address",
       "Status and custody updates",
-      "Full insurance coverage",
+      "Coverage subject to bound policy",
       "Flexible delivery windows",
       "Multi-bag support",
     ],
@@ -68,7 +68,7 @@ const plans = [
     name: "Both Ways",
     price: SERVICE_PRICES_CENTS.both / 100,
     unit: "per bag",
-    description: "Full round-trip. Your bags leave and come back without you lifting a finger.",
+    description: "Coordinated outbound and arrival handling where both service legs are available.",
     features: [
       "Everything in Departure",
       "Everything in Arrival",
@@ -84,11 +84,11 @@ const plans = [
 ];
 
 const addons = [
-  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance and airline cutoff` },
+  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance, the Travelyt handoff target, and any earlier airline or station requirement` },
   { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
   { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
   { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
-  { name: "Airline Cutoff", detail: `Departure handoff targets airline bag acceptance at least ${AIRLINE_BAG_CUTOFF_MINUTES} minutes before departure unless a specific airport or airline approves a shorter Travelyt cutoff` },
+  { name: "Controlled Handoff Target", detail: `Departure service targets carrier handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
 ];
 
@@ -96,7 +96,7 @@ const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
 const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
 
 const competitors = [
-  { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: true },
+  { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "By availability", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
   { name: "Bags VIP", departure: "—", arrival: "$49.95+", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
   { name: "LugLess", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
   { name: "Luggage Forward", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
@@ -159,11 +159,12 @@ export default function PricingPage() {
           </div>
           <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
             Airline baggage fees are paid separately to the airline at check-in.
-            Travelyt base fees cover pickup, transport, sealing, tracking, and
-            standard coverage within {INCLUDED_DISTANCE_MILES} miles of the
+            Travelyt base fees cover pickup, transport, sealing, and custody
+            checkpoints within {INCLUDED_DISTANCE_MILES} miles of the
             airport. Addresses farther than {INCLUDED_DISTANCE_MILES} miles
             add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi
-            with express.
+            with express. Any coverage is subject to a policy bound for the final
+            service model before live custody begins.
           </p>
         </div>
       </section>
@@ -173,7 +174,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">Add-ons & automatic discounts</h2>
           <p className="mx-auto mb-8 max-w-2xl text-center text-sm text-navy/65">
-            Express pickup is a single booking add-on, not a per-bag charge. Pickup timing is confirmed from route distance, traffic, and airline baggage cutoff rules. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
+            Express pickup is a single booking add-on, not a per-bag charge. Pickup timing is confirmed from route distance, traffic, the three-hour Travelyt handoff target, and any earlier airline or station requirement. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {addons.map((a) => (
@@ -243,14 +244,14 @@ export default function PricingPage() {
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#ff6868]">
               <ShieldCheck className="h-6 w-6" strokeWidth={2} />
             </span>
-            <h2 className="mt-4 text-3xl font-bold">Insurance is included on every eligible bag</h2>
+            <h2 className="mt-4 text-3xl font-bold">Coverage must be bound before live custody</h2>
             <p className="mt-4 text-sm leading-relaxed text-white/70">
-              Travelyt coverage starts when we collect your bag and ends when it is delivered or accepted at the agreed handoff point. You can add declared-value coverage for higher-value items before pickup.
+              The final policy must cover the selected driver, vehicle, route, and custody model. Until that binder and its terms are confirmed, pricing and declared-value selections are proposals—not evidence of active insurance.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              ["Standard coverage", "Included in every eligible booking"],
+              ["Policy binder", "Required before any live customer bag"],
               ["Chain of custody", "Photos, seals, timestamps, and handoff logs"],
               ["Claims support", "Documented claim process if something goes wrong"],
             ].map(([title, body]) => (
@@ -267,7 +268,7 @@ export default function PricingPage() {
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">How we compare</h2>
-          <p className="text-navy/70 text-center mb-10 max-w-xl mx-auto">Same-day pickup, GPS custody checkpoints, curbside meet-up at the airport. We pick up and deliver — the airline handles the counter.</p>
+          <p className="text-navy/70 text-center mb-10 max-w-xl mx-auto">Availability-based pickup, documented custody checkpoints, and airport meet-up only where approved. The participating airline and airport control acceptance, check-in, tagging, and screening.</p>
           <p className="text-center text-xs text-navy/50 mb-2 sm:hidden">Swipe to see all columns →</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

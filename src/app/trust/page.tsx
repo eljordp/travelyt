@@ -42,8 +42,8 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Insurance Coverage",
-    desc: "Every bag we pick up is insured from the moment we collect it until delivery. Standard coverage applies automatically; declared-value upgrades are available for high-value items. Full terms apply.",
+    title: "Coverage Before Custody",
+    desc: "No live customer bag enters Travelyt custody until coverage is bound for the final driver, vehicle, route, and custody model. The controlling policy—not a quote-page selection—defines all terms.",
     icon: (
       <ShieldCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
@@ -67,8 +67,8 @@ const securityFeatures = [
 const process = [
   { title: "Pickup", desc: "Agent arrives at your door, verifies your ID, weighs each bag, and applies a uniquely numbered tamper-evident seal." },
   { title: "Transport", desc: "Bags are loaded for transport, and GPS custody checkpoints are recorded as the driver starts route, arrives, and completes each proof step." },
-  { title: "Airline Handoff", desc: "For departures, we drive your bags to the airport and deliver them to your airline for your flight. You walk in with nothing to carry." },
-  { title: "Arrival Delivery", desc: "For arrivals service, our agent coordinates post-flight bag pickup using your bag tag receipt and flight info." },
+  { title: "Airline Handoff", desc: "For departures, we tender bags only through the receiving role, location, cutoff, tagging, screening, and exception process authorized by the participating airline and airport." },
+  { title: "Arrival Delivery", desc: "Where approved, our agent coordinates post-flight bag release using the airline- and airport-required documents and process." },
   { title: "Delivery", desc: "Bags are delivered to your chosen address — hotel, home, office — within the agreed delivery window." },
 ];
 
@@ -83,7 +83,7 @@ export default function TrustPage() {
           <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Trust & Security</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Your bags are in safe hands</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Every bag is tracked, insured, sealed, and handled by vetted agents. Here&apos;s exactly how we protect your belongings.
+            Every live bag must be sealed, documented, handled by trained staff, and covered by the controlling policy. Here&apos;s how the custody controls are designed.
           </p>
         </div>
       </section>
@@ -129,20 +129,20 @@ export default function TrustPage() {
         </div>
       </section>
 
-      {/* Insurance */}
+      {/* Coverage readiness */}
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-[#f5f0ee] rounded-2xl p-8 md:p-12">
-            <h2 className="text-2xl font-bold text-navy mb-2">Insurance coverage</h2>
-            <p className="text-sm text-navy/70 mb-8">Standard coverage is included on every booking. Full terms and claim procedures apply — details below, and complete terms are available on request.</p>
+            <h2 className="text-2xl font-bold text-navy mb-2">Coverage readiness</h2>
+            <p className="text-sm text-navy/70 mb-8">These are launch gates, not current insurance benefits. The final binder and policy terms must be confirmed before Travelyt accepts a live customer bag.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               {[
-                { label: "Standard coverage per bag", value: "Included in every booking" },
-                { label: "Declared value upgrade", value: "Available for high-value items" },
-                { label: "Lost or damaged bag", value: "Claim for documented value" },
-                { label: "Delayed delivery", value: "Service fee refund options" },
-                { label: "Fragile / high-value items", value: "Must be declared at pickup" },
-                { label: "Claims process", value: "Initiated via your Travelyt account" },
+                { label: "Final policy binder", value: "Required before live custody" },
+                { label: "Driver and vehicle", value: "Must be named or covered" },
+                { label: "Custody model", value: "Must match policy terms" },
+                { label: "Declared value", value: "Recorded for manual review" },
+                { label: "Exclusions and limits", value: "Controlled by final policy" },
+                { label: "Claims process", value: "Published after policy binding" },
               ].map((item) => (
                 <div key={item.label} className="flex justify-between gap-4 border-b border-gray-200 pb-3">
                   <span className="text-navy/70">{item.label}</span>
@@ -151,7 +151,9 @@ export default function TrustPage() {
               ))}
             </div>
             <p className="text-xs text-navy/70 mt-6">
-              Specific coverage limits are set out in the Travelyt Terms of Service. Items restricted by law or by carrier policy (flammable liquids, lithium batteries shipped loose, currency, irreplaceable documents, etc.) are not eligible for coverage.
+              Restricted items remain prohibited regardless of coverage. No page,
+              quote, or declared-value entry overrides the controlling policy,
+              airline requirements, airport rules, or law.
             </p>
           </div>
         </div>
@@ -163,7 +165,7 @@ export default function TrustPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             {[
               { label: "Every bag sealed and tracked", icon: "✓" },
-              { label: "Insurance on every booking", icon: "✓" },
+              { label: "Coverage required before live custody", icon: "✓" },
               { label: "Federally registered motor carrier", icon: "✓" },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-8">
@@ -179,7 +181,7 @@ export default function TrustPage() {
       <section className="py-16 bg-navy text-white text-center">
         <div className="max-w-2xl mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4">Trust us with your bags</h2>
-          <p className="text-white/60 mb-8">Tracked, insured, sealed, delivered. Every time.</p>
+          <p className="text-white/60 mb-8">Documented, sealed, and handled through an approved process.</p>
           <Link href="/quote" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
             Get Your Quote
           </Link>

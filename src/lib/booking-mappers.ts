@@ -7,6 +7,7 @@ import type {
   PhotoProof,
   ServiceType,
 } from "@/lib/bookings";
+import type { BookingPassenger } from "@/lib/passengers";
 
 export const BOOKING_SELECT_COLUMNS = [
   "id",
@@ -17,6 +18,7 @@ export const BOOKING_SELECT_COLUMNS = [
   "flight_time",
   "flight",
   "bags",
+  "passenger_manifest",
   "customer_name",
   "email",
   "phone",
@@ -77,6 +79,7 @@ export interface BookingRow {
   flight_time: string | null;
   flight: string | null;
   bags: number;
+  passenger_manifest: BookingPassenger[] | null;
   customer_name: string;
   email: string;
   phone: string | null;
@@ -133,6 +136,7 @@ export function rowToBooking(row: BookingRow): Booking {
     flightTime: row.flight_time ?? undefined,
     flight: row.flight ?? undefined,
     bags: row.bags,
+    passengers: Array.isArray(row.passenger_manifest) ? row.passenger_manifest : [],
     name: row.customer_name,
     email: row.email,
     phone: row.phone ?? "",
@@ -192,6 +196,7 @@ export function bookingToInsert(
     flight_time: booking.flightTime ?? null,
     flight: booking.flight ?? null,
     bags: booking.bags,
+    passenger_manifest: booking.passengers ?? [],
     customer_name: booking.name,
     email: booking.email,
     phone: booking.phone.trim() || null,
@@ -248,6 +253,7 @@ export function bookingPatchToRowPatch(patch: Partial<Booking>) {
   if (patch.flightTime !== undefined) row.flight_time = patch.flightTime ?? null;
   if (patch.flight !== undefined) row.flight = patch.flight ?? null;
   if (patch.bags !== undefined) row.bags = patch.bags;
+  if (patch.passengers !== undefined) row.passenger_manifest = patch.passengers;
   if (patch.name !== undefined) row.customer_name = patch.name;
   if (patch.email !== undefined) row.email = patch.email;
   if (patch.phone !== undefined) row.phone = patch.phone.trim() || null;

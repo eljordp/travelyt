@@ -134,15 +134,15 @@ export default function WebsiteHome() {
         <section className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6868]">
-              Live tracking
+              Custody checkpoints
             </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
               Sealed and tracked from door to gate.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-navy/65">
-              Every Travelyt booking moves through a chain of custody you can
-              watch in real time — from doorstep pickup to the moment your
-              airline accepts it as your checked baggage.
+              Every Travelyt booking moves through a documented chain of custody,
+              from doorstep pickup to an authorized carrier handoff. Traveler-facing
+              live GPS remains subject to launch testing.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
@@ -151,7 +151,7 @@ export default function WebsiteHome() {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Live status as your bag clears the airport and boards your flight.
+                Status and location recorded at custody milestones.
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
@@ -228,7 +228,7 @@ export default function WebsiteHome() {
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy/65">
               <span className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
-                Sealed and insured
+                Sealed; coverage required before launch
               </span>
               <span className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />

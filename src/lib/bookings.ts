@@ -9,9 +9,16 @@ import {
   normalizePromoCode,
   PROMO_CODES,
 } from "@/lib/promos";
+import {
+  normalizeBookingPassengers,
+  type BookingPassenger,
+  type BookingPassengerInput,
+} from "@/lib/passengers";
+import { listQueuedOfflineProofs, queueOfflineProof, removeQueuedOfflineProof } from "@/lib/offline-custody";
 
 export { calcPriceBreakdown, calcPriceCents };
 export { getPromoDiscountCents, normalizePromoCode, PROMO_CODES };
+export type { BookingPassenger } from "@/lib/passengers";
 
 export type BookingStatus =
   | "pending"
@@ -37,6 +44,10 @@ export const ISSUE_TYPE_LABELS = {
   wrong_bag: "Wrong bag",
   driver_delay: "Driver delay",
   vehicle_issue: "Vehicle issue",
+  seal_compromised: "Seal compromised",
+  prohibited_item: "Prohibited item",
+  compliance_hold: "Compliance hold",
+  capacity_hold: "Capacity hold",
   lost_or_damaged_bag: "Lost or damaged bag",
   customer_unreachable: "Customer unreachable",
   airline_delay: "Airline delay",
@@ -122,6 +133,7 @@ export interface Booking {
   flightTime?: string;
   flight?: string;
   bags: number;
+  passengers?: BookingPassenger[];
   name: string;
   email: string;
   phone: string;
@@ -359,6 +371,9 @@ function upsertLocal(booking: Booking, notify = true) {
 }
 
 export async function getBookings(): Promise<Booking[]> {
+  if (typeof window !== "undefined" && navigator.onLine) {
+    void flushOfflineCustodyQueue().catch(() => undefined);
+  }
   const data = await apiJson<{ bookings: Booking[] }>("/api/bookings");
   if (data?.bookings) {
     data.bookings.forEach((booking) => upsertLocal(booking, false));
@@ -371,6 +386,9 @@ export async function getBooking(
   id: string,
   explicitAccessToken?: string | null
 ): Promise<Booking | undefined> {
+  if (typeof window !== "undefined" && navigator.onLine) {
+    void flushOfflineCustodyQueue().catch(() => undefined);
+  }
   const accessToken = explicitAccessToken || getStoredAccessToken(id);
   if (explicitAccessToken) storeBookingAccessToken(id, explicitAccessToken);
   const qs = new URLSearchParams({ id });
@@ -388,8 +406,19 @@ export async function getBooking(
 export async function createBooking(
   data: Omit<
     Booking,
-    "id" | "status" | "createdAt" | "proofs" | "priceCents" | "discountCents"
-  > & { promoCode?: string; expressPickup?: boolean; flightTime?: string }
+    | "id"
+    | "status"
+    | "createdAt"
+    | "proofs"
+    | "priceCents"
+    | "discountCents"
+    | "passengers"
+  > & {
+    passengers?: BookingPassengerInput[];
+    promoCode?: string;
+    expressPickup?: boolean;
+    flightTime?: string;
+  }
 ): Promise<Booking> {
   const { expressPickup, flightTime, ...bookingData } = data;
   const priceBreakdown = calcPriceBreakdown(
@@ -415,9 +444,16 @@ export async function createBooking(
   ]
     .filter(Boolean)
     .join(" ");
+  const normalizedPassengers = normalizeBookingPassengers(data.passengers, {
+    accountHolderName: data.name,
+    totalBags: data.bags,
+    travelDate: data.date,
+  });
+  if ("error" in normalizedPassengers) throw new Error(normalizedPassengers.error);
 
   const booking: Booking = {
     ...bookingData,
+    passengers: normalizedPassengers.passengers,
     flightTime,
     notes: notes || undefined,
     promoCode,
@@ -531,6 +567,9 @@ export async function addProof(
   id: string,
   proof: PhotoProof
 ): Promise<Booking | undefined> {
+  if (typeof window !== "undefined" && navigator.onLine) {
+    await flushOfflineCustodyQueue().catch(() => undefined);
+  }
   const saved = await apiJson<{ booking: Booking }>(`/api/bookings`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -544,12 +583,36 @@ export async function addProof(
 
   if (!canUseLocalFallback()) return undefined;
 
+  try {
+    await queueOfflineProof(id, proof, getStoredAccessToken(id));
+  } catch (error) {
+    console.error("Could not persist offline custody proof", error);
+  }
+
   const all = readLocal();
   const i = all.findIndex((b) => b.id === id);
   if (i === -1) return;
   all[i].proofs = [...all[i].proofs, proof];
   writeLocal(all);
   return all[i];
+}
+
+// A queued proof is never silently treated as delivered. It is replayed through
+// the normal authenticated API path when the driver next has connectivity.
+export async function flushOfflineCustodyQueue() {
+  const queued = await listQueuedOfflineProofs();
+  let flushed = 0;
+  for (const item of queued) {
+    const saved = await apiJson<{ booking: Booking }>("/api/bookings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.bookingId, proof: item.proof, accessToken: item.accessToken, offlineProofDigest: item.proofDigest, reason: `Offline custody proof queued at ${item.queuedAt}.` }),
+    });
+    if (!saved?.booking) break;
+    await removeQueuedOfflineProof(item.id);
+    upsertLocal(saved.booking); flushed += 1;
+  }
+  return flushed;
 }
 
 export async function recordClientOpsException(

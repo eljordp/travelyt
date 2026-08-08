@@ -3,9 +3,9 @@ import { ClipboardCheck, Lightbulb, LockKeyhole, MapPin, Smartphone, Zap } from 
 export default function Technology() {
   const features = [
     {
-      title: "Live Bag Tracking",
+      title: "Custody Checkpoints",
       description:
-        "A GPS-enabled tag and a shareable tracking link. Watch your luggage move from your door to your destination in real time.",
+        "The system records status, time, location, operator, and proof at custody milestones. Traveler-facing live GPS is not promised until end-to-end testing is complete.",
       icon: (
         <MapPin className="w-6 h-6" strokeWidth={1.5} />
       ),
@@ -13,7 +13,7 @@ export default function Technology() {
     {
       title: "Tamper-Evident Seals",
       description:
-        "Every bag is sealed at pickup with a uniquely numbered seal. Any break is logged and flagged instantly — you know if anything changes hands unexpectedly.",
+        "Every bag is sealed at pickup with a uniquely numbered seal. A broken or mismatched seal becomes a documented exception that stops normal handoff.",
       icon: (
         <LockKeyhole className="w-6 h-6" strokeWidth={1.5} />
       ),
@@ -29,7 +29,7 @@ export default function Technology() {
     {
       title: "Smart Booking Platform",
       description:
-        "Book a pickup, manage your itinerary, and get SMS and email updates at every checkpoint — from a simple, fast web experience.",
+        "Book a pickup and manage your itinerary from a simple web experience. SMS and email updates are enabled only after the launch environment is configured and tested.",
       icon: (
         <Smartphone className="w-6 h-6" strokeWidth={1.5} />
       ),

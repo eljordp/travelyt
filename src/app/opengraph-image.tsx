@@ -99,7 +99,7 @@ export default function OpengraphImage() {
             <span>·</span>
             <span>Tracked end-to-end</span>
             <span>·</span>
-            <span>Fully insured</span>
+            <span>Coverage before custody</span>
           </div>
           <div style={{ color: "white", fontWeight: 700 }}>{SITE_HOST}</div>
         </div>

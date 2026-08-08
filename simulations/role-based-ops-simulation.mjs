@@ -41,7 +41,7 @@ const activeDriverStatuses = new Set([
 
 const rules = {
   generatedAt: new Date().toISOString(),
-  airlineCutoffMinutes: 40,
+  travelytHandoffTargetMinutes: 180,
   rolePermissions: {
     admin: "Can override and close emergency workflow with reason.",
     dispatcher: "Can assign, open issues, and move day-of operational statuses.",

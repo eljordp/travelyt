@@ -2,12 +2,12 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { AIRLINE_BAG_CUTOFF_MINUTES } from "@/lib/service-rules";
+import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
 
 const faqs = [
   {
     q: "How far in advance do I need to book?",
-    a: `We recommend booking at least 24 hours before your flight. Same-day bookings may be available depending on your distance from the airport, driver availability, traffic, and airline baggage cutoff rules. For departures, Travelyt targets bag acceptance at least ${AIRLINE_BAG_CUTOFF_MINUTES} minutes before departure unless an airline or airport approves a shorter Travelyt-specific cutoff.`,
+    a: `We recommend booking at least 24 hours before your flight. Same-day bookings depend on distance, driver availability, traffic, and carrier rules. During controlled launch operations, Travelyt targets carrier handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control.`,
   },
   {
     q: "What airports and cities do you serve?",
@@ -15,15 +15,15 @@ const faqs = [
   },
   {
     q: "How does the handoff to my airline work?",
-    a: "We're not a ticketed-passenger counter check-in — after 9/11, only you can do that. What we do is take the lugging out: we pick up your bags at your door and deliver them straight to your airline at the airport on your behalf, so they fly with you. You walk in with nothing to carry.",
+    a: "Travelyt collects, seals, and documents your bags, then tenders them only through the location, receiving role, timing, tagging, and screening process authorized by the participating airline and airport. Until an airline enables an integrated check-in path, passengers still complete every required passenger and document step themselves.",
   },
   {
     q: "Is my luggage insured?",
-    a: "Yes. Every bag we touch is covered from pickup to delivery. Our standard coverage applies automatically; additional declared-value coverage is available for high-value items. Full details are in our Terms.",
+    a: "Live custody will begin only after coverage is bound for the final driver, vehicle, and custody model. Any quote or declared-value option shown before launch is proposed and subject to the controlling policy terms.",
   },
   {
     q: "Can I track my bags in real time?",
-    a: "Yes. You get a tracking link via SMS and email. Follow your bags on a live map with status updates at every checkpoint.",
+    a: "The system records status updates and custody checkpoints. Live GPS visibility and automated SMS or email delivery depend on the configured launch environment and are not promised until they have passed end-to-end testing.",
   },
   {
     q: "What if my flight is delayed or cancelled?",

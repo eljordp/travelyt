@@ -7,7 +7,7 @@ const OUT_DIR = "/Users/jp/Desktop/Travelyt-Full-Simulation";
 
 const rules = {
   runAt: "2026-05-28T14:00:00.000Z",
-  airlineCutoffMinutes: 40,
+  travelytHandoffTargetMinutes: 180,
   includedDistanceMiles: 30,
   standardDistanceRateCents: 225,
   expressDistanceRateCents: 450,
@@ -124,7 +124,7 @@ function flightCutoffResult({ flightIso, airlineAcceptIso }) {
   const minutesBeforeFlight = minutesBetween(airlineAcceptIso, flightIso);
   return {
     minutesBeforeFlight,
-    pass: minutesBeforeFlight >= rules.airlineCutoffMinutes,
+    pass: minutesBeforeFlight >= rules.travelytHandoffTargetMinutes,
   };
 }
 
@@ -255,7 +255,7 @@ function runDepartureHappyPath() {
     recipient: "Dana Lee",
     organization: "United Airlines Baggage Services",
     badgeOrReference: "UA-IAD-7721",
-    acceptedAt: "2026-05-28T15:05:00.000Z",
+    acceptedAt: "2026-05-28T12:45:00.000Z",
   };
   const missingHandoff = checkRequiredProof(airlineHandoff, [
     "photo",
@@ -284,10 +284,10 @@ function runDepartureHappyPath() {
       "DEP-006",
       "P0",
       "Airline rules",
-      "Airline acceptance missed 40-minute cutoff",
-      "Travelyt targets acceptance before the airline cutoff.",
+      "Carrier acceptance missed Travelyt's three-hour handoff target",
+      "The controlled launch targets documented carrier acceptance at least three hours before departure.",
       `${cutoff.minutesBeforeFlight} minutes before flight`,
-      "Require dispatch plan to prove airline acceptance can occur at least 40 minutes before departure."
+      "Require dispatch to prove carrier acceptance can occur at least three hours before departure, or earlier when airline or station rules require it."
     ));
   }
 
@@ -400,7 +400,7 @@ function runCutoffFailure() {
     travelTime: booking.flightTime,
     nowIso: booking.requestedAt,
   });
-  const cutoffDeadlineIso = addMinutes(booking.flightIso, -rules.airlineCutoffMinutes);
+  const cutoffDeadlineIso = addMinutes(booking.flightIso, -rules.travelytHandoffTargetMinutes);
   const canPossiblyAcceptBeforeCutoff =
     new Date(booking.requestedAt).getTime() < new Date(cutoffDeadlineIso).getTime();
   const issues = [];
@@ -411,9 +411,9 @@ function runCutoffFailure() {
       "P0",
       "Booking rules",
       "Booking accepts impossible same-day departure cutoff",
-      "Date/time validation only checks that the flight time is later than now. It does not enforce the 40-minute airline baggage acceptance cutoff or pickup/drive time.",
+      "Date/time validation only checks that the flight time is later than now. It does not enforce Travelyt's three-hour handoff target or pickup/drive time.",
       `Requested at ${timePart(booking.requestedAt)} for ${booking.flightTime}; cutoff deadline is ${timePart(cutoffDeadlineIso)}.`,
-      "Add backend validation for departure flightTime: reject if now + minimum operational prep/drive buffer is after flightTime - 40 minutes."
+      "Add backend validation for departure flightTime: reject if pickup and travel cannot finish before flightTime minus the three-hour Travelyt handoff target."
     ));
   }
 
@@ -425,7 +425,7 @@ function runCutoffFailure() {
         ? `App validation blocked it: ${validationError}`
         : operationalCutoffValidationBlocks
           ? "Operational cutoff validation blocked it before booking."
-          : "App validation allowed it even though airline cutoff is already impossible.",
+          : "App validation allowed it even though the controlled handoff target is already impossible.",
     ],
     issues,
   };

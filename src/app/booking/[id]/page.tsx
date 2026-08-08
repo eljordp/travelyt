@@ -424,7 +424,7 @@ export default function BookingPage() {
               value={
                 booking.declaredValueCents
                   ? `Declared value ${formatPrice(booking.declaredValueCents)}`
-                  : "Standard coverage"
+                  : "No declared value requested"
               }
             />
             {booking.driverName && <Row label="Driver" value={booking.driverName} />}

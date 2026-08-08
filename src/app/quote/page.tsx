@@ -64,6 +64,17 @@ interface DateParts {
   year: string;
 }
 
+type GroupTraveler = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  relationship: "spouse" | "child" | "sibling" | "parent" | "colleague" | "other";
+  dateOfBirth: string;
+  email: string;
+  bags: number;
+  authorized: boolean;
+};
+
 const STEPS = ["Service", "Trip Details", "Contact", "Review"];
 const MONTHS = [
   ["01", "Jan"],
@@ -122,6 +133,18 @@ export default function QuotePage() {
     "idle" | "verifying" | "verified" | "error"
   >("idle");
   const [addressMessage, setAddressMessage] = useState("");
+  const [travelers, setTravelers] = useState<GroupTraveler[]>([]);
+
+  function addTraveler() {
+    setTravelers((current) => [...current, {
+      id: crypto.randomUUID(), firstName: "", lastName: "", relationship: "sibling",
+      dateOfBirth: "", email: "", bags: 0, authorized: false,
+    }]);
+  }
+  function updateTraveler(id: string, patch: Partial<GroupTraveler>) {
+    setTravelers((current) => current.map((traveler) => traveler.id === id ? { ...traveler, ...patch } : traveler));
+  }
+  function removeTraveler(id: string) { setTravelers((current) => current.filter((traveler) => traveler.id !== id)); }
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -201,6 +224,7 @@ export default function QuotePage() {
     if (step === 1) {
       if (!form.airport) e.airport = "Select an airport";
       if (!form.address.trim()) e.address = "Enter your pickup or delivery address";
+      if (!form.flight.trim()) e.flight = "Enter the flight number";
       const dateError = validateTravelDateTime(form.date, form.flightTime);
       if (dateError) e.date = dateError;
       if (!form.flightTime) e.flightTime = "Select the flight time";
@@ -215,7 +239,8 @@ export default function QuotePage() {
         form.date,
         form.flightTime,
         form.service,
-        Number.isFinite(miles) ? miles : undefined
+        Number.isFinite(miles) ? miles : undefined,
+        form.airport
       );
       if (cutoffError) e.flightTime = cutoffError;
     }
@@ -389,6 +414,16 @@ export default function QuotePage() {
     setSubmitting(true);
 
     try {
+      const assignedTravelerBags = travelers.reduce((sum, traveler) => sum + traveler.bags, 0);
+      if (assignedTravelerBags > form.bags) {
+        setErrors((current) => ({ ...current, travelers: "Traveler bag assignments cannot exceed the booking total." }));
+        setSubmitting(false); return;
+      }
+      if (travelers.some((traveler) => !traveler.authorized)) {
+        setErrors((current) => ({ ...current, travelers: "Confirm your authority to add each family or group traveler." }));
+        setSubmitting(false); return;
+      }
+      const now = new Date().toISOString();
       const timingNotes = [
         form.flightTime
           ? `${form.service === "arrival" ? "Flight arrival time" : "Flight departure time"}: ${form.flightTime}.`
@@ -427,6 +462,19 @@ export default function QuotePage() {
             ? new Date().toISOString()
             : undefined,
         restrictedItemsAttestedAt: new Date().toISOString(),
+        passengers: [
+          {
+            id: crypto.randomUUID(), firstName: form.name, lastName: "", category: "account_holder" as const,
+            relationship: "self" as const, bags: form.bags - assignedTravelerBags,
+            consentAt: now,
+          },
+          ...travelers.map((traveler) => ({
+            id: traveler.id, firstName: traveler.firstName, lastName: traveler.lastName,
+            category: "adult" as const, relationship: traveler.relationship,
+            dateOfBirth: traveler.dateOfBirth, email: traveler.email || undefined, bags: traveler.bags,
+            guardianAttestedAt: now, householdAttestedAt: now,
+          })),
+        ],
       });
       trackBookingRequestCreated({
         bookingId: b.id,
@@ -605,6 +653,9 @@ export default function QuotePage() {
                       </button>
                     ))}
                   </div>
+                  <p className="mt-4 rounded-xl border border-navy/10 bg-[#f6f7fb] px-4 py-3 text-xs leading-relaxed text-navy/65">
+                    Arrival and round-trip requests are availability-only in confirmed launch markets. The proposed Royal Jordanian ORD pilot covers departure pickup through carrier handoff only.
+                  </p>
                   {errors.service && <p className="text-xs text-red-500 mt-3">{errors.service}</p>}
                 </div>
               )}
@@ -789,9 +840,10 @@ export default function QuotePage() {
                       {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
                     </div>
                     <div>
-                      <label htmlFor="quote-flight" className={labelClass}>Flight Number <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
+                      <label htmlFor="quote-flight" className={labelClass}>Flight Number <span className="text-[#ff6868]">*</span></label>
                       <input id="quote-flight" name="flight" type="text" placeholder="e.g. AA 1234" value={form.flight} onChange={(e) => set("flight", e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy" />
+                        className={`w-full px-4 py-3 rounded-xl border ${errors.flight ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`} />
+                      {errors.flight && <p className="mt-1 text-xs text-red-500">{errors.flight}</p>}
                     </div>
                     <div>
                       <label htmlFor="quote-flight-time" className={labelClass}>
@@ -892,6 +944,33 @@ export default function QuotePage() {
                     </div>
                   ))}
 
+                  <div className="rounded-xl border border-navy/10 bg-[#f6f7fb] p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-bold text-navy">Traveling with family or a group?</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-navy/65">Add travelers to this booking. Under 18 stays under your account; other adults verify their own email and ID. A spouse can be grouped under the primary account.</p>
+                      </div>
+                      <button type="button" onClick={addTraveler} className="shrink-0 rounded-lg bg-navy px-3 py-2 text-xs font-bold text-white">Add traveler</button>
+                    </div>
+                    <div className="mt-4 space-y-4">
+                      {travelers.map((traveler, index) => (
+                        <div key={traveler.id} className="rounded-lg border border-navy/10 bg-white p-3">
+                          <div className="mb-3 flex items-center justify-between"><span className="text-sm font-bold text-navy">Traveler {index + 2}</span><button type="button" onClick={() => removeTraveler(traveler.id)} className="text-xs font-semibold text-[#e65454]">Remove</button></div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <input aria-label={`Traveler ${index + 2} first name`} placeholder="First name" value={traveler.firstName} onChange={(e) => updateTraveler(traveler.id, { firstName: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                            <input aria-label={`Traveler ${index + 2} last name`} placeholder="Last name" value={traveler.lastName} onChange={(e) => updateTraveler(traveler.id, { lastName: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                            <input aria-label={`Traveler ${index + 2} date of birth`} type="date" value={traveler.dateOfBirth} onChange={(e) => updateTraveler(traveler.id, { dateOfBirth: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                            <select aria-label={`Traveler ${index + 2} relationship`} value={traveler.relationship} onChange={(e) => updateTraveler(traveler.id, { relationship: e.target.value as GroupTraveler["relationship"] })} className="rounded-lg border border-gray-200 px-3 py-2 text-sm"><option value="spouse">Spouse</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="parent">Parent</option><option value="colleague">Colleague</option><option value="other">Other</option></select>
+                            <input aria-label={`Traveler ${index + 2} email`} type="email" placeholder="Email (required for other adults)" value={traveler.email} onChange={(e) => updateTraveler(traveler.id, { email: e.target.value })} className="rounded-lg border border-gray-200 px-3 py-2 text-sm sm:col-span-2" />
+                            <label className="flex items-center gap-2 text-sm text-navy"><span>Bags</span><input aria-label={`Traveler ${index + 2} bags`} type="number" min="0" max={form.bags} value={traveler.bags} onChange={(e) => updateTraveler(traveler.id, { bags: Number(e.target.value) || 0 })} className="w-16 rounded-lg border border-gray-200 px-2 py-1" /></label>
+                            <label className="flex items-start gap-2 text-xs leading-relaxed text-navy/70 sm:col-span-2"><input type="checkbox" checked={traveler.authorized} onChange={(e) => updateTraveler(traveler.id, { authorized: e.target.checked })} className="mt-0.5" /><span>I am authorized to add this traveler. If they are 18 or older and not my spouse, they will receive a separate verification email.</span></label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {errors.travelers && <p className="mt-3 text-xs text-red-500">{errors.travelers}</p>}
+                  </div>
+
                   <div>
                     <label htmlFor="quote-notes" className={labelClass}>Special Instructions <span className="text-navy/70 font-normal normal-case">(optional)</span></label>
                     <textarea id="quote-notes" name="notes" rows={3} placeholder="Fragile items, oversized bags, gate code, etc."
@@ -921,8 +1000,8 @@ export default function QuotePage() {
                     )}
                     {form.service !== "arrival" && (
                       <Row
-                        label="Airline Cutoff"
-                        value="Target bag acceptance at least 40 min before departure"
+                        label="Travelyt Handoff Target"
+                        value="Carrier handoff targeted at least 3 hours before departure"
                       />
                     )}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
@@ -1000,8 +1079,9 @@ export default function QuotePage() {
                         <p className="mt-1 text-xs text-red-500">{errors.declaredValue}</p>
                       )}
                       <p className="mt-2 text-xs leading-relaxed text-navy/65">
-                        Standard coverage applies unless Travelyt approves a
-                        declared-value election during manual confirmation.
+                        Entering a value records your requested coverage for manual
+                        review. It does not create insurance; the bound policy and
+                        confirmed booking terms control.
                       </p>
                       {declaredValueCents && declaredValueCents > 0 ? (
                         <label

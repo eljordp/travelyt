@@ -7,14 +7,14 @@ export default function Services() {
       label: "Departures",
       title: "Doorstep-to-Airline",
       description:
-        "We pick up your luggage at your door, weigh and seal every bag, and deliver it straight to your airline at the airport. You arrive hands-free — ready to walk on with nothing to lug.",
+        "We pick up your luggage at your door, weigh and seal every bag, and transport it to the handoff point authorized by the participating airline and airport.",
       features: [
         "Scheduled doorstep pickup",
         "Weighing and tamper-proof sealing",
-        "Airline-compliant bag prep",
-        "Direct delivery to your airline",
+        "Airline-rule-aware bag prep",
+        "Authorized receiving-point handoff",
         "GPS custody checkpoints",
-        "Insurance on every bag",
+        "Coverage bound before live custody",
       ],
       image: "/service-departures.jpg",
     },
@@ -22,7 +22,7 @@ export default function Services() {
       label: "Arrivals",
       title: "Land & Leave",
       description:
-        "After your flight lands, our team coordinates post-flight bag delivery to your hotel, home, or any address. You walk off the plane and keep moving.",
+        "Where approved, our team coordinates post-flight bag release and delivery to your hotel, home, or other eligible address.",
       features: [
         "Post-flight bag collection",
         "Door-to-door delivery",
@@ -61,8 +61,8 @@ export default function Services() {
             Every leg of your journey, covered
           </h2>
           <p className="text-navy/70 max-w-2xl mx-auto">
-            From your front door to airline handoff and post-flight delivery,
-            we handle the luggage moments that slow travel down.
+            From your front door to an authorized carrier handoff—and, where
+            available, post-flight delivery—we handle the luggage moments that slow travel down.
           </p>
         </div>
 

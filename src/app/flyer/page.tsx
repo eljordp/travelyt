@@ -159,7 +159,7 @@ export default function FlyerPage() {
               <p className="text-base leading-relaxed text-[#081546]/80">
                 One job, done well. We pick up your bags. We move them with
                 care. We deliver them where you&apos;re going. Tracked at every
-                step. Sealed in transit. Fully insured.
+                step. Sealed in transit. Coverage bound before live custody.
               </p>
             </div>
             <div className="text-right">
