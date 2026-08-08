@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "travelyt.rj-ord-current-state.v1",
+  "asOf": "2026-08-08",
+  "scope": "Royal Jordanian passenger checked-baggage acceptance for ORD departures",
+  "boundary": "Public-source fact model only. It is not an airline, airport, handler, or TSA authorization.",
+  "facts": {
+    "departureTerminal": {
+      "value": "ORD Terminal 5",
+      "status": "verified_public",
+      "source": "https://www.flychicago.com/ORDerUp/assets/documents/Enplanements%20Concessions%20Sales%20and%20Other%20Statistical%20Data/O%27Hare%202019-2023%20Historical%20Enplanements%20by%20Airline.pdf",
+      "note": "FlyChicago enplanement data places Royal Jordanian in Terminal 5. Exact counter and receiving point remain unverified."
+    },
+    "counterClosure": {
+      "value": "80 minutes before departure",
+      "status": "verified_public",
+      "source": "https://www.rj.com/en/info-and-tips/check-in-options/airport-check-in",
+      "note": "RJ publishes this as the latest passenger acceptance time from Chicago, not a Travelyt handoff cutoff."
+    },
+    "recommendedPassengerArrival": {
+      "value": "3 hours before departure",
+      "status": "verified_public",
+      "source": "https://www.rj.com/en/info-and-tips/check-in-options/airport-check-in",
+      "note": "Travelyt's controlled simulation uses this as the target airline handoff time until RJ provides a stricter written station rule."
+    },
+    "bagTagIssuance": {
+      "value": "RJ issues one Baggage Identification Tag when checked baggage is checked in",
+      "status": "verified_public",
+      "source": "https://www.rj.com/en/info-and-tips/conditions-of-carriage",
+      "note": "Public terms do not authorize Travelyt to issue or activate airline bag tags."
+    },
+    "screening": {
+      "value": "Checked baggage is subject to TSA screening and possible physical opening",
+      "status": "verified_public",
+      "source": "https://www.tsa.gov/sites/default/files/checked_baggage_roadmap.pdf",
+      "note": "The exact ORD system routing and custody boundary are security-sensitive operational details and are not inferred here."
+    },
+    "passengerBoardingLink": {
+      "value": "RJ normally will not carry checked baggage if the passenger fails to board",
+      "status": "verified_public",
+      "source": "https://www.rj.com/en/info-and-tips/conditions-of-carriage",
+      "note": "This does not answer whether an authorized third party may tender a bag before the passenger arrives."
+    },
+    "ordGroundHandler": {
+      "value": null,
+      "status": "rj_confirmation_required",
+      "note": "No authoritative public source reviewed identifies RJ's current ORD passenger/ramp handling provider."
+    },
+    "passengerAbsentTenderAuthority": {
+      "value": null,
+      "status": "rj_confirmation_required",
+      "note": "RJ must state in writing whether Travelyt may tender a sealed passenger bag without the passenger physically present."
+    },
+    "receivingRoleAndLocation": {
+      "value": null,
+      "status": "rj_confirmation_required",
+      "note": "Named role, counter/door, hours, escalation owner, and refusal/return process are missing."
+    },
+    "dcsBsmApiContract": {
+      "value": null,
+      "status": "rj_confirmation_required",
+      "note": "RJ must supply approved message mapping, credentials, idempotency, timeout reconciliation, webhook rules, and tag activation semantics."
+    }
+  }
+}
