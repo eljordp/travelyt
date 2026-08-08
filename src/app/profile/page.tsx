@@ -9,6 +9,7 @@ import {
   Package,
   PlusCircle,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AppChrome from "@/components/AppChrome";
@@ -515,7 +516,11 @@ export default function ProfilePage() {
                     htmlFor={`profile-${field}`}
                     className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5 capitalize"
                   >
-                    {field === "address" ? "Home Address" : field}
+                    {field === "address"
+                      ? "Home Address"
+                      : field === "phone"
+                        ? "Contact phone"
+                        : field}
                     {field === "phone" && (
                       <span className="font-normal normal-case text-navy/70"> (optional)</span>
                     )}
@@ -539,6 +544,22 @@ export default function ProfilePage() {
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
+
+            <Link
+              href="/security"
+              className="mt-6 flex items-center gap-3 rounded-xl border border-navy/10 bg-navy/[0.03] p-4 transition-colors hover:bg-navy/[0.06]"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-navy shadow-sm">
+                <ShieldCheck className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-navy">Account Security</span>
+                <span className="mt-0.5 block text-xs text-navy/65">
+                  Email status, password recovery, phone verification, and authenticator 2FA.
+                </span>
+              </span>
+              <span className="text-navy/45" aria-hidden="true">→</span>
+            </Link>
 
             <div className="mt-6 rounded-xl border border-navy/10 bg-navy/[0.03] p-4">
               <h3 className="text-sm font-bold text-navy">

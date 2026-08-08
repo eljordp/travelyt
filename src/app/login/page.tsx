@@ -3,18 +3,26 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  roleRequiresMfa,
+  safeAuthNext,
+} from "@/lib/auth-policy";
+import { SITE_URL } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 
 function nextPath() {
   if (typeof window === "undefined") return "/profile";
   const next = new URLSearchParams(window.location.search).get("next");
-  return next?.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+  return safeAuthNext(next);
 }
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [canResendConfirmation, setCanResendConfirmation] = useState(false);
+  const [notice, setNotice] = useState("");
 
   function validate() {
     const e: Record<string, string> = {};
@@ -34,19 +42,78 @@ export default function LoginPage() {
       return;
     }
 
+    setNotice("");
+    setCanResendConfirmation(false);
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: form.email.trim().toLowerCase(),
       password: form.password,
     });
-    setSubmitting(false);
 
     if (error) {
+      setSubmitting(false);
+      setCanResendConfirmation(error.code === "email_not_confirmed");
       setErrors({ form: error.message });
       return;
     }
 
-    window.location.href = nextPath();
+    const destination = nextPath();
+    const [assuranceResult, factorResult] = await Promise.all([
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+      supabase.auth.mfa.listFactors(),
+    ]);
+
+    if (assuranceResult.error || factorResult.error) {
+      await supabase.auth.signOut({ scope: "local" });
+      setSubmitting(false);
+      setErrors({
+        form: "Security verification is temporarily unavailable. No session was opened; please try again.",
+      });
+      return;
+    }
+
+    const assurance = assuranceResult.data;
+    const factorData = factorResult.data;
+    const hasVerifiedTotp = Boolean(factorData?.totp?.length);
+
+    if (
+      hasVerifiedTotp &&
+      assurance?.currentLevel !== "aal2"
+    ) {
+      window.location.href = `/mfa?next=${encodeURIComponent(destination)}`;
+      return;
+    }
+
+    const role = data.user?.user_metadata?.role;
+    if (roleRequiresMfa(typeof role === "string" ? role : null) && !hasVerifiedTotp) {
+      window.location.href = `/security?required=1&next=${encodeURIComponent(destination)}`;
+      return;
+    }
+
+    window.location.href = destination;
+  }
+
+  async function resendConfirmation() {
+    const supabase = getSupabaseBrowser();
+    const email = form.email.trim().toLowerCase();
+    if (!supabase || !email) return;
+    setResending(true);
+    setNotice("");
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath())}`,
+      },
+    });
+    setResending(false);
+    if (error) {
+      setErrors({ form: error.message });
+      return;
+    }
+    setErrors({});
+    setCanResendConfirmation(false);
+    setNotice("A new confirmation link was sent. Check your email before signing in.");
   }
 
   const field = (id: string) => ({
@@ -67,8 +134,23 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           {errors.form && (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-              {errors.form}
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              <p>{errors.form}</p>
+              {canResendConfirmation && (
+                <button
+                  type="button"
+                  onClick={() => void resendConfirmation()}
+                  disabled={resending}
+                  className="mt-2 font-semibold underline disabled:opacity-50"
+                >
+                  {resending ? "Sending…" : "Resend confirmation email"}
+                </button>
+              )}
+            </div>
+          )}
+          {notice && (
+            <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+              {notice}
             </p>
           )}
           <div>

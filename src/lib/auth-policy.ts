@@ -27,3 +27,10 @@ export function validatePassword(input: string): string | undefined {
 export function roleRequiresMfa(role?: string | null): boolean {
   return PRIVILEGED_ROLES.includes(role as UserRole);
 }
+
+export function safeAuthNext(
+  value: string | null | undefined,
+  fallback = "/profile",
+): string {
+  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
+}

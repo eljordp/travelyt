@@ -7,6 +7,7 @@ import { getSupabaseBrowser } from "@/lib/supabase-client";
 import { SITE_URL } from "@/lib/site";
 import {
   normalizePhone,
+  safeAuthNext,
   validatePassword,
   validatePhone,
 } from "@/lib/auth-policy";
@@ -14,7 +15,7 @@ import {
 function nextPath() {
   if (typeof window === "undefined") return "/profile";
   const next = new URLSearchParams(window.location.search).get("next");
-  return next?.startsWith("/") && !next.startsWith("//") ? next : "/profile";
+  return safeAuthNext(next);
 }
 
 export default function RegisterPage() {
@@ -67,8 +68,6 @@ export default function RegisterPage() {
           full_name: form.name.trim(),
           phone: phone || undefined,
           role: "customer",
-          phone_verified: Boolean(phone),
-          mfa_required: false,
         },
       },
     });
@@ -138,6 +137,10 @@ export default function RegisterPage() {
             <input id="reg-phone" type="tel" placeholder="+1 555 000 0000" {...field("phone")}
               className={`w-full px-4 py-3 rounded-xl border ${errors.phone ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all`} />
             {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+            <p className="mt-1 text-xs text-navy/50">
+              This is saved as contact information only. Phone verification is
+              completed separately in Account Security.
+            </p>
           </div>
 
           {/* Password */}
