@@ -10,6 +10,7 @@
     "audit:rj": "node simulations/enhanced-new-dimensions-audit.mjs",
     "simulate:family": "node simulations/multi-passenger-household-simulation.mjs",
     "simulate:account-security": "node simulations/account-access-security-simulation.mjs",
+    "simulate:admin-accounts": "node simulations/admin-account-visibility-simulation.mjs",
     "simulate:carrier-neutral": "node simulations/carrier-neutral-operations-simulation.mjs",
     "simulate:concierge-controls": "node simulations/concierge-control-library-simulation.mjs",
     "simulate:rj:integrated": "node simulations/rj-ord-integrated-checkpoint.mjs",

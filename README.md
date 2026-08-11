@@ -191,6 +191,9 @@ inactive reference-only annex at `docs/custody/iac-applicability-annex.md`; it
 has no runtime activation path and does not claim passenger-baggage, TSA,
 airline, airport, or IAC authorization.
 
+The ORD public-area, badging, and receiver gate is recorded in
+`docs/custody/ord-public-handoff-fact-check.md`.
+
 Run `npm run simulate:concierge-controls` to verify the control categories,
 passenger-present default, authorization-gated carrier transfer, and inactive
 IAC boundary.

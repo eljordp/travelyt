@@ -102,6 +102,43 @@ interface DriverApplication {
   created_at: string;
 }
 
+type AuthAccountStatus =
+  | "active"
+  | "confirmed_never_signed_in"
+  | "unconfirmed"
+  | "banned";
+
+interface AuthAccount {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  fullName: string | null;
+  role: string;
+  status: AuthAccountStatus;
+  createdAt: string;
+  confirmedAt: string | null;
+  lastSignInAt: string | null;
+  bannedUntil: string | null;
+  providers: string[];
+}
+
+interface AuthEvent {
+  id: string;
+  action: string;
+  userId: string | null;
+  email: string | null;
+  createdAt: string;
+  ipAddress: string | null;
+}
+
+interface AuthAccountCounts {
+  total: number;
+  active: number;
+  unconfirmed: number;
+  neverSignedIn: number;
+  banned: number;
+}
+
 interface PartnerIntegration {
   id: string;
   name: string;
@@ -364,6 +401,20 @@ function formatAuditTime(value: string) {
   }).format(new Date(parsed));
 }
 
+const ACCOUNT_STATUS_LABELS: Record<AuthAccountStatus, string> = {
+  active: "Active",
+  confirmed_never_signed_in: "Confirmed · no login",
+  unconfirmed: "Incomplete · unconfirmed",
+  banned: "Banned",
+};
+
+const ACCOUNT_STATUS_STYLES: Record<AuthAccountStatus, string> = {
+  active: "bg-green-100 text-green-800",
+  confirmed_never_signed_in: "bg-blue-100 text-blue-800",
+  unconfirmed: "bg-amber-100 text-amber-900",
+  banned: "bg-red-100 text-red-800",
+};
+
 function auditTitle(entry: NonNullable<Booking["statusHistory"]>[number]) {
   const actor = entry.actorName || entry.actorRole;
   if (entry.action === "manual_review_override") {
@@ -398,6 +449,17 @@ export default function AdminPage() {
   const [exceptions, setExceptions] = useState<OpsException[]>([]);
   const [driverCodes, setDriverCodes] = useState<DriverAccessCode[]>([]);
   const [applications, setApplications] = useState<DriverApplication[]>([]);
+  const [accounts, setAccounts] = useState<AuthAccount[]>([]);
+  const [authEvents, setAuthEvents] = useState<AuthEvent[]>([]);
+  const [accountCounts, setAccountCounts] = useState<AuthAccountCounts>({
+    total: 0,
+    active: 0,
+    unconfirmed: 0,
+    neverSignedIn: 0,
+    banned: 0,
+  });
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountActivityMigrationRequired, setAccountActivityMigrationRequired] = useState(false);
   const [appBusyId, setAppBusyId] = useState<string | null>(null);
   const [appCode, setAppCode] = useState<{ id: string; code: string } | null>(null);
   const [partnerIntegrations, setPartnerIntegrations] = useState<PartnerIntegration[]>([]);
@@ -454,6 +516,7 @@ export default function AdminPage() {
           await loadExceptions();
           await loadDriverCodes();
           await loadApplications();
+          if ((data.role ?? "admin") === "admin") await loadAccounts();
           if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
           return;
         }
@@ -481,6 +544,7 @@ export default function AdminPage() {
             await loadExceptions();
             await loadDriverCodes();
             await loadApplications();
+            if ((exchanged.role ?? "admin") === "admin") await loadAccounts();
             if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
           }
         }
@@ -595,6 +659,48 @@ export default function AdminPage() {
       };
       if (response.ok && data.applications) setApplications(data.applications);
     } catch {}
+  }
+
+  async function loadAccounts() {
+    setAccountLoading(true);
+    try {
+      const response = await fetch("/api/admin/accounts", {
+        credentials: "same-origin",
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        accounts?: AuthAccount[];
+        events?: AuthEvent[];
+        counts?: AuthAccountCounts;
+        activityMigrationRequired?: boolean;
+      };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not load customer accounts.");
+      }
+      setAccounts(data.accounts ?? []);
+      setAuthEvents(data.events ?? []);
+      setAccountCounts(
+        data.counts ?? {
+          total: 0,
+          active: 0,
+          unconfirmed: 0,
+          neverSignedIn: 0,
+          banned: 0,
+        },
+      );
+      setAccountActivityMigrationRequired(
+        Boolean(data.activityMigrationRequired),
+      );
+    } catch (accountError) {
+      setError(
+        accountError instanceof Error
+          ? accountError.message
+          : "Could not load customer accounts.",
+      );
+    } finally {
+      setAccountLoading(false);
+    }
   }
 
   async function reviewApplication(id: string, action: "approve" | "reject") {
@@ -807,6 +913,7 @@ export default function AdminPage() {
       await loadExceptions();
       await loadDriverCodes();
       await loadApplications();
+      if ((data.role ?? "admin") === "admin") await loadAccounts();
       if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
@@ -865,6 +972,10 @@ export default function AdminPage() {
     setBookings([]);
     setExceptions([]);
     setDriverCodes([]);
+    setAccounts([]);
+    setAuthEvents([]);
+    setAccountCounts({ total: 0, active: 0, unconfirmed: 0, neverSignedIn: 0, banned: 0 });
+    setAccountActivityMigrationRequired(false);
     setPartnerIntegrations([]);
     setPartnerEvents([]);
     setPartnerMigrationRequired(false);
@@ -1301,6 +1412,130 @@ export default function AdminPage() {
             );
           })}
         </div>
+
+        {adminRole === "admin" && (
+          <section className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#ff6868]" strokeWidth={2} />
+                  <h2 className="font-bold text-navy">Customer accounts &amp; logins</h2>
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-navy/60">
+                  Every Supabase account, incomplete signup, confirmation state,
+                  latest sign-in, and recent authentication activity.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void loadAccounts()}
+                disabled={accountLoading}
+                className="self-start rounded-xl bg-navy px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {accountLoading ? "Refreshing…" : "Refresh accounts"}
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {[
+                ["Total", accountCounts.total],
+                ["Active", accountCounts.active],
+                ["Unconfirmed", accountCounts.unconfirmed],
+                ["No login yet", accountCounts.neverSignedIn],
+                ["Banned", accountCounts.banned],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl bg-navy/[0.03] px-3 py-2">
+                  <p className="text-lg font-black text-navy">{value}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/50">
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {accountActivityMigrationRequired && (
+              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Account list is live. Authentication history will appear after
+                migration 027 is applied.
+              </p>
+            )}
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+              <div className="overflow-hidden rounded-xl border border-navy/10">
+                <div className="border-b border-navy/10 bg-navy/[0.02] px-3 py-2 text-xs font-bold uppercase tracking-wider text-navy/55">
+                  Accounts ({accounts.length})
+                </div>
+                <div className="max-h-[430px] divide-y divide-navy/10 overflow-y-auto">
+                  {accounts.length === 0 ? (
+                    <p className="p-4 text-sm text-navy/55">
+                      {accountLoading ? "Loading accounts…" : "No accounts found."}
+                    </p>
+                  ) : (
+                    accounts.map((account) => (
+                      <div key={account.id} className="p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-navy">
+                              {account.fullName || account.email || account.phone || "Unnamed account"}
+                            </p>
+                            {account.fullName && account.email && (
+                              <p className="truncate text-xs text-navy/55">{account.email}</p>
+                            )}
+                            <p className="mt-1 text-[11px] text-navy/45">
+                              Created {formatAuditTime(account.createdAt)} · Role {account.role}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-navy/45">
+                              {account.lastSignInAt
+                                ? `Last login ${formatAuditTime(account.lastSignInAt)}`
+                                : account.confirmedAt
+                                  ? "Confirmed, but no login recorded"
+                                  : "Email/phone confirmation incomplete"}
+                            </p>
+                          </div>
+                          <span
+                            className={`self-start rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${ACCOUNT_STATUS_STYLES[account.status]}`}
+                          >
+                            {ACCOUNT_STATUS_LABELS[account.status]}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-navy/10">
+                <div className="border-b border-navy/10 bg-navy/[0.02] px-3 py-2 text-xs font-bold uppercase tracking-wider text-navy/55">
+                  Authentication activity ({authEvents.length})
+                </div>
+                <div className="max-h-[430px] divide-y divide-navy/10 overflow-y-auto">
+                  {authEvents.length === 0 ? (
+                    <p className="p-4 text-sm text-navy/55">
+                      {accountActivityMigrationRequired
+                        ? "Migration 027 is required for the login history."
+                        : "No authentication events found."}
+                    </p>
+                  ) : (
+                    authEvents.map((event) => (
+                      <div key={event.id} className="p-3">
+                        <p className="text-xs font-bold text-navy">
+                          {event.action.replace(/_/g, " ")}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-navy/55">
+                          {event.email || event.userId || "System event"}
+                        </p>
+                        <p className="mt-1 text-[11px] text-navy/40">
+                          {formatAuditTime(event.createdAt)}
+                          {event.ipAddress ? ` · ${event.ipAddress}` : ""}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

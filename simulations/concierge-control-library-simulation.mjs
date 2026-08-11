@@ -105,7 +105,7 @@ test("training and retention stay visible as incomplete gates", () => {
   assert.equal(retention?.retentionClass, "legal_schedule_pending");
 });
 
-const [bookingApi, handoffPolicy, custodyMigration, controlSpec, iacAnnex] =
+const [bookingApi, handoffPolicy, custodyMigration, controlSpec, iacAnnex, ordFactCheck] =
   await Promise.all([
     readFile(new URL("../src/app/api/bookings/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../src/lib/handoff-policy.ts", import.meta.url), "utf8"),
@@ -121,6 +121,10 @@ const [bookingApi, handoffPolicy, custodyMigration, controlSpec, iacAnnex] =
       new URL("../docs/custody/iac-applicability-annex.md", import.meta.url),
       "utf8"
     ),
+    readFile(
+      new URL("../docs/custody/ord-public-handoff-fact-check.md", import.meta.url),
+      "utf8"
+    ),
   ]);
 
 test("existing booking flow enforces identity, declaration, and proof gates", () => {
@@ -132,6 +136,24 @@ test("existing booking flow enforces identity, declaration, and proof gates", ()
 test("existing handoff policy fails closed without carrier authorization", () => {
   assert.match(handoffPolicy, /passenger_present/);
   assert.match(handoffPolicy, /carrier_handoff_authorized/);
+});
+
+test("carrier transfer requires a named receiver and location access class", () => {
+  const transfer = TRAVELYT_CONCIERGE_CONTROLS.find(
+    (control) => control.id === "TVT-XFR-002"
+  );
+  assert.ok(
+    transfer?.requiredEvidence.some((item) => item.includes("credential or reference"))
+  );
+  assert.ok(
+    transfer?.requiredEvidence.some((item) => item.includes("public terminal or controlled area"))
+  );
+});
+
+test("ORD fact check keeps unbadged work public and placeholder receivers inactive", () => {
+  assert.match(ordFactCheck, /default ORD departure handoff remains a return to the verified/i);
+  assert.match(ordFactCheck, /"Safe baggage handler" is not a usable live receiver identity/i);
+  assert.match(ordFactCheck, /If any field is missing, the app stays in traveler-present return mode/i);
 });
 
 test("custody vocabulary remains Travelyt-owned and screening-neutral", () => {

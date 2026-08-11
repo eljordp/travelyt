@@ -17,6 +17,9 @@ for airline check-in and baggage acceptance. Passenger-absent transfer to a
 carrier or authorized handler is a separate mode that stays locked without a
 carrier, station, and booking-specific authorization record.
 
+The ORD public-area and receiver gate is recorded in
+`docs/custody/ord-public-handoff-fact-check.md`.
+
 Travelyt does not perform or claim screening, secure-area access, airline tag
 issuance, airline acceptance, or regulatory approval.
 
@@ -116,4 +119,3 @@ because a document exists:
 - [49 CFR 1548.5 — IAC security-program scope](https://www.ecfr.gov/current/title-49/subtitle-B/chapter-XII/subchapter-C/part-1548/section-1548.5)
 - [49 CFR 1548.11 — training for IAC security-related duties](https://www.ecfr.gov/current/title-49/subtitle-B/chapter-XII/subchapter-C/part-1548/section-1548.11)
 - [49 CFR 1548.15 — cargo-access security threat assessments](https://www.ecfr.gov/current/title-49/subtitle-B/chapter-XII/subchapter-C/part-1548/section-1548.15)
-

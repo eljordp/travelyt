@@ -232,8 +232,8 @@ export const TRAVELYT_CONCIERGE_CONTROLS = [
     requiredEvidence: [
       "named carrier or authorized handler",
       "written station authorization reference",
-      "authorized receiving person or role",
-      "handoff location and cutoff",
+      "authorized receiving person's name, organization, and credential or reference",
+      "handoff location, cutoff, and access class: public terminal or controlled area",
       "receiving proof and acceptance outcome",
     ],
     failClosedOutcome: "Use traveler-present return; do not record carrier acceptance.",
@@ -368,4 +368,3 @@ export const IAC_REFERENCE_ANNEX = {
 export function iacOperationalLaneEnabled(): false {
   return false;
 }
-
