@@ -4,8 +4,6 @@ import {
   CheckCircle2,
   Home,
   Lock,
-  PlaneTakeoff,
-  ShieldCheck,
   Truck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -13,10 +11,9 @@ import type { LucideIcon } from "lucide-react";
 export type StatusKey =
   | "picked_up"
   | "sealed"
-  | "tsa_cleared"
-  | "checked_in"
-  | "on_flight"
-  | "delivered";
+  | "terminal_transit"
+  | "traveler_handoff"
+  | "carrier_accepted";
 
 type Step = {
   key: StatusKey;
@@ -29,38 +26,32 @@ const STEPS: Step[] = [
   {
     key: "picked_up",
     label: "Picked up at door",
-    desc: "Courier collected your bag and confirmed ID.",
+    desc: "Courier matched the approved identity record and collected your bag.",
     icon: Home,
   },
   {
     key: "sealed",
     label: "Sealed + weighed",
-    desc: "Tamper-evident seal applied. Weight on file.",
+    desc: "Tamper-evident seal, weight, and pickup photos recorded.",
     icon: Lock,
   },
   {
-    key: "tsa_cleared",
-    label: "Cleared TSA screening",
-    desc: "Bag screened at the airport security checkpoint.",
-    icon: ShieldCheck,
+    key: "terminal_transit",
+    label: "In custody to terminal",
+    desc: "Timestamp and location recorded while the sealed bag is moving.",
+    icon: Truck,
   },
   {
-    key: "checked_in",
-    label: "Checked in to your flight",
-    desc: "Accepted by the airline as your checked baggage.",
+    key: "traveler_handoff",
+    label: "Returned to traveler",
+    desc: "Standard service ends with an identity-matched handoff in the public ticketing area.",
     icon: CheckCircle2,
   },
   {
-    key: "on_flight",
-    label: "On your flight",
-    desc: "In the hold. We'll meet it on the other side.",
-    icon: PlaneTakeoff,
-  },
-  {
-    key: "delivered",
-    label: "Delivered",
-    desc: "Dropped at your address. Signed and photographed.",
-    icon: Truck,
+    key: "carrier_accepted",
+    label: "Carrier acceptance — when authorized",
+    desc: "Only a named airline or authorized handler accepts the bag. Screening remains in the carrier/TSA process.",
+    icon: CheckCircle2,
   },
 ];
 

@@ -185,7 +185,7 @@ export function backupNextAction(booking: Booking) {
   if (booking.status === "arrived") return "Capture seal/proof and confirm custody.";
   if (booking.status === "picked_up") {
     return booking.service === "departure"
-      ? "Customer approves seal, then driver records airline handoff."
+      ? "Customer approves seal, then driver records traveler terminal return or an explicitly authorized carrier handoff."
       : "Move bags to delivery or next custody step.";
   }
   if (booking.status === "in_transit") return "Complete delivery or final handoff proof.";

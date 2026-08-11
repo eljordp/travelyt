@@ -64,9 +64,9 @@ export default function FlyerPage() {
               <span className="text-[#ff6868]">You move freely.</span>
             </h1>
             <p className="text-lg leading-relaxed max-w-[5.5in] text-[#081546]/75">
-              Travelyt picks up your luggage at home, transports it to the
-              airport, and delivers it to your destination — so you never lug a
-              suitcase through a terminal again.
+              Travelyt picks up your luggage at home, records each custody
+              checkpoint, and returns the sealed bags to you in the public
+              ticketing area for airline check-in.
             </p>
             <p className="italic text-[#081546]/55 mt-5 text-base">
               Travel light, arrive smart.
@@ -99,9 +99,9 @@ export default function FlyerPage() {
                 },
                 {
                   n: "03",
-                  title: "Hands-free arrival",
+                  title: "Verified handoff",
                   body:
-                    "Meet your bags curbside on departure or have them delivered to your destination.",
+                    "Receive your sealed bags in the public ticketing area, verify the seal, and complete airline check-in.",
                 },
               ].map((step) => (
                 <div key={step.n}>

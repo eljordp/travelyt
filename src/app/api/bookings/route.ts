@@ -28,6 +28,8 @@ import {
 } from "@/lib/promos";
 import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
+import { carrierHandoffAuthorized } from "@/lib/handoff-policy";
+import { appendCustodyEvent, getBagsForBooking } from "@/lib/custody";
 import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
@@ -35,7 +37,6 @@ import {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[+\d][\d\s().-]{6,}$/;
-const serviceTypes = ["departure", "arrival", "both"] as const;
 const bookingStatuses: Booking["status"][] = [
   "pending",
   "paid",
@@ -358,7 +359,7 @@ function hasRequiredProof(row: BookingRow, kind: Booking["proofs"][number]["kind
   const proof = latestProof(row, kind);
   if (!proof?.dataUrl || !proof.location) return false;
   if (kind === "seal") return Boolean(proof.sealId);
-  if (kind === "airline_handoff" || kind === "pickup") {
+  if (kind === "airline_handoff" || kind === "customer_handoff" || kind === "pickup") {
     return Boolean(
       proof.handoff?.recipientName &&
         proof.handoff.organization &&
@@ -454,7 +455,7 @@ function validateProofShape(proof: Booking["proofs"][number]) {
   if (proof.kind === "seal" && !proof.sealId?.trim()) {
     return "Seal ID is required.";
   }
-  if (proof.kind === "airline_handoff" || proof.kind === "pickup") {
+  if (proof.kind === "airline_handoff" || proof.kind === "customer_handoff" || proof.kind === "pickup") {
     if (
       !proof.handoff?.recipientName?.trim() ||
       !proof.handoff.organization?.trim() ||
@@ -482,6 +483,7 @@ const LOCATION_EVENT_LABELS: Record<
   driver_arrived: "Driver arrived",
   seal_proof: "Seal proof captured",
   airport_release: "Airport release captured",
+  customer_handoff: "Passenger terminal handoff captured",
   airline_handoff: "Airline handoff captured",
   delivery_proof: "Delivery proof captured",
 };
@@ -510,6 +512,7 @@ function locationKindForProof(
 ): NonNullable<Booking["locationEvents"]>[number]["kind"] {
   if (kind === "seal") return "seal_proof";
   if (kind === "pickup") return "airport_release";
+  if (kind === "customer_handoff") return "customer_handoff";
   if (kind === "airline_handoff") return "airline_handoff";
   return "delivery_proof";
 }
@@ -542,7 +545,9 @@ function validateBooking(
       ? Math.max(0, body.distanceMiles)
       : undefined;
 
-  if (!service || !serviceTypes.includes(service)) return "Pick a service.";
+  if (service !== "departure" && service !== "arrival") {
+    return "Book departure and arrival as separate custody legs.";
+  }
   if (!airport) return "Airport is required.";
   if (!address) return "Address is required.";
   const dateError = validateTravelDateTime(date, body.flightTime);
@@ -956,7 +961,7 @@ export async function PATCH(request: Request) {
     }
 
     if (manualReviewPatch && !opsAuthorized(request)) {
-      return bad("Operations access is required to update manual ID/bag review.", 403);
+      return bad("Operations access is required to update identity and customer declaration review.", 403);
     }
 
     if (customerClosing && !opsAuthorized(request)) {
@@ -1065,6 +1070,17 @@ export async function PATCH(request: Request) {
 
     let storedProof = body.proof;
     if (body.proof) {
+      const airlineAuthorized = carrierHandoffAuthorized({
+        externalProvider: existing.external_provider,
+        externalReference: existing.external_reference,
+        externalStatus: existing.external_status,
+      });
+      if (body.proof.kind === "airline_handoff" && !airlineAuthorized) {
+        return bad("Airline handoff proof is locked until the carrier and station explicitly authorize this booking.", 409);
+      }
+      if (body.proof.kind === "customer_handoff" && (existing.service !== "departure" || airlineAuthorized)) {
+        return bad("Passenger terminal handoff proof is only valid for a carrier-neutral departure booking.", 409);
+      }
       const proofError = validateProofShape(body.proof);
       if (proofError) {
         await recordOpsException(
@@ -1140,19 +1156,19 @@ export async function PATCH(request: Request) {
             : "Driver ID review is not complete.",
           existing.restricted_items_attested_at
             ? ""
-            : "Manual ID/bag review is not complete.",
+            : "Identity and customer declaration review is not complete.",
           ...travelerBlockers,
         ].filter(Boolean);
         await recordOpsException(
           supabase,
           id,
           "CUSTODY_IDENTITY_GATE",
-          "Driver tried to start custody before ID verification and restricted-item attestation were complete.",
+          "Driver tried to start custody before identity verification and the customer's prohibited-item declaration were complete.",
           "critical",
           { status: existing.status, nextStatus }
         );
         return bad(
-          `Driver cannot start because manual ID/bag review is not complete. ${blockers.join(" ")}`,
+          `Driver cannot start because identity and customer declaration review is not complete. ${blockers.join(" ")}`,
           409
         );
       }
@@ -1183,6 +1199,13 @@ export async function PATCH(request: Request) {
 
       if (nextStatus === "delivered") {
         if (existing.service === "departure") {
+          if (!carrierHandoffAuthorized({
+            externalProvider: existing.external_provider,
+            externalReference: existing.external_reference,
+            externalStatus: existing.external_status,
+          })) {
+            return bad("Passenger-present departure jobs close through customer terminal confirmation, not airline acceptance.", 409);
+          }
           if (existing.status !== "picked_up" || !hasApprovedSeal(existing)) {
             return bad("Customer seal approval is required before airline handoff.", 409);
           }
@@ -1195,11 +1218,27 @@ export async function PATCH(request: Request) {
       }
 
       if (nextStatus === "delivery_pending") {
-        if (existing.service !== "arrival") {
-          return bad("Only arrival deliveries use customer delivery confirmation.", 409);
-        }
-        if (existing.status !== "in_transit" || !hasRequiredProof(existing, "delivery")) {
-          return bad("Delivery photo and GPS proof are required before customer confirmation.", 409);
+        if (existing.service === "departure") {
+          if (carrierHandoffAuthorized({
+            externalProvider: existing.external_provider,
+            externalReference: existing.external_reference,
+            externalStatus: existing.external_status,
+          })) {
+            return bad("Carrier-authorized departure jobs require airline receiving-party proof.", 409);
+          }
+          if (
+            existing.status !== "picked_up" ||
+            !hasApprovedSeal(existing) ||
+            !hasRequiredProof(existing, "customer_handoff")
+          ) {
+            return bad("Passenger terminal handoff photo, GPS, recipient identity match, and approved seal are required.", 409);
+          }
+        } else if (existing.service === "arrival") {
+          if (existing.status !== "in_transit" || !hasRequiredProof(existing, "delivery")) {
+            return bad("Delivery photo and GPS proof are required before customer confirmation.", 409);
+          }
+        } else {
+          return bad("Round-trip bookings require separate confirmed legs before customer confirmation.", 409);
         }
       }
     }
@@ -1280,7 +1319,7 @@ export async function PATCH(request: Request) {
           fromStatus: existing.status,
           toStatus: existing.status,
           ...actor,
-          reason: reason || "Manual ID/bag review marked complete.",
+          reason: reason || "Identity and customer declaration review marked complete.",
         })
       );
     } else if (storedProof) {
@@ -1362,6 +1401,26 @@ export async function PATCH(request: Request) {
 
     if (statusChanged || storedProof) {
       await queueBookingNotification(data, storedProof ? "proof" : "status");
+    }
+
+    if (customerClosing) {
+      try {
+        const bags = await getBagsForBooking(id);
+        await Promise.all(
+          bags.map((bag) =>
+            appendCustodyEvent({
+              bagId: bag.id,
+              eventType: "recipient_confirmed",
+              actorRole: "traveler",
+              actorName: patch.customerSignatureName?.trim() || null,
+              verifiedMethod: "confirmation_code",
+              note: "Traveler confirmed physical receipt through the booking account.",
+            })
+          )
+        );
+      } catch (custodyError) {
+        console.error("Customer receipt custody event failed", custodyError);
+      }
     }
 
     const includeAccessToken =

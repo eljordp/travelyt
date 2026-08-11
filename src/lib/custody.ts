@@ -2,6 +2,14 @@ import { randomInt } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 export type CustodyEventType =
+  | "bag_registered"
+  | "custody_accepted"
+  | "route_checkpoint"
+  | "traveler_return"
+  | "recipient_confirmed"
+  | "carrier_transfer"
+  | "exception_opened"
+  // Legacy event names remain readable for previously sealed records.
   | "badge_issued"
   | "picked_up"
   | "in_transit"
@@ -10,6 +18,12 @@ export type CustodyEventType =
   | "exception";
 
 export type ActorRole =
+  | "traveler"
+  | "agent"
+  | "operations"
+  | "recipient"
+  | "carrier"
+  // Legacy actor names remain readable for previously sealed records.
   | "customer"
   | "driver"
   | "employee"
@@ -20,6 +34,10 @@ export type ActorRole =
 export type VerifiedMethod =
   | "none"
   | "access_code"
+  | "account_session"
+  | "manual_record"
+  | "employee_credential"
+  | "provider_assertion"
   | "id_document"
   | "facial_liveness"
   | "confirmation_code";
@@ -71,10 +89,17 @@ export interface ChainVerification {
 }
 
 export const EVENT_LABELS: Record<CustodyEventType, string> = {
+  bag_registered: "Bag registered",
+  custody_accepted: "Custody accepted",
+  route_checkpoint: "Route checkpoint",
+  traveler_return: "Returned to traveler",
+  recipient_confirmed: "Recipient confirmed",
+  carrier_transfer: "Authorized carrier transfer",
+  exception_opened: "Exception opened",
   badge_issued: "Badge issued",
   picked_up: "Picked up",
   in_transit: "In transit",
-  security_handoff: "Security handoff",
+  security_handoff: "Legacy carrier transfer",
   delivered: "Delivered",
   exception: "Exception",
 };
@@ -82,6 +107,10 @@ export const EVENT_LABELS: Record<CustodyEventType, string> = {
 export const VERIFIED_METHOD_LABELS: Record<VerifiedMethod, string> = {
   none: "Not verified",
   access_code: "Driver access code",
+  account_session: "Verified account session",
+  manual_record: "Approved manual record",
+  employee_credential: "Receiving-party credential",
+  provider_assertion: "Approved provider assertion",
   id_document: "Government ID",
   facial_liveness: "Facial liveness",
   confirmation_code: "Confirmation code",
@@ -89,6 +118,13 @@ export const VERIFIED_METHOD_LABELS: Record<VerifiedMethod, string> = {
 
 // Which bag status each event moves the bag into.
 const STATUS_FOR_EVENT: Record<CustodyEventType, BagStatus> = {
+  bag_registered: "issued",
+  custody_accepted: "in_custody",
+  route_checkpoint: "in_custody",
+  traveler_return: "delivered",
+  recipient_confirmed: "delivered",
+  carrier_transfer: "handed_off",
+  exception_opened: "exception",
   badge_issued: "issued",
   picked_up: "in_custody",
   in_transit: "in_custody",
@@ -251,11 +287,11 @@ export async function issueBags(input: IssueBagsInput): Promise<Bag[]> {
 
     await appendCustodyEvent({
       bagId: bag.id,
-      eventType: "badge_issued",
-      actorRole: "employee",
+      eventType: "bag_registered",
+      actorRole: "operations",
       actorName: input.issuedBy ?? "Travelyt ops",
       verifiedMethod: "access_code",
-      note: "Bag registered into chain of custody",
+      note: "Bag registered into the Travelyt custody protocol",
     });
 
     created.push(bag);

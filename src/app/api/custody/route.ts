@@ -15,6 +15,13 @@ import {
 } from "@/lib/custody";
 
 const EVENT_TYPES: CustodyEventType[] = [
+  "bag_registered",
+  "custody_accepted",
+  "route_checkpoint",
+  "traveler_return",
+  "recipient_confirmed",
+  "carrier_transfer",
+  "exception_opened",
   "badge_issued",
   "picked_up",
   "in_transit",
@@ -26,6 +33,10 @@ const EVENT_TYPES: CustodyEventType[] = [
 const VERIFIED_METHODS: VerifiedMethod[] = [
   "none",
   "access_code",
+  "account_session",
+  "manual_record",
+  "employee_credential",
+  "provider_assertion",
   "id_document",
   "facial_liveness",
   "confirmation_code",
@@ -135,11 +146,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ events: [], skipped: true });
     }
 
-    const actorRole = ["driver", "employee", "tsa", "airline"].includes(
+    const actorRole = ["agent", "operations", "carrier", "driver", "employee", "tsa", "airline"].includes(
       String(body.actorRole)
     )
       ? (body.actorRole as ActorRole)
-      : "driver";
+      : "agent";
     const lat = body.lat != null ? Number(body.lat) : null;
     const lng = body.lng != null ? Number(body.lng) : null;
 
@@ -181,11 +192,11 @@ export async function POST(request: Request) {
       ? (body.verifiedMethod as VerifiedMethod)
       : "access_code";
 
-    const actorRole = ["driver", "employee", "tsa", "airline"].includes(
+    const actorRole = ["traveler", "agent", "operations", "recipient", "carrier", "driver", "employee", "tsa", "airline"].includes(
       String(body.actorRole)
     )
       ? (body.actorRole as ActorRole)
-      : "driver";
+      : "agent";
 
     const lat = body.lat != null ? Number(body.lat) : null;
     const lng = body.lng != null ? Number(body.lng) : null;

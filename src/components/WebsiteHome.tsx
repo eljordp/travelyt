@@ -23,7 +23,7 @@ const personas = [
   {
     eyebrow: "Business traveler",
     headline: "Move at meeting speed",
-    body: "We collect your bag from your office or hotel and meet you at the airport. Walk in, board, fly out.",
+    body: "We collect your bag from your office or hotel and meet you in the public ticketing area. You verify the seal and complete airline check-in.",
     href: "/quote?service=departure&persona=business",
     cta: "Book a business pickup",
   },
@@ -31,22 +31,22 @@ const personas = [
     eyebrow: "Family trip",
     headline: "One less thing to carry",
     body: "Doorstep pickup so you can travel with kids, strollers, and gear without dragging six suitcases through the terminal.",
-    href: "/quote?service=both&persona=family",
+    href: "/quote?service=departure&persona=family",
     cta: "Book a family trip",
   },
   {
     eyebrow: "Frequent flyer",
     headline: "Move through the airport lighter",
-    body: "Trip handling built around less dragging, fewer bag moments, and a cleaner path from door to airline handoff.",
-    href: "/quote?service=both&persona=frequent",
-    cta: "Set up round-trip",
+    body: "Trip handling built around less dragging, fewer bag moments, and a documented path from door to traveler handoff at the terminal.",
+    href: "/quote?service=departure&persona=frequent",
+    cta: "Book a departure pickup",
   },
 ];
 
 const services = [
   {
     title: "Departure Pickup",
-    text: "Door to gate, sealed and tracked.",
+    text: "Door to public ticketing handoff, sealed and tracked.",
     href: "/quote?service=departure",
     icon: PackageCheck,
   },
@@ -55,12 +55,6 @@ const services = [
     text: "Post-flight delivery support.",
     href: "/quote?service=arrival",
     icon: PlaneLanding,
-  },
-  {
-    title: "Round Trip",
-    text: "Both sides of the trip.",
-    href: "/quote?service=both",
-    icon: BadgeCheck,
   },
 ];
 
@@ -137,12 +131,13 @@ export default function WebsiteHome() {
               Custody checkpoints
             </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight sm:text-4xl">
-              Sealed and tracked from door to gate.
+              Sealed and tracked from door to verified handoff.
             </h2>
             <p className="mt-4 max-w-md text-base leading-relaxed text-navy/65">
               Every Travelyt booking moves through a documented chain of custody,
-              from doorstep pickup to an authorized carrier handoff. Traveler-facing
-              live GPS remains subject to launch testing.
+              from doorstep pickup to verified traveler handoff at the terminal. An
+              authorized carrier handoff is used only where that carrier and station
+              approve it. Traveler-facing live GPS remains subject to launch testing.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-navy/75">
               <li className="flex gap-3">
@@ -155,7 +150,7 @@ export default function WebsiteHome() {
               </li>
               <li className="flex gap-3">
                 <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff6868]" />
-                Photo proof when it&apos;s handed off to the airline and delivered.
+                Photo proof at traveler handoff or authorized carrier acceptance.
               </li>
             </ul>
             <div className="mt-7 flex flex-wrap gap-3">
@@ -175,7 +170,7 @@ export default function WebsiteHome() {
           </div>
 
           <BagStatus
-            current="checked_in"
+            current="traveler_handoff"
             bookingId="TVT-001"
             route="Home → LAX"
           />
@@ -188,10 +183,10 @@ export default function WebsiteHome() {
                 First time? Here&apos;s the idea.
               </p>
               <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
-                You pack the bag. We do everything in between.
+                You pack the bag. We document every custody step.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-navy/65">
-                Most travelers in the US have never used a baggage service before. It&apos;s simple: we collect your luggage at home, move it through the airport on your flight, and meet you at your destination. You travel without the bags.
+                Standard departure service collects, weighs, seals, photographs, and tracks your luggage from home to an identity-matched return in the airport&apos;s public ticketing area. A named airline or authorized handler may receive it only under that carrier&apos;s approved station process.
               </p>
             </div>
 
@@ -220,7 +215,7 @@ export default function WebsiteHome() {
                 </span>
                 <p className="mt-3 font-bold text-navy">You arrive lighter</p>
                 <p className="mt-1 text-sm leading-relaxed text-navy/65">
-                  Walk through the airport hands-free. Your bag is already handled for the trip ahead.
+                  Meet the courier at the public ticketing area, verify the seal, and complete airline check-in. Travelyt never performs screening.
                 </p>
               </li>
             </ol>
@@ -251,7 +246,7 @@ export default function WebsiteHome() {
               Pick the trip that sounds like yours.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-navy/65 sm:text-base">
-              Each one starts the same way: tell us where to pick up, where it&apos;s going, and when. We do the rest.
+            Each one starts the same way: tell us where to pick up, where it&apos;s going, and when. We manage the documented custody leg; you complete airline check-in.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">

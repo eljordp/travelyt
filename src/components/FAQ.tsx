@@ -7,15 +7,15 @@ import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
 const faqs = [
   {
     q: "How far in advance do I need to book?",
-    a: `We recommend booking at least 24 hours before your flight. Same-day bookings depend on distance, driver availability, traffic, and carrier rules. During controlled launch operations, Travelyt targets carrier handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control.`,
+    a: `We recommend booking at least 24 hours before your flight. Same-day bookings depend on distance, driver availability, traffic, and carrier rules. During controlled launch operations, Travelyt targets terminal handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control.`,
   },
   {
     q: "What airports and cities do you serve?",
     a: "We're rolling out service market by market. Check our booking tool for availability in your area — and if we're not in your city yet, sign up and we'll let you know when we launch there.",
   },
   {
-    q: "How does the handoff to my airline work?",
-    a: "Travelyt collects, seals, and documents your bags, then tenders them only through the location, receiving role, timing, tagging, and screening process authorized by the participating airline and airport. Until an airline enables an integrated check-in path, passengers still complete every required passenger and document step themselves.",
+    q: "How does departure handoff work?",
+    a: "Standard service returns the sealed bags to the verified ticketed traveler in the public ticketing area, and the traveler completes airline check-in and bag acceptance. Travelyt never performs screening, issues airline bag tags, or enters secure/badged areas. Passenger-absent tender is available only where the carrier and station authorize a named airline or ground-handler recipient and the full acceptance process.",
   },
   {
     q: "Is my luggage insured?",

@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 const STATUS_LABELS: Record<BagStatus, string> = {
   issued: "Badge issued",
   in_custody: "In Travelyt custody",
-  handed_off: "Handed to security",
+  handed_off: "Custody handoff recorded",
   delivered: "Delivered",
   exception: "Needs attention",
 };

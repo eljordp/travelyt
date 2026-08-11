@@ -61,8 +61,8 @@ export default function Services() {
             Every leg of your journey, covered
           </h2>
           <p className="text-navy/70 max-w-2xl mx-auto">
-            From your front door to an authorized carrier handoff—and, where
-            available, post-flight delivery—we handle the luggage moments that slow travel down.
+            From your front door to a verified traveler handoff at the terminal—and,
+            where authorized, a carrier handoff—we handle the luggage moments that slow travel down.
           </p>
         </div>
 

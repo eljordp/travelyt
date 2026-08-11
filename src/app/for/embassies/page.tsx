@@ -59,12 +59,13 @@ export default function EmbassyPage() {
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-navy/65 sm:text-lg">
               Travelyt helps diplomatic, consular, and official travel teams
-              move baggage through pickup, sealing, airport handoff, and proof
-              of custody without asking travelers to manage every bag in person.
+              move baggage through pickup, sealing, passenger-present terminal
+              return, and proof of custody. Direct carrier handoff is used only
+              where the carrier and station explicitly authorize it.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                href="/quote?service=both&persona=embassy"
+                href="/quote?service=departure&persona=embassy"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#c41e2a] px-5 py-3 text-sm font-bold text-white hover:bg-[#a91823]"
               >
                 Request coordination <ArrowRight className="h-4 w-4" />

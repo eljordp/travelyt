@@ -103,11 +103,10 @@ export default function JFKPage() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-navy mb-4">JFK Pricing</h2>
           <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               { name: "Departure", price: "$49", unit: "/bag" },
               { name: "Arrival", price: "$29", unit: "/bag" },
-              { name: "Both Ways", price: "$69", unit: "/bag" },
             ].map((p) => (
               <div key={p.name} className="bg-[#f5f0ee] rounded-2xl p-6">
                 <div className="text-sm font-semibold text-navy/70 mb-2">{p.name}</div>

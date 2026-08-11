@@ -269,7 +269,7 @@ function custodyBlockers(booking: Booking) {
     blockers.push("Driver ID review is not complete.");
   }
   if (!booking.restrictedItemsAttestedAt) {
-    blockers.push("Manual ID/bag review is not complete.");
+    blockers.push("Identity and customer declaration review is not complete.");
   }
   blockers.push(
     ...passengerManifestCustodyBlockers(

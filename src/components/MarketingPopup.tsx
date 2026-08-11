@@ -107,7 +107,7 @@ export default function MarketingPopup() {
           <p className="text-sm leading-relaxed text-navy/70">
             Book within the next hour and use code{" "}
             <span className="font-bold text-navy">TRAVELYT30</span> to save on
-            door-to-gate luggage pickup.
+            door-to-terminal luggage pickup with a verified traveler handoff.
           </p>
 
           <div className="flex items-center justify-between rounded-xl border border-[#ff6868]/15 bg-[#ff6868]/5 px-4 py-3">

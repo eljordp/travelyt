@@ -21,7 +21,7 @@ export default function ClientCategories() {
     {
       title: "Frequent Flyers",
       description:
-        "You already know the airport routine. Travelyt takes the suitcase drag out of it, from pickup to airline handoff.",
+        "You already know the airport routine. Travelyt takes the suitcase drag out of it, from pickup to verified terminal return.",
       icon: (
         <Plane className="w-8 h-8" strokeWidth={1.5} />
       ),

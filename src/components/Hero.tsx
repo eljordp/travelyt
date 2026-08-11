@@ -73,7 +73,7 @@ export default function Hero() {
             <span className="text-cyan">You move freely.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-            We collect, seal, and transport bags for a carrier-authorized airport handoff. Service launches only where the airline procedure and custody coverage are confirmed.
+            We collect, seal, and transport bags, then return them to the verified traveler at the terminal for airline check-in. Carrier-authorized handoff is an optional airline-specific mode.
           </p>
           <p className="text-sm md:text-base text-cyan/90 italic mt-8 tracking-wide">
             Travel light, arrive smart.

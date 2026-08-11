@@ -17,7 +17,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Travelyt base pricing for departure pickup, arrival delivery, round-trip baggage handling, and distance-based route surcharges.",
+    "Travelyt base pricing for departure pickup, arrival delivery, and distance-based route surcharges.",
   alternates: {
     canonical: "/pricing",
   },
@@ -39,7 +39,7 @@ const plans = [
       "Doorstep bag collection",
       "Weigh, tag, and seal",
       "GPS custody checkpoints",
-      "Approved carrier handoff point",
+      "Verified traveler terminal handoff",
       "Coverage subject to bound policy",
       "Status updates; SMS/email where configured",
     ],
@@ -64,23 +64,6 @@ const plans = [
     href: "/quote?service=arrival",
     popular: false,
   },
-  {
-    name: "Both Ways",
-    price: SERVICE_PRICES_CENTS.both / 100,
-    unit: "per bag",
-    description: "Coordinated outbound and arrival handling where both service legs are available.",
-    features: [
-      "Everything in Departure",
-      "Everything in Arrival",
-      "Priority scheduling",
-      "Dedicated agent both ways",
-      "Save $9 per bag vs. booking separately",
-      "Best value for round trips",
-    ],
-    cta: "Book Both Ways",
-    href: "/quote?service=both",
-    popular: true,
-  },
 ];
 
 const addons = [
@@ -88,7 +71,7 @@ const addons = [
   { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
   { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
   { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
-  { name: "Controlled Handoff Target", detail: `Departure service targets carrier handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control` },
+  { name: "Controlled Handoff Target", detail: `Departure service targets terminal handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; standard service returns bags to the traveler, and airline- or station-specific earlier requirements always control` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
 ];
 

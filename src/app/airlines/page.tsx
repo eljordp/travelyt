@@ -46,7 +46,7 @@ const heroCallouts = [
   },
   {
     title: "A premium ancillary",
-    desc: "Door-to-gate baggage is a product your passengers pay for — without touching your fare structure.",
+    desc: "Door-to-carrier baggage custody can become a paid passenger product only under your approved station process — without touching your fare structure.",
     icon: <TrendingUp className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
@@ -114,7 +114,7 @@ const pillars = [
   {
     label: "Commercial",
     title: "A baggage product worth selling",
-    desc: "Door-to-gate handling is a premium service your passengers already want. It creates an ancillary line and a loyalty story without discounting a single fare.",
+    desc: "An airline-approved baggage custody service can create an ancillary line and a loyalty story without discounting a single fare.",
   },
   {
     label: "Operations",

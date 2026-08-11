@@ -60,7 +60,7 @@ export default function AppHome() {
         </Link>
 
         <BagStatus
-          current="checked_in"
+          current="traveler_handoff"
           bookingId="TVT-001"
           route="Home → LAX"
           compact
@@ -76,7 +76,7 @@ export default function AppHome() {
             </span>
             <p className="font-bold text-navy">Book pickup</p>
             <p className="mt-1 text-xs leading-relaxed text-navy/60">
-              Door to gate.
+              Door to terminal return.
             </p>
           </Link>
 

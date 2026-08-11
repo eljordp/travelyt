@@ -382,7 +382,7 @@ export default function BusinessCardVariantsPage() {
                     <span className="block w-1 h-1 rounded-full bg-[#ff6868]" />
                   </div>
                   <p className="text-[6pt] uppercase tracking-[0.2em] text-white/55 font-semibold">
-                    Door to gate
+                    Door to verified handoff
                   </p>
                 </div>
 

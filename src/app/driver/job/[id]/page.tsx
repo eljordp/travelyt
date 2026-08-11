@@ -31,6 +31,7 @@ import {
 } from "@/lib/bookings";
 import type { CustodyEventType } from "@/lib/custody";
 import { driverNameMatches } from "@/lib/drivers";
+import { carrierHandoffAuthorized } from "@/lib/handoff-policy";
 import { captureCurrentLocation, captureProofPhoto, compressProofPhoto, isNative } from "@/lib/native";
 
 const DRIVER_KEY = "travelyt:driver";
@@ -45,7 +46,7 @@ function custodyBlockers(booking: Booking) {
     blockers.push("Driver ID review is not complete.");
   }
   if (!booking.restrictedItemsAttestedAt) {
-    blockers.push("Manual ID/bag review is not complete.");
+    blockers.push("Identity and customer declaration review is not complete.");
   }
   return blockers;
 }
@@ -93,6 +94,7 @@ export default function DriverJobPage() {
   const [handoffRecipientRole, setHandoffRecipientRole] = useState("");
   const [handoffOrganization, setHandoffOrganization] = useState("");
   const [handoffReference, setHandoffReference] = useState("");
+  const [passengerIdentityMatched, setPassengerIdentityMatched] = useState(false);
   const [error, setError] = useState("");
   const [locationStatus, setLocationStatus] = useState<
     "idle" | "working" | "captured" | "denied" | "unavailable"
@@ -190,6 +192,7 @@ export default function DriverJobPage() {
     setHandoffRecipientRole("");
     setHandoffOrganization("");
     setHandoffReference("");
+    setPassengerIdentityMatched(false);
     setError("");
     setLocationStatus("idle");
     if (fileInput.current) fileInput.current.value = "";
@@ -246,7 +249,7 @@ export default function DriverJobPage() {
           action: "scan_booking",
           bookingId: booking.id,
           eventType,
-          actorRole: "driver",
+          actorRole: "agent",
           lat: location?.latitude ?? null,
           lng: location?.longitude ?? null,
         }),
@@ -327,11 +330,11 @@ export default function DriverJobPage() {
       pickedUpAt: new Date().toISOString(),
     }, `${driver} confirmed sealed pickup and started custody.`);
     if (!updated) {
-      setError(latestApiError("Pickup could not be confirmed. Travelyt may still need ID verification or restricted-item approval."));
+      setError(latestApiError("Pickup could not be confirmed. Travelyt may still need identity verification or the customer's prohibited-item declaration."));
       return;
     }
     setBooking(updated);
-    void logCustody("picked_up", location);
+    void logCustody("custody_accepted", location);
     clearPhoto();
   }
 
@@ -377,11 +380,54 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("security_handoff", location);
+    void logCustody("carrier_transfer", location);
     clearPhoto();
     if (updated?.status === "delivered") {
       setTimeout(() => router.push("/driver"), 800);
     }
+  }
+
+  async function markPassengerTerminalHandoff() {
+    if (!booking || !pendingPhoto) return;
+    const recipientName = handoffRecipientName.trim();
+    if (!recipientName || !passengerIdentityMatched) {
+      setError("Enter the receiving traveler name and confirm the approved identity match.");
+      return;
+    }
+    const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
+    const location = await captureLocation();
+    if (!location) return;
+    const proofSaved = await addProof(booking.id, {
+      kind: "customer_handoff",
+      dataUrl: pendingPhoto,
+      timestamp: new Date().toISOString(),
+      location,
+      sealId: latestSeal,
+      driverName: driver ?? undefined,
+      handoff: {
+        recipientName,
+        recipientRole: "Ticketed traveler",
+        organization: "Passenger-present terminal handoff",
+        badgeOrReference: "IDENTITY_MATCHED_NO_DOCUMENT_NUMBER_STORED",
+        verificationMethod: "manual",
+      },
+      note: photoNote || undefined,
+    });
+    if (!proofSaved) {
+      setError(latestApiError("Passenger terminal handoff proof could not be saved."));
+      return;
+    }
+    const updated = await updateBooking(booking.id, {
+      status: "delivery_pending",
+      deliveryPendingAt: new Date().toISOString(),
+    }, `${driver} returned the sealed bags to the verified ticketed traveler at the terminal.`);
+    if (!updated) {
+      setError(latestApiError("Passenger terminal handoff could not be confirmed. Customer seal approval may still be pending."));
+      return;
+    }
+    setBooking(updated);
+    void logCustody("traveler_return", location);
+    clearPhoto();
   }
 
   async function markAirportRelease() {
@@ -423,7 +469,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("picked_up", location);
+    void logCustody("custody_accepted", location);
     clearPhoto();
   }
 
@@ -454,7 +500,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("delivered", location);
+    void logCustody("recipient_confirmed", location);
     clearPhoto();
     setTimeout(() => router.push("/driver"), 800);
   }
@@ -469,6 +515,7 @@ export default function DriverJobPage() {
   const jobNotes = isPending ? undefined : booking.notes;
   const isDepartureService = booking.service !== "arrival";
   const isArrivalService = booking.service !== "departure";
+  const airlineHandoffAuthorized = carrierHandoffAuthorized(booking);
   const latestSealProof = [...booking.proofs]
     .reverse()
     .find((proof) => proof.kind === "seal");
@@ -489,11 +536,13 @@ export default function DriverJobPage() {
     booking.status === "arrived" && isMine && isDepartureService;
   const needsAirportRelease =
     booking.status === "arrived" && isMine && booking.service === "arrival";
-  const needsAirlineHandoff =
+  const needsDepartureHandoff =
     booking.status === "picked_up" &&
     isMine &&
     isDepartureService &&
     Boolean(latestSealProof?.approvedAt);
+  const needsAirlineHandoff = needsDepartureHandoff && airlineHandoffAuthorized;
+  const needsPassengerHandoff = needsDepartureHandoff && !airlineHandoffAuthorized;
   const needsDeliveryPhoto =
     booking.status === "in_transit" && isMine && isArrivalService;
   const showCamera =
@@ -501,6 +550,7 @@ export default function DriverJobPage() {
     (needsPickupPhoto ||
       needsAirportRelease ||
       needsAirlineHandoff ||
+      needsPassengerHandoff ||
       needsDeliveryPhoto);
   const proofActionTitle = needsPickupPhoto
     ? "Seal proof"
@@ -508,14 +558,18 @@ export default function DriverJobPage() {
       ? "Airport release proof"
       : needsAirlineHandoff
         ? "Airline handoff proof"
-        : "Delivery proof";
+        : needsPassengerHandoff
+          ? "Passenger terminal handoff proof"
+          : "Delivery proof";
   const proofActionBody = needsPickupPhoto
     ? "Attach the seal, enter the printed seal code, then capture a clear bag photo with GPS."
     : needsAirportRelease
       ? "Capture the bags at the airport release point and record who released them to Travelyt."
       : needsAirlineHandoff
-        ? "Capture the sealed bags at the airline handoff point and record who accepted them."
-        : "Capture the final delivery photo with the seals intact.";
+        ? "At the carrier-approved public handoff point, capture the sealed bags and record the named airline or authorized handler who accepted them. Travelyt does not screen, tag, or move bags into a secure area."
+        : needsPassengerHandoff
+          ? "Return the sealed bags to the verified ticketed traveler at the terminal. The traveler remains responsible for airline check-in and bag acceptance."
+          : "Capture the final delivery photo with the seals intact.";
   const currentStep = (() => {
     if (isPending) {
       return {
@@ -548,8 +602,8 @@ export default function DriverJobPage() {
       return {
         key: "custody",
         eyebrow: "Ops review needed",
-        title: "Manual ID/bag review is not complete",
-        body: "Ask admin to clear custody readiness before pickup or airport release.",
+        title: "Identity and declaration review is not complete",
+        body: "Ask operations to confirm identity and the customer's prohibited-item declaration before pickup or airport release. Travelyt does not screen bags.",
         tone: "blocked" as const,
       };
     }
@@ -582,7 +636,7 @@ export default function DriverJobPage() {
     }
     if (showCamera) {
       return {
-        key: needsAirlineHandoff
+        key: needsAirlineHandoff || needsPassengerHandoff
           ? "handoff"
           : needsDeliveryPhoto
             ? "delivery"
@@ -598,7 +652,9 @@ export default function DriverJobPage() {
         key: "seal_approval",
         eyebrow: "Waiting",
         title: "Customer seal approval",
-        body: "The seal photo is on file. Customer approval is required before airline handoff.",
+        body: airlineHandoffAuthorized
+          ? "The seal photo is on file. Customer approval is required before the authorized airline handoff."
+          : "The seal photo is on file. Customer approval is required before returning the bags to the traveler at the terminal.",
         tone: "waiting" as const,
       };
     }
@@ -607,7 +663,9 @@ export default function DriverJobPage() {
         key: "customer_confirm",
         eyebrow: "Waiting",
         title: "Customer confirmation",
-        body: "Delivery proof is on file. The customer must confirm receipt from their tracking page.",
+        body: booking.service === "departure"
+          ? "Passenger terminal handoff proof is on file. The traveler must confirm receipt from their tracking page."
+          : "Delivery proof is on file. The customer must confirm receipt from their tracking page.",
         tone: "waiting" as const,
       };
     }
@@ -745,7 +803,9 @@ export default function DriverJobPage() {
 
           {sealApprovalRequired && (
             <StatusNotice tone="waiting">
-              The customer must approve the seal proof before airline handoff.
+              {airlineHandoffAuthorized
+                ? "The customer must approve the seal proof before the authorized airline handoff."
+                : "The customer must approve the seal proof before passenger-present terminal return."}
             </StatusNotice>
           )}
         </section>
@@ -789,55 +849,57 @@ export default function DriverJobPage() {
                 </p>
               </div>
             )}
-            {(needsAirlineHandoff || needsAirportRelease) && (
+            {(needsAirlineHandoff || needsPassengerHandoff || needsAirportRelease) && (
               <div className="mb-4 space-y-4">
                 <div className="rounded-xl border border-[#ff6868]/15 bg-[#ff6868]/5 p-4 text-xs leading-relaxed text-navy/70">
                   {needsAirportRelease
                     ? "Confirm the airport or airline employee identity before accepting custody."
-                    : "Confirm the receiving employee identity before handoff."}{" "}
-                  Record their name, airline/company, and badge or accepted
-                  reference. Do not photograph private ID documents unless the
-                  airline or airport explicitly permits it.
+                    : needsPassengerHandoff
+                      ? "Match the receiving ticketed traveler to the approved account identity before returning the bags."
+                      : "Confirm that the receiving employee is the named airline or authorized ground-handler recipient for this station before handoff."}{" "}
+                  {needsPassengerHandoff
+                    ? "Record the traveler name only. Do not store or photograph an ID number."
+                    : "Record their name, carrier/handler organization, role, and acceptance reference. Do not photograph private ID documents or enter a secure/badged area."}
                 </div>
                 <div>
                   <label htmlFor="handoff-recipient" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
-                    Receiving employee name
+                    {needsPassengerHandoff ? "Receiving traveler name" : "Receiving employee name"}
                   </label>
                   <input
                     id="handoff-recipient"
                     value={handoffRecipientName}
                     onChange={(event) => setHandoffRecipientName(event.target.value)}
-                    placeholder="Name on badge"
+                    placeholder={needsPassengerHandoff ? "Name matched to traveler account" : "Name on badge"}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                {!needsPassengerHandoff && <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label htmlFor="handoff-organization" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
-                      Airline / company
+                      Carrier / authorized handler
                     </label>
                     <input
                       id="handoff-organization"
                       value={handoffOrganization}
                       onChange={(event) => setHandoffOrganization(event.target.value)}
-                      placeholder="United Airlines"
+                      placeholder="Airline or contracted ground handler"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                     />
                   </div>
                   <div>
                     <label htmlFor="handoff-reference" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
-                      Badge / reference
+                      Acceptance reference
                     </label>
                     <input
                       id="handoff-reference"
                       value={handoffReference}
                       onChange={(event) => setHandoffReference(event.target.value)}
-                      placeholder="Badge, desk, or bag acceptance ref"
+                      placeholder="Station, desk, receipt, or acceptance ref"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                     />
                   </div>
-                </div>
-                <div>
+                </div>}
+                {!needsPassengerHandoff && <div>
                   <label htmlFor="handoff-role" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
                     Role / counter <span className="font-normal normal-case text-navy/60">(optional)</span>
                   </label>
@@ -845,10 +907,21 @@ export default function DriverJobPage() {
                     id="handoff-role"
                     value={handoffRecipientRole}
                     onChange={(event) => setHandoffRecipientRole(event.target.value)}
-                    placeholder="Baggage services supervisor"
+                    placeholder="Ticket-counter or baggage-services agent"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
                   />
-                </div>
+                </div>}
+                {needsPassengerHandoff && (
+                  <label className="flex items-start gap-3 rounded-xl border border-navy/10 bg-white p-4 text-sm leading-relaxed text-navy/70">
+                    <input
+                      type="checkbox"
+                      checked={passengerIdentityMatched}
+                      onChange={(event) => setPassengerIdentityMatched(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                    />
+                    <span>I matched the receiving traveler to the approved identity record. No document number or ID photo was stored.</span>
+                  </label>
+                )}
               </div>
             )}
             {error && (
@@ -915,9 +988,11 @@ export default function DriverJobPage() {
                         ? markPickedUp
                         : needsAirportRelease
                           ? markAirportRelease
-                        : needsAirlineHandoff
-                          ? markAirlineHandoff
-                          : markDelivered
+                          : needsAirlineHandoff
+                            ? markAirlineHandoff
+                            : needsPassengerHandoff
+                              ? markPassengerTerminalHandoff
+                              : markDelivered
                     }
                     disabled={locationStatus === "working"}
                     className="flex-[2] rounded-xl bg-[#ff6868] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
@@ -928,9 +1003,11 @@ export default function DriverJobPage() {
                         ? "Confirm seal + pickup"
                         : needsAirportRelease
                           ? "Confirm airport release"
-                        : needsAirlineHandoff
-                          ? "Confirm airline handoff"
-                          : "Confirm delivery"}
+                          : needsAirlineHandoff
+                            ? "Confirm authorized acceptance"
+                            : needsPassengerHandoff
+                              ? "Confirm passenger handoff"
+                              : "Confirm delivery"}
                   </button>
                 </div>
                 {locationStatus === "captured" && (
@@ -1117,8 +1194,16 @@ function getWorkflowSteps({
   if (isDepartureService) {
     steps.push(
       { id: "seal_approval", label: "Seal approval" },
-      { id: "handoff", label: "Airline handoff" }
+      {
+        id: "handoff",
+        label: carrierHandoffAuthorized(booking)
+          ? "Airline handoff"
+          : "Passenger handoff",
+      }
     );
+    if (booking.service === "departure" && !carrierHandoffAuthorized(booking)) {
+      steps.push({ id: "customer_confirm", label: "Traveler confirms" });
+    }
   }
   if (isArrivalService) {
     steps.push(
@@ -1326,6 +1411,7 @@ function StatusNotice({
 function proofTitle(kind: Booking["proofs"][number]["kind"]) {
   if (kind === "seal") return "Seal proof";
   if (kind === "pickup") return "Pickup";
+  if (kind === "customer_handoff") return "Passenger terminal handoff";
   if (kind === "airline_handoff") return "Airline handoff";
   return "Delivery";
 }

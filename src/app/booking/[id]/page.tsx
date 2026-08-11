@@ -397,11 +397,12 @@ export default function BookingPage() {
         {booking.status === "delivery_pending" && (
           <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
             <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-4">
-              Confirm delivery
+              {booking.service === "departure" ? "Confirm terminal handoff" : "Confirm delivery"}
             </h2>
             <div className="rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm leading-relaxed text-orange-900">
-              Driver delivery proof is on file. Confirm only after the bag is
-              physically received and matches the proof.
+              {booking.service === "departure"
+                ? "The driver recorded passenger-present terminal handoff. Confirm only after you physically receive the sealed bags. You remain responsible for airline check-in and bag acceptance."
+                : "Driver delivery proof is on file. Confirm only after the bag is physically received and matches the proof."}
             </div>
             {booking.deliveryConfirmationCode && (
               <div className="mt-4 rounded-xl border border-navy/10 bg-navy/5 px-4 py-3">
@@ -447,7 +448,11 @@ export default function BookingPage() {
               disabled={confirmingDelivery}
               className="mt-4 w-full rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
             >
-              {confirmingDelivery ? "Confirming..." : "Confirm and close booking"}
+              {confirmingDelivery
+                ? "Confirming..."
+                : booking.service === "departure"
+                  ? "Confirm terminal receipt and close"
+                  : "Confirm and close booking"}
             </button>
           </div>
         )}
@@ -533,6 +538,7 @@ export default function BookingPage() {
 function proofTitle(kind: Booking["proofs"][number]["kind"]) {
   if (kind === "seal") return "Seal applied";
   if (kind === "pickup") return "Picked up";
+  if (kind === "customer_handoff") return "Returned to traveler at terminal";
   if (kind === "airline_handoff") return "Airline handoff";
   return "Delivered";
 }

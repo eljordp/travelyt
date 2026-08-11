@@ -63,6 +63,7 @@ export interface BookingLocationEvent {
     | "driver_arrived"
     | "seal_proof"
     | "airport_release"
+    | "customer_handoff"
     | "airline_handoff"
     | "delivery_proof";
   label: string;
@@ -99,7 +100,7 @@ export interface BookingAuditEntry {
 }
 
 export interface PhotoProof {
-  kind: "seal" | "pickup" | "airline_handoff" | "delivery";
+  kind: "seal" | "pickup" | "customer_handoff" | "airline_handoff" | "delivery";
   dataUrl: string;
   storagePath?: string;
   contentType?: string;
@@ -649,6 +650,7 @@ const LOCATION_EVENT_LABELS: Record<BookingLocationEvent["kind"], string> = {
   driver_arrived: "Driver arrived",
   seal_proof: "Seal proof captured",
   airport_release: "Airport release captured",
+  customer_handoff: "Passenger terminal handoff captured",
   airline_handoff: "Airline handoff captured",
   delivery_proof: "Delivery proof captured",
 };
@@ -735,7 +737,11 @@ export function getBookingStatusLabel(
 ): string {
   if (booking.status === "cancelled") return "Cancelled";
   if (booking.status === "issue") return "Failed / Issue";
-  if (booking.status === "delivery_pending") return "Delivery Pending Confirmation";
+  if (booking.status === "delivery_pending") {
+    return booking.service === "departure"
+      ? "Passenger Handoff Awaiting Confirmation"
+      : "Delivery Pending Confirmation";
+  }
   if (booking.status === "closed") return "Closed";
 
   if (booking.service === "departure") {

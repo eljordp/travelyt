@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Home, PlaneLanding, Repeat2, Tag, X } from "lucide-react";
+import { Check, Home, PlaneLanding, Tag, X } from "lucide-react";
 import {
   calcPriceCents,
   calcPriceBreakdown,
@@ -163,7 +163,7 @@ export default function QuotePage() {
         const [year, month, day] = date.split("-");
         setDateParts({ month, day, year });
       }
-      if (service === "departure" || service === "arrival" || service === "both") {
+      if (service === "departure" || service === "arrival") {
         nextForm.service = service;
         setStep(1);
       }
@@ -557,7 +557,7 @@ export default function QuotePage() {
         <div>
           <h1 className="text-2xl font-bold text-navy">Book your handoff</h1>
           <p className="mt-1 text-sm text-navy/65">
-            Door pickup, arrival delivery, or both.
+            Choose one custody leg at a time so each handoff has its own proof chain.
           </p>
         </div>
 
@@ -620,9 +620,8 @@ export default function QuotePage() {
                   <p className="text-navy/70 text-sm mb-6">Select the baggage service that fits your trip.</p>
                   <div className="grid grid-cols-1 gap-4">
                     {[
-                      { value: "departure", icon: <Home className="h-5 w-5" strokeWidth={1.8} />, title: "Departure Pickup", desc: "Door pickup, airport handoff." },
+                      { value: "departure", icon: <Home className="h-5 w-5" strokeWidth={1.8} />, title: "Departure Pickup", desc: "Door pickup; sealed bags returned to you at the terminal." },
                       { value: "arrival", icon: <PlaneLanding className="h-5 w-5" strokeWidth={1.8} />, title: "Arrival Delivery", desc: "Post-flight bag delivery." },
-                      { value: "both", icon: <Repeat2 className="h-5 w-5" strokeWidth={1.8} />, title: "Both Ways", desc: "Round-trip bag handling." },
                     ].map((opt) => (
                       <button key={opt.value} type="button"
                         onClick={() => set("service", opt.value)}
@@ -654,7 +653,7 @@ export default function QuotePage() {
                     ))}
                   </div>
                   <p className="mt-4 rounded-xl border border-navy/10 bg-[#f6f7fb] px-4 py-3 text-xs leading-relaxed text-navy/65">
-                    Arrival and round-trip requests are availability-only in confirmed launch markets. The proposed Royal Jordanian ORD pilot covers departure pickup through carrier handoff only.
+                    Standard departure service returns sealed bags to the ticketed traveler at the terminal; the traveler completes airline check-in. Passenger-absent airline tender is available only where a carrier and station explicitly authorize it. Book departure and arrival as separate custody legs.
                   </p>
                   {errors.service && <p className="text-xs text-red-500 mt-3">{errors.service}</p>}
                 </div>
@@ -1001,7 +1000,7 @@ export default function QuotePage() {
                     {form.service !== "arrival" && (
                       <Row
                         label="Travelyt Handoff Target"
-                        value="Carrier handoff targeted at least 3 hours before departure"
+                        value="Public-terminal handoff targeted at least 3 hours before departure"
                       />
                     )}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
@@ -1160,6 +1159,13 @@ export default function QuotePage() {
                     eligible Travelyt service fees after automatic bag discounts.
                   </p>
 
+                  {form.service !== "arrival" && (
+                    <div className="mt-4 rounded-xl border border-navy/10 bg-[#f6f7fb] p-4 text-sm leading-relaxed text-navy/70">
+                      <span className="font-bold text-navy">Screening is never a Travelyt checkpoint.</span>{" "}
+                      Travelyt does not x-ray, clear, open for screening, issue an airline bag tag, or enter a secure/badged area. Standard service returns the sealed bags to the verified traveler in the public ticketing area. Passenger-absent acceptance requires a named airline or authorized handler and written station approval.
+                    </div>
+                  )}
+
                   <label
                     className={`mt-4 flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed ${
                       errors.restrictedItemsAttested
@@ -1178,8 +1184,9 @@ export default function QuotePage() {
                     <span>
                       I confirm these bags do not contain prohibited,
                       illegal, hazardous, or undeclared high-value items, and I
-                      understand Travelyt may pause custody if the contents or
-                      identity checks cannot be verified.{" "}
+                      understand Travelyt may pause custody if this declaration,
+                      the identity match, or the seal condition cannot be verified.
+                      Travelyt does not screen or clear baggage.{" "}
                       <Link
                         href="/prohibited-items"
                         className="font-semibold text-[#ff6868] underline underline-offset-2"

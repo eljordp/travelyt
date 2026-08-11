@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Travelyt terms covering baggage pickup, airport handoff, delivery, restricted items, pricing, insurance, and customer responsibilities.",
+    "Travelyt terms covering baggage pickup, passenger terminal handoff, authorized carrier handoff, delivery, pricing, insurance, and customer responsibilities.",
   alternates: {
     canonical: "/terms",
   },
@@ -14,11 +14,11 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: "What Travelyt does",
-    body: "Travelyt provides quote requests and launch-market coordination for baggage logistics services including doorstep pickup, weighing, sealing, tracking, airport curbside or designated-area handoff, and arrival delivery where available.",
+    body: "Travelyt provides quote requests and launch-market coordination for baggage logistics services including doorstep pickup, weighing, sealing, tracking, passenger-present terminal handoff, and arrival delivery where available. In the standard departure service, Travelyt returns the sealed bags to the verified ticketed traveler at the terminal.",
   },
   {
     title: "What Travelyt does not do",
-    body: "Travelyt is not an airline and does not check bags at the airline counter on behalf of a ticketed passenger. Airline baggage fees, counter acceptance, and airline baggage rules remain separate from Travelyt service fees.",
+    body: "Travelyt is not an airline, TSA screening provider, or substitute for passenger check-in. Travelyt does not x-ray, clear, open a bag for screening, issue an airline baggage tag, or move a bag into a secure or badge-controlled area. The traveler remains responsible for airline check-in, document checks, baggage declarations, fees, and airline acceptance. Travelyt will tender a bag without the passenger present only when the carrier and station have explicitly authorized the receiving role, public handoff location, timing, carrier screening and tagging process, exceptions, and systems process for that service.",
   },
   {
     title: "Customer responsibilities",
@@ -26,15 +26,19 @@ const sections = [
   },
   {
     title: "Identity verification",
-    body: "Travelyt may require customers, drivers, employees, or handlers to verify identity using a driver's license, passport, employee credential, selfie, liveness video, or similar check before a live custody event. Refusal or failed verification may delay, modify, or cancel service.",
+    body: "Travelyt may require customers, travelers, drivers, employees, or handlers to complete an approved identity check before a live custody event. The available method may be manual during controlled launch operations or may use a configured identity provider. Refusal, mismatch, incomplete adult-traveler consent, or failed verification may delay, modify, or cancel service.",
   },
   {
     title: "Chain of custody",
-    body: "Travelyt custody records may include verified account identity, driver or handler identity, GPS checkpoints, tamper-evident seal IDs, bag photos, customer approvals, and airline or airport receiving-party details. A bag handoff is not considered complete until Travelyt records the required proof for that stage, including airline or airport acceptance when applicable.",
+    body: "Travelyt custody records may include verified account identity, driver or handler identity, GPS checkpoints, tamper-evident seal IDs, bag photos, customer approvals, passenger receipt, and authorized airline or airport receiving-party details when applicable. A handoff is not complete until the required proof for that operating mode is recorded. Carrier acceptance, screening, and baggage control remain with the carrier and TSA-controlled process.",
   },
   {
     title: "Restricted items",
-    body: "Travelyt follows the same restricted-item baseline used across the luggage shipping industry (Luggage Forward, Send My Bag, My Baggage). Do not pack: firearms, explosives, ammunition, flammable liquids, aerosols and pressurized containers (deodorant, hairspray, spray paint), loose batteries and power banks, perishable food (produce, dairy, meat, fish, nuts, seeds), cash, money orders, irreplaceable documents, medications, tobacco, alcohol, jewelry, precious metals, artwork, musical instruments, or fragile valuables. Lithium batteries are accepted only when installed in a working device and limited to one such device per shipment, consistent with unaccompanied baggage air security regulations. Items shipped against this list move at the customer's own risk and are excluded from coverage.",
+    body: "Customers must follow the current TSA, PHMSA, airline, airport, and destination rules that apply to their trip. Travelyt may use a stricter controlled-custody exclusion list and may refuse a bag that contains, appears to contain, or is declared to contain prohibited, hazardous, illegal, perishable, fragile, irreplaceable, or inadequately documented items. Customer acceptance does not override a carrier or government restriction.",
+  },
+  {
+    title: "Operating authorization",
+    body: "Travelyt will not open a live service lane until the operating model, required state or federal carrier authority, commercial vehicle and airport access rules, insurance filings, driver classification and screening, and local permits have been reviewed for that lane. A carrier partnership does not replace those requirements, and the absence of a carrier integration does not authorize passenger-absent airline tender.",
   },
   {
     title: "Coverage and claims",
