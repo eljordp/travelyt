@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray, passengerDisplayName } from "@/lib/passengers";
+import { trustedUserRole } from "@/lib/auth-policy";
 
-const roles = ["customer", "driver", "employee", "admin"] as const;
 const documentTypes = ["driver_license", "passport", "employee_badge", "other"] as const;
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -98,7 +98,6 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json().catch(() => ({}))) as {
-      role?: string;
       documentType?: string;
       bookingId?: string;
       passengerId?: string;
@@ -189,13 +188,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, status: "invite_sent", expiresAt });
     }
     const metadata = user.user_metadata ?? {};
-    const roleSource =
-      body.role ||
-      (typeof metadata.role === "string" ? metadata.role : undefined) ||
-      "customer";
-    const role = roles.includes(roleSource as (typeof roles)[number])
-      ? roleSource
-      : "customer";
+    const trustedRole = trustedUserRole(user);
+    const role =
+      trustedRole === "manager"
+        ? "admin"
+        : trustedRole === "dispatcher"
+          ? "employee"
+          : trustedRole;
     const documentType = documentTypes.includes(
       body.documentType as (typeof documentTypes)[number]
     )

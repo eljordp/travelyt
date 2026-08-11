@@ -1,6 +1,38 @@
-export type UserRole = "customer" | "driver" | "employee" | "admin";
+import type { User } from "@supabase/supabase-js";
 
-export const PRIVILEGED_ROLES: UserRole[] = ["driver", "employee", "admin"];
+export type UserRole =
+  | "customer"
+  | "driver"
+  | "employee"
+  | "dispatcher"
+  | "manager"
+  | "admin";
+
+export const PRIVILEGED_ROLES: UserRole[] = [
+  "driver",
+  "employee",
+  "dispatcher",
+  "manager",
+  "admin",
+];
+
+const USER_ROLES: UserRole[] = ["customer", ...PRIVILEGED_ROLES];
+
+/**
+ * Authorization roles must come from app_metadata. A signed-in user can edit
+ * user_metadata, so it is never a safe source for privileges or MFA policy.
+ */
+export function trustedUserRole(
+  user: Pick<User, "app_metadata"> | null | undefined,
+): UserRole {
+  const candidate =
+    typeof user?.app_metadata?.role === "string"
+      ? user.app_metadata.role.trim().toLowerCase()
+      : "";
+  return USER_ROLES.includes(candidate as UserRole)
+    ? (candidate as UserRole)
+    : "customer";
+}
 
 export function normalizePhone(input: string): string {
   return input.trim().replace(/[^\d+]/g, "");

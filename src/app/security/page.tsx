@@ -19,6 +19,7 @@ import {
   normalizePhone,
   roleRequiresMfa,
   safeAuthNext,
+  trustedUserRole,
   validatePhone,
 } from "@/lib/auth-policy";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
@@ -141,10 +142,7 @@ export default function SecurityPage() {
   );
   const emailVerified = Boolean(user?.email_confirmed_at);
   const phoneVerified = Boolean(user?.phone && user.phone_confirmed_at);
-  const role =
-    typeof user?.user_metadata?.role === "string"
-      ? user.user_metadata.role
-      : null;
+  const role = trustedUserRole(user);
   const mfaRequired = roleRequiresMfa(role);
 
   function resetMessages() {

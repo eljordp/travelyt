@@ -235,7 +235,6 @@ export default function ProfilePage() {
       data: {
         full_name: name,
         phone: phone ? normalizePhone(phone) : "",
-        role: (user.user_metadata?.role as string | undefined) ?? "customer",
         address,
       },
     });
@@ -326,7 +325,6 @@ export default function ProfilePage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        role: (user?.user_metadata?.role as string | undefined) ?? "customer",
         documentType: "driver_license",
       }),
     });

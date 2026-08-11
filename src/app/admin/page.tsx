@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import AppChrome from "@/components/AppChrome";
 import type { AdminRole } from "@/lib/admin-auth";
+import { roleRequiresMfa, trustedUserRole } from "@/lib/auth-policy";
+import { getSupabaseBrowser } from "@/lib/supabase-client";
 import { DRIVER_OPTIONS } from "@/lib/drivers";
 import {
   formatPrice,
@@ -453,6 +455,34 @@ export default function AdminPage() {
           await loadDriverCodes();
           await loadApplications();
           if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
+          return;
+        }
+
+        const supabase = getSupabaseBrowser();
+        const accessToken = supabase
+          ? (await supabase.auth.getSession()).data.session?.access_token
+          : null;
+        if (!cancelled && accessToken) {
+          const exchange = await fetch("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ accessToken }),
+          });
+          const exchanged = (await exchange.json()) as {
+            ok?: boolean;
+            email?: string;
+            role?: AdminRole;
+          };
+          if (exchange.ok && exchanged.ok && exchanged.email) {
+            setAdminEmail(exchanged.email);
+            setAdminRole(exchanged.role ?? "admin");
+            await loadBookings();
+            await loadExceptions();
+            await loadDriverCodes();
+            await loadApplications();
+            if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -714,13 +744,50 @@ export default function AdminPage() {
     setError("");
 
     try {
+      const supabase = getSupabaseBrowser();
+      if (!supabase) throw new Error("Account sign-in is not configured.");
+
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+      if (signInError || !signInData.user) {
+        throw new Error(signInError?.message || "Could not sign in.");
+      }
+
+      const role = trustedUserRole(signInData.user);
+      if (!roleRequiresMfa(role)) {
+        await supabase.auth.signOut({ scope: "local" });
+        throw new Error("This account is not authorized for Travelyt operations.");
+      }
+
+      const [assuranceResult, factorResult] = await Promise.all([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        supabase.auth.mfa.listFactors(),
+      ]);
+      if (assuranceResult.error || factorResult.error) {
+        throw new Error("Could not verify account security. Try again.");
+      }
+      const hasVerifiedTotp = Boolean(factorResult.data?.totp?.length);
+      if (!hasVerifiedTotp) {
+        window.location.href = "/security?required=1&next=%2Fadmin";
+        return;
+      }
+      if (assuranceResult.data?.currentLevel !== "aal2") {
+        window.location.href = "/mfa?next=%2Fadmin";
+        return;
+      }
+
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.access_token) throw new Error("Verified session is missing.");
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "same-origin",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ accessToken: session.access_token }),
       });
       const data = (await response.json()) as {
         ok?: boolean;
@@ -733,7 +800,7 @@ export default function AdminPage() {
         throw new Error(data.error || "Could not sign in.");
       }
 
-      setAdminEmail(data.email || email.trim().toLowerCase());
+      setAdminEmail(data.email || signInData.user.email || "");
       setAdminRole(data.role ?? "admin");
       setPassword("");
       await loadBookings();
@@ -1056,7 +1123,7 @@ export default function AdminPage() {
               </span>
               <div>
                 <h2 className="font-bold text-navy">Access required</h2>
-                <p className="text-xs text-navy/55">Use your admin email and password.</p>
+                <p className="text-xs text-navy/55">Use an authorized account and authenticator.</p>
               </div>
             </div>
 

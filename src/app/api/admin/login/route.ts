@@ -3,7 +3,8 @@ import {
   adminAuthConfigured,
   createAdminSession,
   setAdminSessionCookie,
-  verifyAdminCredentialsWithSupabase,
+  verifyAdminAccessToken,
+  verifyAdminCredentials,
 } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -21,16 +22,44 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as {
+      accessToken?: string;
       email?: string;
       password?: string;
     };
+    const accessToken = body.accessToken?.trim() ?? "";
     const email = body.email ?? "";
     const password = body.password ?? "";
 
-    const role = await verifyAdminCredentialsWithSupabase(email, password);
+    if (accessToken) {
+      const verified = await verifyAdminAccessToken(accessToken);
+      if (!verified) {
+        return bad(
+          "Complete two-factor verification with an authorized operations account.",
+          401,
+        );
+      }
+      const response = NextResponse.json({ ok: true, ...verified });
+      setAdminSessionCookie(
+        response,
+        createAdminSession(verified.email, verified.role),
+      );
+      return response;
+    }
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.TRAVELYT_ADMIN_BREAK_GLASS_ENABLED !== "true"
+    ) {
+      return bad(
+        "Use the verified Travelyt account sign-in and authenticator.",
+        401,
+      );
+    }
+
+    const role = verifyAdminCredentials(email, password);
     if (!role) {
       return bad(
-        "Email/password is incorrect, or this account is not marked as manager/admin/employee/dispatcher.",
+        "Email/password is incorrect.",
         401
       );
     }

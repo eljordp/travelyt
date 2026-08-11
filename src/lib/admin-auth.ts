@@ -79,13 +79,52 @@ function roleFromSupabaseUser(user: User): AdminRole | false {
   const metadataRole =
     typeof user.app_metadata?.role === "string"
       ? user.app_metadata.role
-      : typeof user.user_metadata?.role === "string"
-        ? user.user_metadata.role
-        : "";
+      : "";
   const role = metadataRole.trim().toLowerCase();
   if (role === "admin" || role === "manager") return "admin";
   if (role === "dispatcher" || role === "employee") return "dispatcher";
   return false;
+}
+
+function accessTokenAssuranceLevel(accessToken: string) {
+  try {
+    const [, payload] = accessToken.split(".");
+    if (!payload) return "";
+    const claims = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as { aal?: unknown };
+    return typeof claims.aal === "string" ? claims.aal : "";
+  } catch {
+    return "";
+  }
+}
+
+export async function verifyAdminAccessToken(accessToken: string): Promise<
+  | {
+      email: string;
+      role: AdminRole;
+    }
+  | false
+> {
+  if (!supabaseAuthConfigured() || accessTokenAssuranceLevel(accessToken) !== "aal2") {
+    return false;
+  }
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  const email = data.user?.email?.trim().toLowerCase();
+  const role = data.user ? roleFromSupabaseUser(data.user) : false;
+  if (error || !email || !role) return false;
+  return { email, role };
 }
 
 export function verifyAdminCredentials(email: string, password: string) {

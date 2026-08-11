@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   roleRequiresMfa,
   safeAuthNext,
+  trustedUserRole,
 } from "@/lib/auth-policy";
 import { SITE_URL } from "@/lib/site";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
@@ -84,8 +85,8 @@ export default function LoginPage() {
       return;
     }
 
-    const role = data.user?.user_metadata?.role;
-    if (roleRequiresMfa(typeof role === "string" ? role : null) && !hasVerifiedTotp) {
+    const role = trustedUserRole(data.user);
+    if (roleRequiresMfa(role) && !hasVerifiedTotp) {
       window.location.href = `/security?required=1&next=${encodeURIComponent(destination)}`;
       return;
     }
