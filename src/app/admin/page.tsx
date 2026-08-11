@@ -1506,14 +1506,14 @@ export default function AdminPage() {
 
               <div className="overflow-hidden rounded-xl border border-navy/10">
                 <div className="border-b border-navy/10 bg-navy/[0.02] px-3 py-2 text-xs font-bold uppercase tracking-wider text-navy/55">
-                  Authentication activity ({authEvents.length})
+                  Successful sign-ins ({authEvents.length})
                 </div>
                 <div className="max-h-[430px] divide-y divide-navy/10 overflow-y-auto">
                   {authEvents.length === 0 ? (
                     <p className="p-4 text-sm text-navy/55">
                       {accountActivityMigrationRequired
-                        ? "Migration 027 is required for the login history."
-                        : "No authentication events found."}
+                        ? "Migration 028 is required for successful sign-in history."
+                        : "No successful sign-ins recorded yet."}
                     </p>
                   ) : (
                     authEvents.map((event) => (

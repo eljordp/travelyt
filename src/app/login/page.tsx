@@ -76,6 +76,17 @@ export default function LoginPage() {
     const assurance = assuranceResult.data;
     const factorData = factorResult.data;
     const hasVerifiedTotp = Boolean(factorData?.totp?.length);
+    const role = trustedUserRole(data.user);
+
+    if (role === "customer" && data.session?.access_token) {
+      await fetch("/api/auth/activity", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+        credentials: "same-origin",
+      });
+    }
 
     if (
       hasVerifiedTotp &&
@@ -85,7 +96,6 @@ export default function LoginPage() {
       return;
     }
 
-    const role = trustedUserRole(data.user);
     if (roleRequiresMfa(role) && !hasVerifiedTotp) {
       window.location.href = `/security?required=1&next=${encodeURIComponent(destination)}`;
       return;

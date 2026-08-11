@@ -101,6 +101,7 @@ function accessTokenAssuranceLevel(accessToken: string) {
 
 export async function verifyAdminAccessToken(accessToken: string): Promise<
   | {
+      userId: string;
       email: string;
       role: AdminRole;
     }
@@ -124,7 +125,7 @@ export async function verifyAdminAccessToken(accessToken: string): Promise<
   const email = data.user?.email?.trim().toLowerCase();
   const role = data.user ? roleFromSupabaseUser(data.user) : false;
   if (error || !email || !role) return false;
-  return { email, role };
+  return { userId: data.user!.id, email, role };
 }
 
 export function verifyAdminCredentials(email: string, password: string) {

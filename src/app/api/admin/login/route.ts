@@ -6,6 +6,7 @@ import {
   verifyAdminAccessToken,
   verifyAdminCredentials,
 } from "@/lib/admin-auth";
+import { recordAuthActivity } from "@/lib/auth-activity";
 import { rateLimit } from "@/lib/rate-limit";
 
 function bad(error: string, status = 400) {
@@ -38,7 +39,18 @@ export async function POST(request: Request) {
           401,
         );
       }
-      const response = NextResponse.json({ ok: true, ...verified });
+      await recordAuthActivity({
+        userId: verified.userId,
+        email: verified.email,
+        eventType: "admin_login",
+        authLevel: "aal2",
+        role: verified.role,
+      });
+      const response = NextResponse.json({
+        ok: true,
+        email: verified.email,
+        role: verified.role,
+      });
       setAdminSessionCookie(
         response,
         createAdminSession(verified.email, verified.role),
