@@ -1,3 +1,8 @@
+import {
+  CARRIER_AUTHORIZED_DEPARTURE_SEQUENCE,
+  PASSENGER_PRESENT_DEPARTURE_SEQUENCE,
+} from "./custody-controls.ts";
+
 export type DepartureHandoffMode =
   | "passenger_present"
   | "carrier_authorized";
@@ -29,4 +34,10 @@ export function departureHandoffMode(
 
 export function carrierHandoffAuthorized(booking: HandoffBooking) {
   return departureHandoffMode(booking) === "carrier_authorized";
+}
+
+export function departureCustodySequence(booking: HandoffBooking) {
+  return carrierHandoffAuthorized(booking)
+    ? CARRIER_AUTHORIZED_DEPARTURE_SEQUENCE
+    : PASSENGER_PRESENT_DEPARTURE_SEQUENCE;
 }

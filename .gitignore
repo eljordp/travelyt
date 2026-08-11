@@ -45,8 +45,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# internal docs — pitches, LOIs, attorney briefs, etc. Repo is public.
+# Internal pitches, LOIs, attorney briefs, and restricted operating material do
+# not belong in this public repo. The custody folder is deliberately limited to
+# sanitized, public-source product controls and an inactive applicability annex.
 docs/
+!docs/
+docs/*
+!docs/custody/
+!docs/custody/*.md
 
 # emergency ops exports contain live customer/job PII
 ops-backups/

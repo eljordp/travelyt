@@ -185,6 +185,16 @@ proof capture, GPS checkpoint capture, and push permission timing.
 
 ## Current Product Notes
 
+The carrier-neutral concierge custody controls are documented in
+`docs/custody/travelyt-concierge-control-spec.md`. The optional IAC lane is an
+inactive reference-only annex at `docs/custody/iac-applicability-annex.md`; it
+has no runtime activation path and does not claim passenger-baggage, TSA,
+airline, airport, or IAC authorization.
+
+Run `npm run simulate:concierge-controls` to verify the control categories,
+passenger-present default, authorization-gated carrier transfer, and inactive
+IAC boundary.
+
 - Booking data is backend-backed when Supabase is configured, with local browser
   storage as a development fallback.
 - Native push tokens are persisted in Supabase and booking updates are queued in
