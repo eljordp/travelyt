@@ -7,6 +7,7 @@ supabase
 docs
 .next
 coverage
+scripts/backup
 *.xcarchive
 *.ipa
 *.dSYM
