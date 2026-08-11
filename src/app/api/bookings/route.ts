@@ -28,7 +28,10 @@ import {
 } from "@/lib/promos";
 import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
-import { normalizeBookingPassengers } from "@/lib/passengers";
+import {
+  normalizeBookingPassengers,
+  passengerManifestCustodyBlockers,
+} from "@/lib/passengers";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[+\d][\d\s().-]{6,}$/;
@@ -369,7 +372,11 @@ function custodyIdentityReady(row: BookingRow) {
   return Boolean(
     row.customer_identity_verified_at &&
       row.driver_identity_verified_at &&
-      row.restricted_items_attested_at
+      row.restricted_items_attested_at &&
+      passengerManifestCustodyBlockers(
+        row.passenger_manifest,
+        Boolean(row.customer_identity_verified_at)
+      ).length === 0
   );
 }
 
@@ -814,6 +821,7 @@ export async function POST(request: Request) {
     }
     const normalizedPassengers = normalizeBookingPassengers(validated.passengers, {
       accountHolderName: validated.name,
+      accountHolderEmail: validated.email,
       totalBags: validated.bags,
       travelDate: validated.date,
       accountHolderVerifiedAt,
@@ -1119,6 +1127,10 @@ export async function PATCH(request: Request) {
         nextStatus === "picked_up" ||
         (existing.service === "arrival" && nextStatus === "in_transit");
       if (custodyStarts && !custodyIdentityReady(existing)) {
+        const travelerBlockers = passengerManifestCustodyBlockers(
+          existing.passenger_manifest,
+          Boolean(existing.customer_identity_verified_at)
+        );
         const blockers = [
           existing.customer_identity_verified_at
             ? ""
@@ -1129,6 +1141,7 @@ export async function PATCH(request: Request) {
           existing.restricted_items_attested_at
             ? ""
             : "Manual ID/bag review is not complete.",
+          ...travelerBlockers,
         ].filter(Boolean);
         await recordOpsException(
           supabase,

@@ -403,6 +403,20 @@ export async function getBooking(
   return readLocal().find((b) => b.id === id);
 }
 
+export async function sendTravelerVerificationInvite(
+  bookingId: string,
+  passengerId: string
+) {
+  return apiJson<{ ok: true; status: "invite_sent"; expiresAt: string }>(
+    "/api/identity/verification-request",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId, passengerId }),
+    }
+  );
+}
+
 export async function createBooking(
   data: Omit<
     Booking,
@@ -446,6 +460,7 @@ export async function createBooking(
     .join(" ");
   const normalizedPassengers = normalizeBookingPassengers(data.passengers, {
     accountHolderName: data.name,
+    accountHolderEmail: data.email,
     totalBags: data.bags,
     travelDate: data.date,
   });

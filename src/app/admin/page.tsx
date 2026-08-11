@@ -40,6 +40,7 @@ import {
   type Booking,
 } from "@/lib/bookings";
 import { getSlaAlerts, latestLocationEvent } from "@/lib/ops-rules";
+import { passengerManifestCustodyBlockers } from "@/lib/passengers";
 
 type DataView = "production" | "demo" | "all";
 
@@ -270,6 +271,12 @@ function custodyBlockers(booking: Booking) {
   if (!booking.restrictedItemsAttestedAt) {
     blockers.push("Manual ID/bag review is not complete.");
   }
+  blockers.push(
+    ...passengerManifestCustodyBlockers(
+      booking.passengers,
+      Boolean(booking.customerIdentityVerifiedAt)
+    )
+  );
   return blockers;
 }
 
@@ -2084,6 +2091,41 @@ function BookingCard({
   const [bags, setBags] = useState<BookingBag[] | null>(null);
   const [bagsBusy, setBagsBusy] = useState(false);
   const [bagsError, setBagsError] = useState("");
+  const [reviewBusyPassengerId, setReviewBusyPassengerId] = useState("");
+  const [reviewedPassengerStatuses, setReviewedPassengerStatuses] = useState<Record<string, "verified" | "rejected">>({});
+  const [reviewError, setReviewError] = useState("");
+  const [reviewEvidenceReference, setReviewEvidenceReference] = useState("");
+  const [reviewReason, setReviewReason] = useState("");
+
+  async function reviewPassenger(passengerId: string, action: "verify" | "reject") {
+    setReviewBusyPassengerId(passengerId);
+    setReviewError("");
+    try {
+      const response = await fetch("/api/identity/verification-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          bookingId: booking.id,
+          passengerId,
+          action,
+          evidenceReference: reviewEvidenceReference,
+          reason: reviewReason,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not complete identity review.");
+      }
+      setReviewedPassengerStatuses((current) => ({ ...current, [passengerId]: action === "verify" ? "verified" : "rejected" }));
+      setReviewEvidenceReference("");
+      setReviewReason("");
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Could not complete identity review.");
+    } finally {
+      setReviewBusyPassengerId("");
+    }
+  }
 
   async function loadBags() {
     setBagsBusy(true);
@@ -2129,12 +2171,30 @@ function BookingCard({
 
   const demoBooking = isDemoBooking(booking);
   const stale = isStalePending(booking);
+  const effectivePassengers = booking.passengers?.map((passenger) => {
+    const reviewedStatus = reviewedPassengerStatuses[passenger.id];
+    if (!reviewedStatus) return passenger;
+    return {
+      ...passenger,
+      verificationStatus: reviewedStatus,
+      identityVerifiedAt: reviewedStatus === "verified"
+        ? passenger.identityVerifiedAt ?? "reviewed-in-session"
+        : undefined,
+    };
+  });
+  const effectiveBooking = { ...booking, passengers: effectivePassengers };
+  const travelerBlockers = passengerManifestCustodyBlockers(
+    effectivePassengers,
+    Boolean(booking.customerIdentityVerifiedAt)
+  );
   const identityReady = Boolean(
-    booking.customerIdentityVerifiedAt && booking.driverIdentityVerifiedAt
+    booking.customerIdentityVerifiedAt &&
+      booking.driverIdentityVerifiedAt &&
+      travelerBlockers.length === 0
   );
   const restrictedReady = Boolean(booking.restrictedItemsAttestedAt);
-  const custodyReady = identityReady && restrictedReady;
-  const blockers = custodyBlockers(booking);
+  const blockers = custodyBlockers(effectiveBooking);
+  const custodyReady = blockers.length === 0;
   const workflowIssues = workflowBlockers(booking);
   const archived = Boolean(booking.archivedAt);
   const slaAlerts = archived ? [] : getSlaAlerts(booking);
@@ -2338,6 +2398,67 @@ function BookingCard({
           >
             Open in Google Maps
           </a>
+        </div>
+      )}
+
+      {booking.passengers && booking.passengers.length > 1 && (
+        <div className="mt-4 rounded-2xl border border-navy/10 bg-[#f7f8fb] p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-navy/60">
+              Traveler identity reviews
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block rounded-xl border border-navy/10 bg-white px-3 py-3 text-xs font-semibold text-navy/70">
+              Document or approved-provider reference
+              <input value={reviewEvidenceReference} onChange={(event) => setReviewEvidenceReference(event.target.value)} placeholder="Provider case or manual ledger reference" className="mt-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]" />
+            </label>
+            <label className="block rounded-xl border border-navy/10 bg-white px-3 py-3 text-xs font-semibold text-navy/70">
+              Rejection reason
+              <input value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} placeholder="Required only when rejecting" className="mt-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]" />
+            </label>
+          </div>
+          <div className="mt-3 space-y-2">
+            {booking.passengers.map((passenger) => {
+              const localStatus = reviewedPassengerStatuses[passenger.id];
+              const status = localStatus ?? passenger.verificationStatus;
+              const reviewable = passenger.verificationMethod === "self_service" &&
+                ["pending", "manual_review"].includes(status);
+              return (
+                <div key={passenger.id} className="flex flex-col gap-2 rounded-xl border border-navy/10 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-navy">{passenger.firstName} {passenger.lastName}</p>
+                    <p className="mt-0.5 text-xs capitalize text-navy/55">{passenger.category.replace("_", " ")} · {passenger.relationship} · {passenger.bags} bag{passenger.bags === 1 ? "" : "s"} · {status.replaceAll("_", " ")}</p>
+                  </div>
+                  {status === "verified" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                    </span>
+                  ) : status === "rejected" ? (
+                    <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700">Rejected</span>
+                  ) : reviewable ? (
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => void reviewPassenger(passenger.id, "verify")} disabled={Boolean(reviewBusyPassengerId)} className="rounded-lg bg-navy px-3 py-2 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-50">
+                        {reviewBusyPassengerId === passenger.id ? "Saving..." : "Mark verified"}
+                      </button>
+                      <button type="button" onClick={() => void reviewPassenger(passenger.id, "reject")} disabled={Boolean(reviewBusyPassengerId)} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 disabled:cursor-wait disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  ) : status === "invite_sent" ? (
+                    <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-800">Waiting for adult consent</span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">{String(status).replaceAll("_", " ")}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-navy/55">
+            Only mark a separate adult verified after their private consent plus the required document and liveness review. Raw identity documents do not belong in the booking manifest.
+          </p>
+          {reviewError && <p className="mt-2 text-xs font-semibold text-red-600">{reviewError}</p>}
         </div>
       )}
 

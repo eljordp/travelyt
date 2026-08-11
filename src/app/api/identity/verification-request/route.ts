@@ -143,7 +143,11 @@ export async function POST(request: Request) {
         verification_invite_otp_attempts: 0,
         verification_invite_otp_verified_at: null,
         consent_at: null,
-        metadata: { source: "booking-group", raw_document_stored_by_travelyt: false },
+        metadata: {
+          source: "booking-group",
+          verification_method: passenger.verificationMethod,
+          raw_document_stored_by_travelyt: false,
+        },
       };
       const { data: existingInvite, error: inviteLookupError } = await supabase
         .from("identity_verifications")
@@ -169,6 +173,19 @@ export async function POST(request: Request) {
         token,
       });
       if (!sent) return bad("Traveler invite email is not configured. No invitation was sent.", 503);
+      const updatedManifest = booking.passenger_manifest.map((candidate) =>
+        candidate.id === passenger.id
+          ? { ...candidate, verificationStatus: "invite_sent" as const }
+          : candidate
+      );
+      const { error: manifestError } = await supabase
+        .from("bookings")
+        .update({ passenger_manifest: updatedManifest })
+        .eq("id", booking.id);
+      if (manifestError) {
+        console.error("Adult traveler invite status reconciliation failed", manifestError);
+        return bad("The traveler email was sent, but the booking status needs reconciliation.", 502);
+      }
       return NextResponse.json({ ok: true, status: "invite_sent", expiresAt });
     }
     const metadata = user.user_metadata ?? {};

@@ -79,14 +79,15 @@ export async function POST(request: Request) {
   const documentType = ["passport", "driver_license", "other"].includes(String(body.documentType)) ? body.documentType : "passport";
   const { error: consentError } = await supabase.from("identity_verifications").update({
     provider: "manual_prelaunch", document_type: documentType, consent_at: consentAt,
+    status: "manual_review",
     verification_invite_otp_verified_at: consentAt,
     metadata: { ...(data.metadata ?? {}), invite_state: "accepted", self_consent_at: consentAt, raw_document_stored_by_travelyt: false },
   }).eq("id", data.id).is("consent_at", null);
   if (consentError) return bad("Could not submit traveler verification.", 500);
   const { data: booking, error: bookingError } = await supabase.from("bookings").select("passenger_manifest").eq("id", data.booking_id).maybeSingle<{ passenger_manifest: unknown }>();
   if (bookingError || !booking || !isBookingPassengerArray(booking.passenger_manifest)) return bad("Verification submitted, but booking reconciliation is required.", 502);
-  const manifest = booking.passenger_manifest.map((passenger) => passenger.id === data.passenger_id ? { ...passenger, consentAt, verificationStatus: "pending" as const } : passenger);
+  const manifest = booking.passenger_manifest.map((passenger) => passenger.id === data.passenger_id ? { ...passenger, consentAt, verificationStatus: "manual_review" as const } : passenger);
   const { error: manifestError } = await supabase.from("bookings").update({ passenger_manifest: manifest }).eq("id", data.booking_id);
   if (manifestError) return bad("Verification submitted, but booking reconciliation is required.", 502);
-  return NextResponse.json({ ok: true, status: "pending" });
+  return NextResponse.json({ ok: true, status: "manual_review" });
 }

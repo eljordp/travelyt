@@ -57,6 +57,7 @@ export type BookingPassengerInput = Omit<
 
 type NormalizeOptions = {
   accountHolderName: string;
+  accountHolderEmail?: string;
   totalBags: number;
   travelDate: string;
   accountHolderVerifiedAt?: string;
@@ -81,6 +82,48 @@ export function splitPassengerName(fullName: string) {
 
 export function passengerDisplayName(passenger: Pick<BookingPassenger, "firstName" | "lastName">) {
   return `${passenger.firstName} ${passenger.lastName}`.trim();
+}
+
+export function passengerVerificationReady(passenger: BookingPassenger) {
+  if (passenger.verificationMethod === "primary_account") {
+    return passenger.verificationStatus === "verified" && Boolean(passenger.identityVerifiedAt);
+  }
+  if (passenger.verificationMethod === "self_service") {
+    return passenger.verificationStatus === "verified" && Boolean(passenger.identityVerifiedAt);
+  }
+  if (passenger.verificationMethod === "guardian") {
+    return Boolean(passenger.guardianAttestedAt) &&
+      ["guardian_attested", "verified"].includes(passenger.verificationStatus);
+  }
+  return Boolean(passenger.householdAttestedAt) &&
+    ["household_attested", "verified"].includes(passenger.verificationStatus);
+}
+
+export function passengerManifestCustodyBlockers(
+  value: unknown,
+  accountHolderVerified: boolean
+) {
+  if (!isBookingPassengerArray(value)) {
+    return ["Traveler manifest is missing or invalid."];
+  }
+  // Records created before passenger manifests existed represent one account
+  // holder. Preserve that legacy path while requiring every new group booking
+  // to carry its explicit manifest.
+  if (value.length === 0) {
+    return accountHolderVerified
+      ? []
+      : ["Account holder identity review is not complete."];
+  }
+
+  return value.flatMap((passenger) => {
+    if (passenger.verificationMethod === "primary_account") {
+      return accountHolderVerified
+        ? []
+        : ["Account holder identity review is not complete."];
+    }
+    if (passengerVerificationReady(passenger)) return [];
+    return [`${passengerDisplayName(passenger)} still needs traveler verification.`];
+  });
 }
 
 export function isBookingPassengerArray(value: unknown): value is BookingPassenger[] {
@@ -127,14 +170,20 @@ export function normalizeBookingPassengers(
   }
   const now = validTimestamp(options.now) ? options.now! : new Date().toISOString();
   const holderName = splitPassengerName(options.accountHolderName);
+  const holderEmail = typeof options.accountHolderEmail === "string" && options.accountHolderEmail.trim()
+    ? options.accountHolderEmail.trim().toLowerCase()
+    : undefined;
   if (!NAME_PATTERN.test(holderName.firstName) || !NAME_PATTERN.test(holderName.lastName)) {
     return { error: "Enter the account holder's first and last name." };
+  }
+  if (holderEmail && !EMAIL_PATTERN.test(holderEmail)) {
+    return { error: "Enter a valid email for the account holder." };
   }
   const raw = Array.isArray(input) ? input : [];
   if (raw.length === 0) {
     return { passengers: [{
       id: crypto.randomUUID(), firstName: holderName.firstName, lastName: holderName.lastName,
-      category: "account_holder", relationship: "self", bags: options.totalBags,
+      category: "account_holder", relationship: "self", email: holderEmail, bags: options.totalBags,
       verificationMethod: "primary_account", consentAt: now,
       identityVerifiedAt: options.accountHolderVerifiedAt,
       verificationStatus: options.accountHolderVerifiedAt ? "verified" : "consent_recorded",
@@ -145,6 +194,8 @@ export function normalizeBookingPassengers(
   const passengers: BookingPassenger[] = [];
   const ids = new Set<string>();
   const identityKeys = new Set<string>();
+  const emailMethods = new Map<string, PassengerVerificationMethod>();
+  if (holderEmail) emailMethods.set(holderEmail, "primary_account");
   let holderCount = 0;
   for (const item of raw) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return { error: "Traveler details are invalid." };
@@ -170,12 +221,24 @@ export function normalizeBookingPassengers(
     if (dateOfBirth && dateOfBirth > now.slice(0, 10)) return { error: `Date of birth cannot be in the future for ${firstName} ${lastName}.` };
     const category: PassengerCategory = requestedCategory === "account_holder" ? "account_holder" : age! < 18 ? "minor" : "adult";
     const verificationMethod = passengerVerificationMethod({ category, relationship });
-    const email = typeof candidate.email === "string" && candidate.email.trim() ? candidate.email.trim().toLowerCase() : undefined;
+    const email = requestedCategory === "account_holder"
+      ? holderEmail
+      : typeof candidate.email === "string" && candidate.email.trim()
+        ? candidate.email.trim().toLowerCase()
+        : undefined;
     if (email && !EMAIL_PATTERN.test(email)) return { error: `Enter a valid email for ${firstName} ${lastName}.` };
     if (verificationMethod === "self_service" && !email) return { error: `Enter ${firstName} ${lastName}'s email for separate adult verification.` };
+    const existingEmailMethod = email ? emailMethods.get(email) : undefined;
+    if (email && requestedCategory !== "account_holder" && existingEmailMethod &&
+        (verificationMethod === "self_service" || existingEmailMethod === "self_service")) {
+      return { error: `Enter a separate email for each adult who must verify independently.` };
+    }
+    if (email && !existingEmailMethod) emailMethods.set(email, verificationMethod);
     if (verificationMethod === "guardian" && !validTimestamp(candidate.guardianAttestedAt)) return { error: `Record guardian authorization for ${firstName} ${lastName}.` };
     if (verificationMethod === "household_spouse" && !validTimestamp(candidate.householdAttestedAt)) return { error: `Record spouse household authorization for ${firstName} ${lastName}.` };
-    const identityKey = [firstName.toLocaleLowerCase(), lastName.toLocaleLowerCase(), dateOfBirth ?? "account-holder", email ?? ""].join("|");
+    // Email is a contact channel, not identity. Keeping it out of this key
+    // prevents the same traveler from being entered twice with two addresses.
+    const identityKey = [firstName.toLocaleLowerCase(), lastName.toLocaleLowerCase(), dateOfBirth ?? "account-holder"].join("|");
     if (identityKeys.has(identityKey)) return { error: `${firstName} ${lastName} appears more than once in this traveler group.` };
     identityKeys.add(identityKey);
     const identityVerifiedAt = category === "account_holder" ? options.accountHolderVerifiedAt : undefined;

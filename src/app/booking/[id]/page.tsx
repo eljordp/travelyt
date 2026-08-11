@@ -15,6 +15,7 @@ import {
   getBooking,
   getBookingStatusLabel,
   getLastApiFailureMessage,
+  sendTravelerVerificationInvite,
   subscribe,
   SERVICE_LABELS,
   STATUS_ORDER,
@@ -39,6 +40,9 @@ export default function BookingPage() {
   const [confirmationCode, setConfirmationCode] = useState("");
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
+  const [inviteBusyPassengerId, setInviteBusyPassengerId] = useState("");
+  const [inviteNotice, setInviteNotice] = useState("");
+  const [inviteError, setInviteError] = useState("");
 
   useEffect(() => {
     const handle = window.setTimeout(() => setNative(isNative()), 0);
@@ -143,6 +147,26 @@ export default function BookingPage() {
     }
     setConfirmingDelivery(false);
   };
+  const sendTravelerInvite = async (passengerId: string) => {
+    setInviteBusyPassengerId(passengerId);
+    setInviteError("");
+    setInviteNotice("");
+    const result = await sendTravelerVerificationInvite(booking.id, passengerId);
+    if (result) {
+      setBooking((currentBooking) => currentBooking ? {
+        ...currentBooking,
+        passengers: currentBooking.passengers?.map((passenger) =>
+          passenger.id === passengerId
+            ? { ...passenger, verificationStatus: "invite_sent" }
+            : passenger
+        ),
+      } : currentBooking);
+      setInviteNotice("Private traveler verification email sent. The link expires in 30 minutes.");
+    } else {
+      setInviteError(getLastApiFailureMessage() || "Could not send the traveler verification email.");
+    }
+    setInviteBusyPassengerId("");
+  };
 
   return (
     <AppChrome title="Tracking">
@@ -167,6 +191,44 @@ export default function BookingPage() {
               Travelyt operations needs to review this booking before it can
               continue. Contact support if you need help.
             </p>
+          </div>
+        )}
+
+        {booking.passengers && booking.passengers.length > 1 && (
+          <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm shadow-navy/5 md:p-8">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-navy/70">
+              Family and group travelers
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-navy/65">
+              Adults outside the spouse household exception must use their own private email link. Custody stays blocked until every required traveler step is complete.
+            </p>
+            <div className="mt-4 space-y-3">
+              {booking.passengers.map((passenger) => {
+                const canSendInvite = passenger.verificationMethod === "self_service" &&
+                  ["invite_required", "invite_sent", "rejected"].includes(passenger.verificationStatus);
+                return (
+                  <div key={passenger.id} className="flex flex-col gap-3 rounded-xl border border-navy/10 bg-[#f7f8fb] p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-navy">{passenger.firstName} {passenger.lastName}</p>
+                      <p className="mt-1 text-xs capitalize text-navy/55">
+                        {passenger.relationship.replace("_", " ")} · {passenger.bags} bag{passenger.bags === 1 ? "" : "s"} · {travelerStatusLabel(passenger.verificationStatus)}
+                      </p>
+                    </div>
+                    {canSendInvite && (
+                      <button type="button" onClick={() => void sendTravelerInvite(passenger.id)} disabled={Boolean(inviteBusyPassengerId)} className="rounded-lg bg-navy px-4 py-2 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-50">
+                        {inviteBusyPassengerId === passenger.id
+                          ? "Sending..."
+                          : passenger.verificationStatus === "invite_sent"
+                            ? "Resend private link"
+                            : "Send private link"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {inviteNotice && <p className="mt-3 rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">{inviteNotice}</p>}
+            {inviteError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{inviteError}</p>}
           </div>
         )}
 
@@ -473,6 +535,22 @@ function proofTitle(kind: Booking["proofs"][number]["kind"]) {
   if (kind === "pickup") return "Picked up";
   if (kind === "airline_handoff") return "Airline handoff";
   return "Delivered";
+}
+
+function travelerStatusLabel(status: NonNullable<Booking["passengers"]>[number]["verificationStatus"]) {
+  const labels: Record<typeof status, string> = {
+    not_started: "Not started",
+    invite_required: "Private link required",
+    invite_sent: "Link sent",
+    consent_recorded: "Consent recorded",
+    guardian_attested: "Guardian attestation recorded",
+    household_attested: "Household attestation recorded",
+    pending: "Pending review",
+    manual_review: "Manual review required",
+    verified: "Verified",
+    rejected: "Review rejected",
+  };
+  return labels[status];
 }
 
 function Row({ label, value }: { label: string; value: string }) {
