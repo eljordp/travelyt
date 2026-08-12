@@ -117,6 +117,16 @@ function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
+function reservedAgentAssignmentStatus(status?: Booking["status"]) {
+  if (status === "assigned") {
+    return "Use the verified primary-and-backup assignment workflow to assign this booking.";
+  }
+  if (status === "accepted") {
+    return "The assigned primary agent must complete the acceptance checklist.";
+  }
+  return undefined;
+}
+
 function newAccessToken() {
   return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8);
 }
@@ -909,6 +919,8 @@ export async function PATCH(request: Request) {
     if (patch.status && !bookingStatuses.includes(patch.status)) {
       return bad("Unsupported booking status.");
     }
+    const reservedStatusError = reservedAgentAssignmentStatus(patch.status);
+    if (reservedStatusError) return bad(reservedStatusError, 409);
     if (patch.locationEvents !== undefined) {
       return bad("Location trail is append-only. Submit a GPS checkpoint or proof instead.", 409);
     }

@@ -30,7 +30,6 @@ import AppChrome from "@/components/AppChrome";
 import type { AdminRole } from "@/lib/admin-auth";
 import { roleRequiresMfa, trustedUserRole } from "@/lib/auth-policy";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
-import { DRIVER_OPTIONS } from "@/lib/drivers";
 import {
   formatPrice,
   getBookingStatusLabel,
@@ -71,6 +70,46 @@ interface DriverAccessCode {
   expiresAt?: string;
   revokedAt?: string;
   revokedBy?: string;
+}
+
+interface AgentReadinessProfile {
+  driverAccessId: string;
+  driverName: string;
+  driverEmail?: string;
+  accessStatus: DriverAccessCode["status"];
+  status: "pending" | "active" | "suspended";
+  identityEvidenceReference?: string;
+  identityVerifiedAt?: string;
+  identityExpiresAt?: string;
+  trainingEvidenceReference?: string;
+  trainingCompletedAt?: string;
+  trainingExpiresAt?: string;
+  insuranceEvidenceReference?: string;
+  insuranceVerifiedAt?: string;
+  insuranceExpiresAt?: string;
+  vehicleMakeModel?: string;
+  licensePlate?: string;
+  vehicleEvidenceReference?: string;
+  vehicleVerifiedAt?: string;
+  vehicleExpiresAt?: string;
+  notes?: string;
+  ready: boolean;
+  blockers: string[];
+}
+
+interface AgentAssignment {
+  id: string;
+  bookingId: string;
+  primaryDriverAccessId: string;
+  primaryDriverName: string;
+  backupDriverAccessId: string;
+  backupDriverName: string;
+  status: "assigned" | "accepted" | "declined" | "expired" | "superseded" | "revoked";
+  assignedBy: string;
+  assignedAt: string;
+  acceptanceDueAt: string;
+  acceptedAt?: string;
+  declineReason?: string;
 }
 
 interface BookingBag {
@@ -448,6 +487,9 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [exceptions, setExceptions] = useState<OpsException[]>([]);
   const [driverCodes, setDriverCodes] = useState<DriverAccessCode[]>([]);
+  const [agentReadiness, setAgentReadiness] = useState<AgentReadinessProfile[]>([]);
+  const [agentAssignments, setAgentAssignments] = useState<AgentAssignment[]>([]);
+  const [agentMigrationRequired, setAgentMigrationRequired] = useState(false);
   const [applications, setApplications] = useState<DriverApplication[]>([]);
   const [accounts, setAccounts] = useState<AuthAccount[]>([]);
   const [authEvents, setAuthEvents] = useState<AuthEvent[]>([]);
@@ -515,6 +557,7 @@ export default function AdminPage() {
           await loadBookings();
           await loadExceptions();
           await loadDriverCodes();
+          await loadAgentOperations();
           await loadApplications();
           if ((data.role ?? "admin") === "admin") await loadAccounts();
           if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
@@ -543,6 +586,7 @@ export default function AdminPage() {
             await loadBookings();
             await loadExceptions();
             await loadDriverCodes();
+            await loadAgentOperations();
             await loadApplications();
             if ((exchanged.role ?? "admin") === "admin") await loadAccounts();
             if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
@@ -648,6 +692,88 @@ export default function AdminPage() {
     } catch {}
   }
 
+  async function loadAgentOperations() {
+    try {
+      const [readinessResponse, assignmentsResponse] = await Promise.all([
+        fetch("/api/ops/agent-readiness", { credentials: "same-origin" }),
+        fetch("/api/ops/agent-assignments", { credentials: "same-origin" }),
+      ]);
+      const readinessData = (await readinessResponse.json()) as {
+        ok?: boolean;
+        profiles?: AgentReadinessProfile[];
+        migrationRequired?: boolean;
+      };
+      const assignmentData = (await assignmentsResponse.json()) as {
+        ok?: boolean;
+        assignments?: AgentAssignment[];
+      };
+      if (readinessResponse.ok && readinessData.profiles) {
+        setAgentReadiness(readinessData.profiles);
+        setAgentMigrationRequired(false);
+      } else if (readinessData.migrationRequired) {
+        setAgentMigrationRequired(true);
+      }
+      if (assignmentsResponse.ok && assignmentData.assignments) {
+        setAgentAssignments(assignmentData.assignments);
+      }
+    } catch {}
+  }
+
+  async function saveAgentReadiness(input: Record<string, unknown>) {
+    setError("");
+    const response = await fetch("/api/ops/agent-readiness", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(input),
+    });
+    const data = (await response.json()) as {
+      ok?: boolean;
+      error?: string;
+      profiles?: AgentReadinessProfile[];
+      migrationRequired?: boolean;
+    };
+    if (!response.ok || !data.profiles) {
+      if (data.migrationRequired) setAgentMigrationRequired(true);
+      throw new Error(data.error || "Could not save agent readiness evidence.");
+    }
+    setAgentReadiness(data.profiles);
+  }
+
+  async function assignAgents(input: {
+    bookingId: string;
+    primaryDriverAccessId: string;
+    backupDriverAccessId: string;
+    reason?: string;
+  }) {
+    setUpdatingId(input.bookingId);
+    setError("");
+    try {
+      const response = await fetch("/api/ops/agent-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ ...input, acceptanceMinutes: 10 }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        details?: string[];
+        booking?: Booking;
+        assignment?: AgentAssignment;
+      };
+      if (!response.ok || !data.booking || !data.assignment) {
+        throw new Error([data.error, ...(data.details ?? [])].filter(Boolean).join(" ") || "Could not assign agents.");
+      }
+      setBookings((rows) => rows.map((row) => row.id === data.booking!.id ? data.booking! : row));
+      setAgentAssignments((rows) => [data.assignment!, ...rows.filter((row) => row.bookingId !== input.bookingId || !["assigned", "accepted"].includes(row.status))]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not assign agents.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
   async function loadApplications() {
     try {
       const response = await fetch("/api/driver-applications", {
@@ -724,6 +850,7 @@ export default function AdminPage() {
       if (data.oneTimeCode) {
         setAppCode({ id, code: data.oneTimeCode });
         await loadDriverCodes();
+        await loadAgentOperations();
       }
       await loadApplications();
     } catch (err) {
@@ -912,6 +1039,7 @@ export default function AdminPage() {
       await loadBookings();
       await loadExceptions();
       await loadDriverCodes();
+      await loadAgentOperations();
       await loadApplications();
       if ((data.role ?? "admin") === "admin") await loadAccounts();
       if (PARTNER_INTEGRATIONS_ENABLED) await loadPartnerIntegrations();
@@ -972,6 +1100,8 @@ export default function AdminPage() {
     setBookings([]);
     setExceptions([]);
     setDriverCodes([]);
+    setAgentReadiness([]);
+    setAgentAssignments([]);
     setAccounts([]);
     setAuthEvents([]);
     setAccountCounts({ total: 0, active: 0, unconfirmed: 0, neverSignedIn: 0, banned: 0 });
@@ -1014,6 +1144,7 @@ export default function AdminPage() {
       }
       setGeneratedDriverCode(data.oneTimeCode);
       setDriverCodes((rows) => [data.accessCode!, ...rows]);
+      await loadAgentOperations();
       setNewDriverName("");
       setNewDriverEmail("");
       setNewDriverPhone("");
@@ -1952,6 +2083,19 @@ export default function AdminPage() {
             </button>
           </div>
 
+          {agentMigrationRequired ? (
+            <div className="mb-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-3 text-xs leading-relaxed text-yellow-900">
+              Apply Supabase migration <code className="font-bold">030_agent_assignment_acceptance.sql</code>{" "}
+              before certifying or assigning agents.
+            </div>
+          ) : (
+            <AgentReadinessEditor
+              profiles={agentReadiness}
+              disabled={adminRole !== "admin"}
+              onSave={saveAgentReadiness}
+            />
+          )}
+
           {generatedDriverCode && (
             <div className="mb-4 rounded-2xl border border-green-100 bg-green-50 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-green-700">
@@ -2326,6 +2470,7 @@ export default function AdminPage() {
                 void loadBookings();
                 void loadExceptions();
                 void loadDriverCodes();
+                void loadAgentOperations();
                 void loadPartnerIntegrations();
               }}
               disabled={loading}
@@ -2351,14 +2496,22 @@ export default function AdminPage() {
               Loading bookings...
             </div>
           ) : filtered.length ? (
-            filtered.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                disabled={updatingId === booking.id}
-                onPatch={(patch, reason) => updateBooking(booking.id, patch, reason)}
-              />
-            ))
+            filtered.map((booking) => {
+              const assignment = agentAssignments.find((row) =>
+                row.bookingId === booking.id && ["assigned", "accepted"].includes(row.status)
+              );
+              return (
+                <BookingCard
+                  key={`${booking.id}:${assignment?.id ?? "unassigned"}`}
+                  booking={booking}
+                  disabled={updatingId === booking.id}
+                  onPatch={(patch, reason) => updateBooking(booking.id, patch, reason)}
+                  agentProfiles={agentReadiness}
+                  assignment={assignment}
+                  onAssign={assignAgents}
+                />
+              );
+            })
           ) : (
             <div className="rounded-2xl border border-dashed border-navy/15 bg-white/60 p-8 text-center text-sm text-navy/65">
               No bookings match this view.
@@ -2372,16 +2525,187 @@ export default function AdminPage() {
   );
 }
 
+function dateInputValue(value?: string) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+}
+
+function agentReadinessForm(profile?: AgentReadinessProfile): Record<string, string> {
+  if (!profile) return {};
+  return {
+    status: profile.status,
+    identityEvidenceReference: profile.identityEvidenceReference ?? "",
+    identityVerifiedAt: dateInputValue(profile.identityVerifiedAt),
+    identityExpiresAt: dateInputValue(profile.identityExpiresAt),
+    trainingEvidenceReference: profile.trainingEvidenceReference ?? "",
+    trainingCompletedAt: dateInputValue(profile.trainingCompletedAt),
+    trainingExpiresAt: dateInputValue(profile.trainingExpiresAt),
+    insuranceEvidenceReference: profile.insuranceEvidenceReference ?? "",
+    insuranceVerifiedAt: dateInputValue(profile.insuranceVerifiedAt),
+    insuranceExpiresAt: dateInputValue(profile.insuranceExpiresAt),
+    vehicleMakeModel: profile.vehicleMakeModel ?? "",
+    licensePlate: profile.licensePlate ?? "",
+    vehicleEvidenceReference: profile.vehicleEvidenceReference ?? "",
+    vehicleVerifiedAt: dateInputValue(profile.vehicleVerifiedAt),
+    vehicleExpiresAt: dateInputValue(profile.vehicleExpiresAt),
+    notes: profile.notes ?? "",
+  };
+}
+
+function AgentReadinessEditor({
+  profiles,
+  disabled,
+  onSave,
+}: {
+  profiles: AgentReadinessProfile[];
+  disabled: boolean;
+  onSave: (input: Record<string, unknown>) => Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const selected = profiles.find((profile) => profile.driverAccessId === selectedId);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [localError, setLocalError] = useState("");
+
+  function field(name: string, label: string, type = "text") {
+    return (
+      <label className="grid gap-1 text-[11px] font-bold uppercase tracking-wider text-navy/50">
+        {label}
+        <input
+          type={type}
+          value={form[name] ?? ""}
+          onChange={(event) => setForm((current) => ({ ...current, [name]: event.target.value }))}
+          disabled={disabled || saving}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-navy outline-none focus:border-[#ff6868] disabled:bg-gray-50"
+        />
+      </label>
+    );
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-navy/45">Checkpoint 1 gate</p>
+          <h3 className="mt-1 font-bold text-navy">Agent readiness evidence</h3>
+          <p className="mt-1 text-xs leading-relaxed text-navy/55">
+            Assignment stays blocked until both the primary and backup have current identity,
+            training, insurance, vehicle, and individual-access evidence.
+          </p>
+        </div>
+        {selected && (
+          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${selected.ready ? "bg-green-100 text-green-700" : "bg-red-50 text-red-700"}`}>
+            {selected.ready ? "Ready" : "Blocked"}
+          </span>
+        )}
+      </div>
+      <select
+        value={selectedId}
+        onChange={(event) => {
+          const nextId = event.target.value;
+          setSelectedId(nextId);
+          setForm(agentReadinessForm(profiles.find((profile) => profile.driverAccessId === nextId)));
+          setLocalError("");
+        }}
+        className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-navy outline-none focus:border-[#ff6868]"
+      >
+        <option value="">Select an individual agent account</option>
+        {profiles.map((profile) => (
+          <option key={profile.driverAccessId} value={profile.driverAccessId}>
+            {profile.driverName} · {profile.ready ? "ready" : "blocked"}
+          </option>
+        ))}
+      </select>
+      {selected && (
+        <div className="mt-4 space-y-4">
+          <label className="grid gap-1 text-[11px] font-bold uppercase tracking-wider text-navy/50">
+            Operational status
+            <select
+              value={form.status ?? "pending"}
+              onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+              disabled={disabled || saving}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-navy outline-none focus:border-[#ff6868] disabled:bg-gray-50"
+            >
+              <option value="pending">Pending</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </label>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
+            <span className="font-bold">Provider-backed identity:</span>{" "}
+            {selected.identityVerifiedAt
+              ? `Stripe Identity verified ${new Date(selected.identityVerifiedAt).toLocaleDateString()}.`
+              : "No current Stripe Identity verification matches this agent email."}
+            {selected.identityExpiresAt ? ` Expires ${new Date(selected.identityExpiresAt).toLocaleDateString()}.` : ""}
+            Identity evidence cannot be manually certified here.
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {field("trainingEvidenceReference", "Training evidence ref")}
+            {field("trainingCompletedAt", "Training completed", "date")}
+            {field("trainingExpiresAt", "Training expires", "date")}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {field("insuranceEvidenceReference", "Insurance evidence ref")}
+            {field("insuranceVerifiedAt", "Insurance verified", "date")}
+            {field("insuranceExpiresAt", "Insurance expires", "date")}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {field("vehicleMakeModel", "Vehicle")}
+            {field("licensePlate", "Plate")}
+            {field("vehicleEvidenceReference", "Vehicle evidence ref")}
+            {field("vehicleVerifiedAt", "Vehicle verified", "date")}
+            {field("vehicleExpiresAt", "Vehicle expires", "date")}
+          </div>
+          {field("notes", "Internal readiness note")}
+          {selected.blockers.length > 0 && (
+            <ul className="rounded-xl bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-700">
+              {selected.blockers.map((blocker) => <li key={blocker}>• {blocker}</li>)}
+            </ul>
+          )}
+          {localError && <p className="text-xs font-semibold text-red-600">{localError}</p>}
+          <button
+            type="button"
+            disabled={disabled || saving}
+            onClick={() => {
+              setSaving(true);
+              setLocalError("");
+              void onSave({ driverAccessId: selected.driverAccessId, ...form })
+                .catch((error) => setLocalError(error instanceof Error ? error.message : "Could not save readiness."))
+                .finally(() => setSaving(false));
+            }}
+            className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {saving ? "Saving evidence..." : "Save readiness evidence"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BookingCard({
   booking,
   disabled,
   onPatch,
+  agentProfiles,
+  assignment,
+  onAssign,
 }: {
   booking: Booking;
   disabled: boolean;
   onPatch: (patch: Partial<Booking>, reason?: string) => void | Promise<void>;
+  agentProfiles: AgentReadinessProfile[];
+  assignment?: AgentAssignment;
+  onAssign: (input: {
+    bookingId: string;
+    primaryDriverAccessId: string;
+    backupDriverAccessId: string;
+    reason?: string;
+  }) => void | Promise<void>;
 }) {
-  const [driverName, setDriverName] = useState(booking.driverName ?? "");
+  const [primaryAgentId, setPrimaryAgentId] = useState(assignment?.primaryDriverAccessId ?? "");
+  const [backupAgentId, setBackupAgentId] = useState(assignment?.backupDriverAccessId ?? "");
   const [auditReason, setAuditReason] = useState("");
   const [issueType, setIssueType] = useState<BookingIssueType | "">(
     booking.issueType ?? ""
@@ -3006,10 +3330,10 @@ function BookingCard({
           placeholder="Example: Driver called support; airline accepted bags manually"
           className="mb-3 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
         />
-        <div className="grid gap-3 sm:grid-cols-[180px_1fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-[150px_1fr_1fr_auto]">
         <select
           value={booking.status}
-          disabled={disabled}
+          disabled={disabled || assignment?.status === "accepted"}
           onChange={(event) => {
             const nextStatus = event.target.value as Booking["status"];
             const reason =
@@ -3029,46 +3353,68 @@ function BookingCard({
           {statusOptions
             .filter((option) => option !== "all")
             .map((option) => (
-              <option key={option} value={option}>
+              <option
+                key={option}
+                value={option}
+                disabled={option === "assigned" || option === "accepted"}
+              >
                 {STATUS_LABELS[option]}
               </option>
             ))}
         </select>
-        <input
-          value={driverName}
-          onChange={(event) => setDriverName(event.target.value)}
-          list={`driver-options-${booking.id}`}
-          placeholder="Driver name"
-          className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
-        />
-        <datalist id={`driver-options-${booking.id}`}>
-          {DRIVER_OPTIONS.map((profile) => (
-            <option key={profile.name} value={profile.name} />
+        <select
+          value={primaryAgentId}
+          onChange={(event) => setPrimaryAgentId(event.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+        >
+          <option value="">Primary agent</option>
+          {agentProfiles.map((profile) => (
+            <option key={profile.driverAccessId} value={profile.driverAccessId} disabled={!profile.ready}>
+              {profile.driverName}{profile.ready ? "" : " — blocked"}
+            </option>
           ))}
-        </datalist>
+        </select>
+        <select
+          value={backupAgentId}
+          onChange={(event) => setBackupAgentId(event.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+        >
+          <option value="">Backup agent</option>
+          {agentProfiles.map((profile) => (
+            <option key={profile.driverAccessId} value={profile.driverAccessId} disabled={!profile.ready || profile.driverAccessId === primaryAgentId}>
+              {profile.driverName}{profile.ready ? "" : " — blocked"}
+            </option>
+          ))}
+        </select>
         <button
-          disabled={disabled}
+          disabled={disabled || assignment?.status === "accepted"}
           onClick={() => {
-            const nextStatus = driverName.trim() ? "assigned" : "paid";
-            const reason =
-              auditReason.trim() ||
-              (driverName.trim()
-                ? `Admin assigned driver ${driverName.trim()}.`
-                : "Admin cleared driver assignment.");
-            void onPatch({
-              driverName: driverName.trim() || undefined,
-              status: nextStatus,
-              assignedAt: driverName.trim()
-                ? booking.assignedAt ?? new Date().toISOString()
-                : undefined,
-            }, reason);
+            void onAssign({
+              bookingId: booking.id,
+              primaryDriverAccessId: primaryAgentId,
+              backupDriverAccessId: backupAgentId,
+              reason: auditReason.trim() || undefined,
+            });
             setAuditReason("");
           }}
           className="rounded-xl bg-[#ff6868] px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {disabled ? "Saving..." : "Assign"}
+          {disabled ? "Saving..." : assignment?.status === "accepted" ? "Accepted" : assignment ? "Reassign" : "Assign agents"}
         </button>
         </div>
+        {assignment && (
+          <p className="mt-2 text-xs leading-relaxed text-navy/55">
+            Primary: {assignment.primaryDriverName} · Backup: {assignment.backupDriverName} ·{" "}
+            {assignment.status === "accepted"
+              ? `Accepted ${formatDate(assignment.acceptedAt || assignment.assignedAt)}`
+              : `Accept by ${formatDate(assignment.acceptanceDueAt)}`}
+          </p>
+        )}
+        {!agentProfiles.some((profile) => profile.ready) && (
+          <p className="mt-2 text-xs font-semibold text-red-600">
+            No agent has complete, current identity, training, insurance, and vehicle evidence.
+          </p>
+        )}
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-navy/50">
         Admin status override is allowed for operations cleanup. Driver custody

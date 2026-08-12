@@ -37,6 +37,19 @@ import { captureCurrentLocation, captureProofPhoto, compressProofPhoto, isNative
 const DRIVER_KEY = "travelyt:driver";
 type ProofLocation = NonNullable<Booking["proofs"][number]["location"]>;
 
+type AgentAssignment = {
+  id: string;
+  bookingId: string;
+  primaryDriverAccessId: string;
+  primaryDriverName: string;
+  backupDriverAccessId: string;
+  backupDriverName: string;
+  status: "assigned" | "accepted";
+  assignedAt: string;
+  acceptanceDueAt: string;
+  acceptedAt?: string;
+};
+
 function custodyBlockers(booking: Booking) {
   const blockers: string[] = [];
   if (!booking.customerIdentityVerifiedAt) {
@@ -86,6 +99,13 @@ export default function DriverJobPage() {
   const router = useRouter();
   const [driver, setDriver] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | undefined>(undefined);
+  const [assignment, setAssignment] = useState<AgentAssignment | null>(null);
+  const [availabilityConfirmed, setAvailabilityConfirmed] = useState(false);
+  const [deviceReady, setDeviceReady] = useState(false);
+  const [sealKitReady, setSealKitReady] = useState(false);
+  const [vehicleReady, setVehicleReady] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [photoNote, setPhotoNote] = useState("");
@@ -115,8 +135,19 @@ export default function DriverJobPage() {
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const result = await getBooking(params.id);
-      if (!cancelled) setBooking(result);
+      const [result, assignmentResponse] = await Promise.all([
+        getBooking(params.id),
+        fetch(`/api/drivers/assignments?bookingId=${encodeURIComponent(params.id)}`, {
+          credentials: "same-origin",
+        }).catch(() => null),
+      ]);
+      if (!cancelled) {
+        setBooking(result);
+        if (assignmentResponse?.ok) {
+          const data = (await assignmentResponse.json()) as { assignment?: AgentAssignment };
+          setAssignment(data.assignment ?? null);
+        }
+      }
     };
     const handle = window.setTimeout(() => {
       setMounted(true);
@@ -261,14 +292,63 @@ export default function DriverJobPage() {
 
   async function acceptJob() {
     if (!booking) return;
-    const updated = await updateBooking(booking.id, {
-      status: "accepted",
-      driverName: booking.driverName || driver || undefined,
-      assignedAt: booking.assignedAt ?? new Date().toISOString(),
-      acceptedAt: new Date().toISOString(),
-    }, `${driver} accepted the job.`);
-    if (updated) setBooking(updated);
-    else setError(latestApiError("Could not accept this job. Refresh and check driver access or schedule conflicts."));
+    setAssignmentBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/drivers/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          bookingId: booking.id,
+          action: "accept",
+          checklist: {
+            availabilityConfirmed,
+            deviceReady,
+            sealKitReady,
+            vehicleReady,
+          },
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        details?: string[];
+        booking?: Booking;
+        assignment?: AgentAssignment;
+      };
+      if (!response.ok || !data.booking) {
+        throw new Error([data.error, ...(data.details ?? [])].filter(Boolean).join(" ") || "Could not accept this assignment.");
+      }
+      setBooking(data.booking);
+      setAssignment(data.assignment ?? assignment);
+    } catch (acceptError) {
+      setError(acceptError instanceof Error ? acceptError.message : "Could not accept this assignment.");
+    } finally {
+      setAssignmentBusy(false);
+    }
+  }
+
+  async function declineJob() {
+    if (!booking) return;
+    setAssignmentBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/drivers/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ bookingId: booking.id, action: "decline", reason: declineReason }),
+      });
+      const data = (await response.json()) as { error?: string; booking?: Booking };
+      if (!response.ok || !data.booking) throw new Error(data.error || "Could not decline this assignment.");
+      setBooking(data.booking);
+      setAssignment(null);
+      router.replace("/driver");
+    } catch (declineError) {
+      setError(declineError instanceof Error ? declineError.message : "Could not decline this assignment.");
+    } finally {
+      setAssignmentBusy(false);
+    }
   }
 
   async function markEnRoute() {
@@ -743,9 +823,53 @@ export default function DriverJobPage() {
           )}
 
           {booking.status === "assigned" && isMine && (
-            <PrimaryActionButton onClick={acceptJob} icon={CheckCircle2}>
-              Accept job
-            </PrimaryActionButton>
+            <div className="mt-4 rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
+              <p className="text-xs font-bold uppercase tracking-wider text-navy/45">Verified assignment acceptance</p>
+              <h2 className="mt-1 text-lg font-bold text-navy">Confirm before accepting</h2>
+              {assignment && (
+                <p className="mt-1 text-xs leading-relaxed text-navy/55">
+                  Primary: {assignment.primaryDriverName} · Backup: {assignment.backupDriverName} ·
+                  respond by {new Date(assignment.acceptanceDueAt).toLocaleString()}.
+                </p>
+              )}
+              <div className="mt-4 grid gap-2">
+                {([
+                  [availabilityConfirmed, setAvailabilityConfirmed, "I am available for the assigned date and time."],
+                  [deviceReady, setDeviceReady, "My assigned phone/device is charged and operational."],
+                  [sealKitReady, setSealKitReady, "My approved seal kit is present and intact."],
+                  [vehicleReady, setVehicleReady, "The approved vehicle on my readiness record is ready."],
+                ] as const).map(([checked, setter, label]) => (
+                  <label key={label} className="flex items-start gap-3 rounded-xl bg-navy/[0.03] px-3 py-2.5 text-sm text-navy/75">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => setter(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-[#ff6868]"
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+              <PrimaryActionButton onClick={acceptJob} disabled={assignmentBusy} icon={CheckCircle2}>
+                {assignmentBusy ? "Recording acceptance..." : "Accept verified assignment"}
+              </PrimaryActionButton>
+              <div className="mt-4 border-t border-navy/10 pt-4">
+                <input
+                  value={declineReason}
+                  onChange={(event) => setDeclineReason(event.target.value)}
+                  placeholder="Reason required to decline"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#ff6868]"
+                />
+                <button
+                  type="button"
+                  disabled={assignmentBusy || !declineReason.trim()}
+                  onClick={() => void declineJob()}
+                  className="mt-2 w-full rounded-xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-40"
+                >
+                  Decline and return to dispatch
+                </button>
+              </div>
+            </div>
           )}
 
           {booking.status === "accepted" && isMine && (
