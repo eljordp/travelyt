@@ -332,6 +332,7 @@ export default function ProfilePage() {
       ok?: boolean;
       error?: string;
       existing?: boolean;
+      url?: string | null;
     } | null;
 
     setIdentitySubmitting(false);
@@ -341,10 +342,15 @@ export default function ProfilePage() {
       return;
     }
 
+    if (data.url) {
+      window.location.assign(data.url);
+      return;
+    }
+
     setNotice(
       data.existing
-        ? "Verification is already pending. Travelyt will send the secure ID link."
-        : "Verification requested. Travelyt will send the secure ID link."
+        ? "Your identity is already verified."
+        : "Identity verification is processing. Custody remains blocked until it passes."
     );
   }
 

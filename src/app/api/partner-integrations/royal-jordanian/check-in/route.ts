@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { executeRjGatewayCheckIn, getRjIntegrationReadiness, RJ_PROVIDER_ID, RjIntegrationError, validateRjCheckInInput } from "@/lib/rj-check-in";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray } from "@/lib/passengers";
+import { STRIPE_IDENTITY_PROVIDER } from "@/lib/stripe-identity";
 
 function bad(error: string, status = 400, extra: Record<string, unknown> = {}) { return NextResponse.json({ ok: false, error, ...extra }, { status }); }
 function fingerprint(value: unknown) { return createHash("sha256").update(JSON.stringify(value)).digest("hex"); }
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
   if (!booking.customer_user_id) return bad("Booking owner identity is unavailable.", 409);
   const { data: identities, error: identityError } = await supabase.from("identity_verifications")
     .select("id, booking_id, passenger_id, user_id, verified_at")
+    .eq("provider", STRIPE_IDENTITY_PROVIDER)
     .eq("status", "verified")
     .or(`booking_id.eq.${bookingId},user_id.eq.${booking.customer_user_id}`);
   if (identityError) return bad("Could not load verified identities.", 500);

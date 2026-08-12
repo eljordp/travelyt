@@ -11,6 +11,7 @@ import {
 import { queueBookingNotification } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
+import { STRIPE_IDENTITY_PROVIDER } from "@/lib/stripe-identity";
 import { calcPriceBreakdown } from "@/lib/pricing";
 import { getAdminSession, isFullAdminSession, isOpsSession } from "@/lib/admin-auth";
 import { canonicalDriverName, driverNameMatches } from "@/lib/drivers";
@@ -813,6 +814,7 @@ export async function POST(request: Request) {
         .select("verified_at")
         .eq("user_id", user.id)
         .eq("role", "customer")
+        .eq("provider", STRIPE_IDENTITY_PROVIDER)
         .eq("status", "verified")
         .order("verified_at", { ascending: false })
         .limit(1)

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { markBookingPaidFromCheckoutSession } from "@/lib/stripe-payments";
+import { verifiedDob } from "@/lib/stripe-identity";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { isBookingPassengerArray } from "@/lib/passengers";
 
 export const runtime = "nodejs";
 
@@ -46,6 +48,125 @@ async function reconcileDispute(dispute: Stripe.Dispute, eventId: string) {
   if (error && !/duplicate|unique/i.test(error.message)) throw error;
 }
 
+async function reconcileIdentity(
+  eventSession: Stripe.Identity.VerificationSession,
+  eventType: Stripe.Event.Type
+) {
+  const stripe = getStripe();
+  const supabase = getSupabaseAdmin();
+  if (!stripe || !supabase) throw new Error("Identity reconciliation is not configured.");
+
+  const session = await stripe.identity.verificationSessions.retrieve(eventSession.id);
+  const { data: record, error: recordError } = await supabase
+    .from("identity_verifications")
+    .select("id, user_id, booking_id, passenger_id, metadata")
+    .eq("provider_session_id", session.id)
+    .maybeSingle<{
+      id: string;
+      user_id: string | null;
+      booking_id: string | null;
+      passenger_id: string | null;
+      metadata: Record<string, unknown> | null;
+    }>();
+  if (recordError) throw recordError;
+  if (!record) return;
+
+  const now = new Date().toISOString();
+  const dob = verifiedDob(session);
+  let status: "pending" | "verified" | "manual_review" | "expired" = "pending";
+  let livenessStatus: "pending" | "passed" | "failed" | "manual_review" = "pending";
+  if (eventType === "identity.verification_session.verified") {
+    status = "verified";
+    livenessStatus = "passed";
+  } else if (eventType === "identity.verification_session.requires_input") {
+    status = "manual_review";
+    livenessStatus = "failed";
+  } else if (eventType === "identity.verification_session.canceled") {
+    status = "expired";
+    livenessStatus = "manual_review";
+  }
+
+  let expectedDob: string | undefined;
+  let manifest: unknown;
+  if (record.booking_id && record.passenger_id) {
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("passenger_manifest")
+      .eq("id", record.booking_id)
+      .maybeSingle<{ passenger_manifest: unknown }>();
+    if (bookingError) throw bookingError;
+    manifest = booking?.passenger_manifest;
+    if (isBookingPassengerArray(manifest)) {
+      expectedDob = manifest.find((passenger) => passenger.id === record.passenger_id)?.dateOfBirth;
+    }
+  }
+  const dobMatches = !expectedDob || (Boolean(dob) && expectedDob === dob);
+  if (status === "verified" && !dobMatches) {
+    status = "manual_review";
+    livenessStatus = "manual_review";
+  }
+
+  const { error: updateError } = await supabase
+    .from("identity_verifications")
+    .update({
+      status,
+      liveness_status: livenessStatus,
+      verified_at: status === "verified" ? now : null,
+      metadata: {
+        ...(record.metadata ?? {}),
+        stripe_status: session.status,
+        stripe_livemode: session.livemode,
+        verified_dob: dob,
+        expected_dob_match: expectedDob ? dobMatches : null,
+        provider_error_code: session.last_error?.code ?? null,
+        raw_document_stored_by_travelyt: false,
+        reconciled_at: now,
+      },
+    })
+    .eq("id", record.id);
+  if (updateError) throw updateError;
+
+  if (status === "verified" && record.booking_id && record.passenger_id && isBookingPassengerArray(manifest)) {
+    const updatedManifest = manifest.map((passenger) =>
+      passenger.id === record.passenger_id
+        ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
+        : passenger
+    );
+    const { error: manifestError } = await supabase
+      .from("bookings")
+      .update({ passenger_manifest: updatedManifest })
+      .eq("id", record.booking_id);
+    if (manifestError) throw manifestError;
+  }
+
+  if (status === "verified" && record.user_id && !record.booking_id && !record.passenger_id) {
+    const { data: bookings, error: bookingsError } = await supabase
+      .from("bookings")
+      .select("id, passenger_manifest")
+      .eq("customer_user_id", record.user_id)
+      .is("customer_identity_verified_at", null)
+      .returns<Array<{ id: string; passenger_manifest: unknown }>>();
+    if (bookingsError) throw bookingsError;
+    for (const booking of bookings ?? []) {
+      const passengerManifest = isBookingPassengerArray(booking.passenger_manifest)
+        ? booking.passenger_manifest.map((passenger) =>
+            passenger.category === "account_holder"
+              ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
+              : passenger
+          )
+        : booking.passenger_manifest;
+      const { error: bookingUpdateError } = await supabase
+        .from("bookings")
+        .update({
+          customer_identity_verified_at: now,
+          passenger_manifest: passengerManifest,
+        })
+        .eq("id", booking.id);
+      if (bookingUpdateError) throw bookingUpdateError;
+    }
+  }
+}
+
 export async function POST(request: Request) {
   const stripe = getStripe();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -77,6 +198,16 @@ export async function POST(request: Request) {
     }
     if (event.type === "charge.dispute.created") {
       await reconcileDispute(event.data.object as Stripe.Dispute, event.id);
+    }
+    if (
+      event.type === "identity.verification_session.verified" ||
+      event.type === "identity.verification_session.requires_input" ||
+      event.type === "identity.verification_session.canceled"
+    ) {
+      await reconcileIdentity(
+        event.data.object as Stripe.Identity.VerificationSession,
+        event.type
+      );
     }
 
     return json({ ok: true, received: true });

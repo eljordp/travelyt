@@ -1004,6 +1004,46 @@ export default function QuotePage() {
                       />
                     )}
                     <Row label="Bags" value={`${form.bags} bag${form.bags > 1 ? "s" : ""}`} />
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-navy/55">
+                        Family and group travelers
+                      </p>
+                      <div className="mt-3 space-y-3">
+                        <div className="rounded-lg border border-navy/10 bg-white p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-navy">{form.name}</p>
+                              <p className="mt-0.5 text-xs text-navy/60">
+                                Account holder · {form.email}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-xs font-semibold text-navy/70">
+                              {Math.max(0, form.bags - travelers.reduce((sum, traveler) => sum + traveler.bags, 0))} bags
+                            </span>
+                          </div>
+                        </div>
+                        {travelers.map((traveler) => (
+                          <div key={traveler.id} className="rounded-lg border border-navy/10 bg-white p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-bold text-navy">
+                                  {traveler.firstName} {traveler.lastName}
+                                </p>
+                                <p className="mt-0.5 text-xs capitalize text-navy/60">
+                                  {traveler.relationship} · DOB {traveler.dateOfBirth}
+                                </p>
+                                <p className="mt-0.5 break-all text-xs text-navy/60">
+                                  {traveler.email || "Guardian-managed minor — no separate email"}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-xs font-semibold text-navy/70">
+                                {traveler.bags} {traveler.bags === 1 ? "bag" : "bags"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     {priceBreakdown?.distanceMiles !== undefined && (
                       <Row
                         label="Distance"

@@ -11,6 +11,7 @@ const files = {
   serviceRules: "src/lib/service-rules.ts",
   quote: "src/app/quote/page.tsx",
   identityRequest: "src/app/api/identity/verification-request/route.ts",
+  stripeIdentity: "src/lib/stripe-identity.ts",
   travelerVerification: "src/app/api/identity/traveler-verification/route.ts",
   passengerLogic: "src/lib/passengers.ts",
   offlineCustody: "src/lib/offline-custody.ts",
@@ -46,11 +47,15 @@ function has(key, pattern) {
 check(
   "IDENTITY-01",
   "Identity fraud",
-  has("identityRequest", /Sign in before requesting verification/) && has("identityRequest", /provider:\s*"manual_prelaunch"/)
+  has("identityRequest", /createStripeIdentitySession/) &&
+  has("stripeIdentity", /require_live_capture:\s*true/) &&
+  has("stripeIdentity", /require_matching_selfie:\s*true/) &&
+  has("stripeWebhook", /verifiedDob/) &&
+  has("stripeWebhook", /expected_dob_match/)
     ? "PARTIAL" : "MISSING",
   "Fake traveler / forged-ID admission",
-  "The current identity route requires an account but creates a manual_prelaunch review. No approved document/liveness provider callback or document-to-DOB match is present in the current source.",
-  "Integrate a provider-backed verification result, bind it to the passenger and booking, and fail check-in when identity/DOB/liveness is unresolved."
+  "Stripe Identity document, live-capture, selfie-match, webhook, and traveler-DOB reconciliation are implemented fail-closed. Production Identity activation, webhook subscription, and a completed test verification have not been evidenced yet.",
+  "Enable Stripe Identity, subscribe the signed Stripe webhook to Identity events, and complete one success plus one DOB-mismatch test before marking this control live."
 );
 check(
   "IDENTITY-02",

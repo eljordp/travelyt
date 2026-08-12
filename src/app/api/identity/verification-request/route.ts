@@ -4,51 +4,20 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray, passengerDisplayName } from "@/lib/passengers";
 import { trustedUserRole } from "@/lib/auth-policy";
+import {
+  createStripeIdentitySession,
+  STRIPE_IDENTITY_PROVIDER,
+} from "@/lib/stripe-identity";
+import { getStripe } from "@/lib/stripe-server";
 
 const documentTypes = ["driver_license", "passport", "employee_badge", "other"] as const;
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
 const leadFromEmail =
   process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
-}
-
-async function sendVerificationNotification(data: {
-  email: string;
-  phone?: string;
-  role: string;
-  documentType: string;
-}) {
-  if (!resendApiKey || !leadNotifyEmail) return;
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: leadFromEmail,
-      to: leadNotifyEmail,
-      subject: `Identity verification requested: ${data.email}`,
-      reply_to: data.email,
-      text: [
-        "Travelyt identity verification requested",
-        "",
-        `Email: ${data.email}`,
-        `Phone: ${data.phone || "(none)"}`,
-        `Role: ${data.role}`,
-        `Document: ${data.documentType}`,
-      ].join("\n"),
-    }),
-  });
-
-  if (!response.ok) {
-    console.error("Resend identity notification failed", await response.text());
-  }
 }
 
 function hash(value: string) {
@@ -195,34 +164,59 @@ export async function POST(request: Request) {
         : trustedRole === "dispatcher"
           ? "employee"
           : trustedRole;
-    const documentType = documentTypes.includes(
+    const documentType: (typeof documentTypes)[number] = documentTypes.includes(
       body.documentType as (typeof documentTypes)[number]
     )
-      ? body.documentType!
+      ? (body.documentType as (typeof documentTypes)[number])
       : "driver_license";
     const phone = typeof metadata.phone === "string" ? metadata.phone : null;
 
-    const { data: existing, error: existingError } = await supabase
+    const { data: verified, error: verifiedError } = await supabase
       .from("identity_verifications")
-      .select("*")
+      .select("id, status")
       .eq("user_id", user.id)
       .eq("role", role)
-      .in("status", ["pending", "manual_review"])
+      .eq("provider", STRIPE_IDENTITY_PROVIDER)
+      .eq("status", "verified")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-
-    if (existingError) {
-      console.error("Identity verification lookup failed", existingError);
+    if (verifiedError) {
+      console.error("Verified identity lookup failed", verifiedError);
       return bad("Could not check verification status.", 500);
     }
-
-    if (existing) {
+    if (verified) {
       return NextResponse.json({
         ok: true,
-        status: existing.status,
+        status: "verified",
         existing: true,
       });
+    }
+
+    const { data: existing, error: existingError } = await supabase
+      .from("identity_verifications")
+      .select("id, status, provider_session_id")
+      .eq("user_id", user.id)
+      .eq("role", role)
+      .eq("provider", STRIPE_IDENTITY_PROVIDER)
+      .in("status", ["pending", "manual_review"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string; status: string; provider_session_id: string | null }>();
+    if (existingError) {
+      console.error("Stripe Identity lookup failed", existingError);
+      return bad("Could not check verification status.", 500);
+    }
+    if (existing?.provider_session_id) {
+      const stripe = getStripe();
+      if (!stripe) return bad("Stripe Identity is not configured.", 503);
+      try {
+        const session = await stripe.identity.verificationSessions.retrieve(existing.provider_session_id);
+        return NextResponse.json({ ok: true, status: existing.status, existing: true, url: session.url });
+      } catch (error) {
+        console.error("Stripe Identity session retrieval failed", error);
+        return bad("Could not reopen the secure identity session.", 502);
+      }
     }
 
     const { data, error } = await supabase
@@ -233,16 +227,17 @@ export async function POST(request: Request) {
         phone,
         role,
         status: "pending",
-        provider: "manual_prelaunch",
+        provider: STRIPE_IDENTITY_PROVIDER,
         document_type: documentType,
         liveness_required: true,
         liveness_status: "pending",
         metadata: {
           source: "profile",
           requested_by: user.id,
+          raw_document_stored_by_travelyt: false,
         },
       })
-      .select("status")
+      .select("id, status")
       .single();
 
     if (error) {
@@ -250,14 +245,44 @@ export async function POST(request: Request) {
       return bad("Could not request verification.", 500);
     }
 
-    await sendVerificationNotification({
-      email: user.email ?? "unknown",
-      phone: phone ?? undefined,
-      role,
-      documentType,
-    });
-
-    return NextResponse.json({ ok: true, status: data.status });
+    try {
+      const session = await createStripeIdentitySession({
+        verificationId: data.id,
+        userId: user.id,
+        email: user.email ?? undefined,
+        phone: phone ?? undefined,
+        role,
+        documentType,
+        request,
+      });
+      const { error: sessionWriteError } = await supabase
+        .from("identity_verifications")
+        .update({
+          provider_session_id: session.id,
+          metadata: {
+            source: "profile",
+            requested_by: user.id,
+            stripe_livemode: session.livemode,
+            raw_document_stored_by_travelyt: false,
+          },
+        })
+        .eq("id", data.id);
+      if (sessionWriteError) throw sessionWriteError;
+      return NextResponse.json({ ok: true, status: data.status, url: session.url });
+    } catch (providerError) {
+      console.error("Stripe Identity session creation failed", providerError);
+      await supabase.from("identity_verifications").update({
+        status: "manual_review",
+        liveness_status: "manual_review",
+        metadata: {
+          source: "profile",
+          requested_by: user.id,
+          provider_launch_failed: true,
+          raw_document_stored_by_travelyt: false,
+        },
+      }).eq("id", data.id);
+      return bad("Secure identity verification is not available yet. Custody remains blocked.", 503);
+    }
   } catch {
     return bad("Could not request verification.");
   }
