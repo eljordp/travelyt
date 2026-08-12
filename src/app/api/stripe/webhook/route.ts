@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { markBookingPaidFromCheckoutSession } from "@/lib/stripe-payments";
 import { verifiedDob } from "@/lib/stripe-identity";
+import { archiveIdentityOriginals, type ArchiveOutcome } from "@/lib/identity-originals";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray } from "@/lib/passengers";
@@ -56,7 +57,9 @@ async function reconcileIdentity(
   const supabase = getSupabaseAdmin();
   if (!stripe || !supabase) throw new Error("Identity reconciliation is not configured.");
 
-  const session = await stripe.identity.verificationSessions.retrieve(eventSession.id);
+  const session = await stripe.identity.verificationSessions.retrieve(eventSession.id, {
+    expand: ["last_verification_report"],
+  });
   const { data: record, error: recordError } = await supabase
     .from("identity_verifications")
     .select("id, user_id, booking_id, passenger_id, metadata")
@@ -106,12 +109,39 @@ async function reconcileIdentity(
     livenessStatus = "manual_review";
   }
 
+  // Keep Travelyt's own copies of the capture originals once verified —
+  // Stripe alone holding the images is not acceptable for chain of custody.
+  let archive: ArchiveOutcome | null = null;
+  let archiveError: string | null = null;
+  if (status === "verified") {
+    try {
+      archive = await archiveIdentityOriginals({
+        stripe,
+        supabase,
+        verificationId: record.id,
+        session,
+      });
+    } catch (error) {
+      archiveError = error instanceof Error ? error.message : "Unknown archive failure.";
+      console.error("Identity original archive failed", error);
+    }
+  }
+  const archived = Boolean(archive && archive.stored > 0);
+
   const { error: updateError } = await supabase
     .from("identity_verifications")
     .update({
       status,
       liveness_status: livenessStatus,
       verified_at: status === "verified" ? now : null,
+      ...(archive && archived
+        ? {
+            raw_document_paths: archive.paths,
+            raw_stored_at: archive.storedAt,
+            raw_retention_until: archive.retentionUntil,
+            raw_export_status: "pending_ash",
+          }
+        : {}),
       metadata: {
         ...(record.metadata ?? {}),
         stripe_status: session.status,
@@ -119,7 +149,8 @@ async function reconcileIdentity(
         verified_dob: dob,
         expected_dob_match: expectedDob ? dobMatches : null,
         provider_error_code: session.last_error?.code ?? null,
-        raw_document_stored_by_travelyt: false,
+        raw_document_stored_by_travelyt: archived,
+        ...(archiveError ? { raw_archive_error: archiveError } : {}),
         reconciled_at: now,
       },
     })

@@ -573,7 +573,11 @@ export default function ProfilePage() {
                 Live custody handoffs may require a government ID
                 (driver&apos;s license or passport) plus a selfie or liveness
                 video. Travelyt uses this to confirm the customer, driver, or
-                employee identity attached to each custody event.
+                employee identity attached to each custody event. By
+                continuing, you consent to Travelyt securely keeping a copy of
+                your ID and selfie images to verify your identity as part of
+                our chain of custody, retained for up to 3 years or until that
+                purpose ends, then deleted.
               </p>
               <div className="mt-3 inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
                 Secure verification link pending

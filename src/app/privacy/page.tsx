@@ -38,7 +38,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Identity verification and biometrics",
     body:
-      "When identity verification is required, Travelyt may ask a customer, driver, employee, or handler to verify a driver's license, passport, employee credential, selfie, or liveness video. We use this only for account security, fraud prevention, background screening where applicable, custody handoff validation, and legal or claims support. Where possible, government ID images and biometric/liveness checks are processed by a specialized verification provider, and Travelyt stores only verification status, provider reference IDs, timestamps, and the minimum information needed to prove that verification occurred.",
+      "When identity verification is required, Travelyt may ask a customer, driver, employee, or handler to verify a driver's license, passport, employee credential, selfie, or liveness video. We use this only for account security, fraud prevention, background screening where applicable, custody handoff validation, and legal or claims support. Government ID images and biometric/liveness checks are processed by a specialized verification provider, and Travelyt also securely retains a copy of the ID document and selfie images captured during verification, together with verification status, provider reference IDs, and timestamps, as the evidentiary core of our chain of custody. These images are stored in access-restricted systems, are never sold or used for advertising, and are retained for up to 3 years from capture or until the verification purpose ends, whichever comes first, after which they are permanently deleted.",
   },
   {
     title: "Push notifications",
