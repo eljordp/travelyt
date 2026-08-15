@@ -1117,6 +1117,10 @@ export default function AdminPage() {
       setError("Enter a driver name before creating an access code.");
       return;
     }
+    if (!newDriverEmail.trim() && !newDriverPhone.trim()) {
+      setError("Enter a driver email or phone so this access record is bound to one person.");
+      return;
+    }
     setCreatingDriverCode(true);
     setError("");
     setGeneratedDriverCode("");
@@ -2134,14 +2138,14 @@ export default function AdminPage() {
             <input
               value={newDriverEmail}
               onChange={(event) => setNewDriverEmail(event.target.value)}
-              placeholder="Email optional"
+              placeholder="Email (required unless phone provided)"
               disabled={adminRole !== "admin"}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 disabled:bg-gray-50 disabled:text-navy/40"
             />
             <input
               value={newDriverPhone}
               onChange={(event) => setNewDriverPhone(event.target.value)}
-              placeholder="Phone"
+              placeholder="Phone (required unless email provided)"
               disabled={adminRole !== "admin"}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 disabled:bg-gray-50 disabled:text-navy/40"
             />

@@ -32,6 +32,10 @@ export type AgentReadinessProfileRow = {
 export type DriverAccessReadinessRow = {
   id: string;
   driver_name: string;
+  canonical_driver_name: string;
+  driver_email: string | null;
+  driver_phone: string | null;
+  person_key_hash: string;
   status: "active" | "revoked" | "expired";
   expires_at: string | null;
 };
@@ -132,6 +136,35 @@ export function bookingAssignmentBlockers(booking: BookingRow, now = new Date())
     Boolean(booking.customer_identity_verified_at),
   ));
   return [...new Set(blockers)];
+}
+
+function normalizedContact(value: string | null | undefined) {
+  return value?.trim().toLowerCase().replace(/[^a-z0-9@+.]/g, "") ?? "";
+}
+
+export function differentAgentPersonBlockers(
+  primary: DriverAccessReadinessRow | null | undefined,
+  backup: DriverAccessReadinessRow | null | undefined,
+) {
+  if (!primary || !backup) return ["Primary and backup person-bound access records are required."];
+  const samePersonKey = Boolean(
+    primary.person_key_hash && primary.person_key_hash === backup.person_key_hash,
+  );
+  const sameEmail = Boolean(
+    primary.driver_email &&
+      normalizedContact(primary.driver_email) === normalizedContact(backup.driver_email),
+  );
+  const samePhone = Boolean(
+    primary.driver_phone &&
+      normalizedContact(primary.driver_phone) === normalizedContact(backup.driver_phone),
+  );
+  const sameCanonicalName = Boolean(
+    primary.canonical_driver_name &&
+      primary.canonical_driver_name === backup.canonical_driver_name,
+  );
+  return samePersonKey || sameEmail || samePhone || sameCanonicalName
+    ? ["Primary and backup must be different verified people, not duplicate access records."]
+    : [];
 }
 
 export function normalizeAcceptanceMinutes(value: unknown) {

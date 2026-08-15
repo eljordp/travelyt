@@ -4,6 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import AppChrome from "@/components/AppChrome";
+import {
+  IDENTITY_CONSENT_DISCLOSURE,
+  IDENTITY_CONSENT_VERSION,
+} from "@/lib/identity-consent";
 
 type InviteState = {
   name: string;
@@ -35,6 +39,7 @@ function TravelerVerificationContent() {
   const [traveler, setTraveler] = useState<InviteState | null>(null);
   const [documentType, setDocumentType] = useState("passport");
   const [consent, setConsent] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
   const [emailCode, setEmailCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -97,7 +102,7 @@ function TravelerVerificationContent() {
   }
 
   async function submit() {
-    if (!consent || emailCode.length !== 6 || submitting) return;
+    if (!consent || signatureName.trim().length < 2 || emailCode.length !== 6 || submitting) return;
     setSubmitting(true);
     setError("");
     try {
@@ -108,6 +113,8 @@ function TravelerVerificationContent() {
           token,
           action: "consent",
           consent: true,
+          consentVersion: IDENTITY_CONSENT_VERSION,
+          signatureName,
           documentType,
           emailCode,
         }),
@@ -176,10 +183,15 @@ function TravelerVerificationContent() {
 
               <label className="mt-4 flex items-start gap-3 rounded-xl border border-navy/10 bg-[#f7f8fb] p-4 text-sm leading-relaxed text-navy/70">
                 <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]" />
-                <span>I authorize Travelyt to use my traveler details and selected identity-review method for this booking. I understand that no raw identity document is stored in the booking manifest.</span>
+                <span>{IDENTITY_CONSENT_DISCLOSURE} No raw identity document is stored in the booking manifest.</span>
               </label>
 
-              <button type="button" onClick={() => void submit()} disabled={!consent || emailCode.length !== 6 || submitting} className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] py-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              <label className="mt-4 block text-xs font-bold uppercase tracking-wider text-navy/60">
+                Legal name - electronic signature
+                <input value={signatureName} onChange={(event) => setSignatureName(event.target.value)} autoComplete="name" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold normal-case tracking-normal text-navy outline-none focus:border-[#ff6868]" />
+              </label>
+
+              <button type="button" onClick={() => void submit()} disabled={!consent || signatureName.trim().length < 2 || emailCode.length !== 6 || submitting} className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] py-4 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
                 {submitting ? "Submitting securely..." : "Submit my verification request"}
               </button>
             </>

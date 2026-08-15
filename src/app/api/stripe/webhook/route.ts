@@ -127,6 +127,10 @@ async function reconcileIdentity(
     }
   }
   const archived = Boolean(archive && archive.stored > 0);
+  if (status === "verified" && !archived) {
+    status = "manual_review";
+    livenessStatus = "manual_review";
+  }
 
   const { error: updateError } = await supabase
     .from("identity_verifications")
@@ -140,6 +144,7 @@ async function reconcileIdentity(
             raw_stored_at: archive.storedAt,
             raw_retention_until: archive.retentionUntil,
             raw_export_status: "pending_ash",
+            raw_deletion_status: "scheduled",
           }
         : {}),
       metadata: {
@@ -150,6 +155,7 @@ async function reconcileIdentity(
         expected_dob_match: expectedDob ? dobMatches : null,
         provider_error_code: session.last_error?.code ?? null,
         raw_document_stored_by_travelyt: archived,
+        archive_required_before_custody: true,
         ...(archiveError ? { raw_archive_error: archiveError } : {}),
         reconciled_at: now,
       },

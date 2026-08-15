@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizePhone, validatePhone } from "@/lib/auth-policy";
 import { canonicalDriverName } from "@/lib/drivers";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
@@ -24,6 +25,7 @@ export type DriverAccessCodeRow = {
   canonical_driver_name: string;
   driver_email: string | null;
   driver_phone: string | null;
+  person_key_hash: string;
   role: string;
   code_hash: string;
   code_preview: string;
@@ -86,6 +88,21 @@ function readCookie(request: Request, name: string) {
 
 export function hashDriverCode(code: string) {
   return createHash("sha256").update(code.trim()).digest("hex");
+}
+
+export function driverPersonKeyHash(input: {
+  driverEmail?: string | null;
+  driverPhone?: string | null;
+  driverName: string;
+}) {
+  const email = input.driverEmail?.trim().toLowerCase();
+  const phone = normalizePhone(input.driverPhone ?? "");
+  const key = email
+    ? `email:${email}`
+    : phone
+      ? `phone:${phone}`
+      : `name:${canonicalDriverName(input.driverName)}`;
+  return createHash("sha256").update(key).digest("hex");
 }
 
 export function generateDriverAccessCode() {
@@ -406,14 +423,25 @@ export async function createDriverAccessCode(input: {
 
   const code = generateDriverAccessCode();
   const driverName = input.driverName.trim().replace(/\s+/g, " ");
+  const driverEmail = input.driverEmail?.trim().toLowerCase() || "";
+  const driverPhone = normalizePhone(input.driverPhone ?? "");
+  if (!driverEmail && !driverPhone) {
+    throw new Error("A driver email or phone is required to bind this access record to one person.");
+  }
+  if (driverEmail && !/^\S+@\S+\.\S+$/.test(driverEmail)) {
+    throw new Error("Enter a valid driver email address.");
+  }
+  const phoneError = validatePhone(driverPhone);
+  if (phoneError) throw new Error(phoneError);
   const role = input.role?.trim() || "driver";
   const { data, error } = await supabase
     .from("driver_access_codes")
     .insert({
       driver_name: driverName,
       canonical_driver_name: canonicalDriverName(driverName),
-      driver_email: input.driverEmail?.trim().toLowerCase() || null,
-      driver_phone: input.driverPhone?.trim() || null,
+      driver_email: driverEmail || null,
+      driver_phone: driverPhone || null,
+      person_key_hash: driverPersonKeyHash({ driverName, driverEmail, driverPhone }),
       role,
       code_hash: hashDriverCode(code),
       code_preview: codePreview(code),

@@ -6,6 +6,7 @@ import { getAdminSession } from "@/lib/admin-auth";
 import {
   agentReadinessBlockers,
   bookingAssignmentBlockers,
+  differentAgentPersonBlockers,
   normalizeAcceptanceMinutes,
   type AgentAssignmentRow,
   type AgentReadinessProfileRow,
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
 
   const { data: accessRows, error: accessError } = await supabase
     .from("driver_access_codes")
-    .select("id, driver_name, status, expires_at")
+    .select("id, driver_name, canonical_driver_name, driver_email, driver_phone, person_key_hash, status, expires_at")
     .in("id", [primaryId, backupId]);
   if (accessError) return bad("Could not load individual agent access.", 500);
   const accessById = new Map(
@@ -151,6 +152,13 @@ export async function POST(request: Request) {
   const readinessById = new Map(
     ((readinessRows ?? []) as AgentReadinessProfileRow[]).map((row) => [row.driver_access_id, row]),
   );
+  const personBlockers = differentAgentPersonBlockers(
+    accessById.get(primaryId),
+    accessById.get(backupId),
+  );
+  if (personBlockers.length) {
+    return bad("Primary and backup must be different verified people.", 409, personBlockers);
+  }
   const primaryBlockers = agentReadinessBlockers(accessById.get(primaryId), readinessById.get(primaryId), now);
   const backupBlockers = agentReadinessBlockers(accessById.get(backupId), readinessById.get(backupId), now);
   const readinessBlockers = [

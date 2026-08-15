@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     };
     const driverName = body.driverName?.trim();
     if (!driverName) return bad("Driver name is required.");
+    if (!body.driverEmail?.trim() && !body.driverPhone?.trim()) {
+      return bad("A driver email or phone is required to create a person-bound access record.");
+    }
     const created = await createDriverAccessCode({
       driverName,
       driverEmail: body.driverEmail,
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Could not create driver access code", error);
-    return bad("Could not create driver access code.", 500);
+    return bad(error instanceof Error ? error.message : "Could not create driver access code.", 400);
   }
 }
 

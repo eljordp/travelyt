@@ -1,12 +1,11 @@
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { IDENTITY_RETENTION_YEARS } from "@/lib/identity-consent";
 
 export const IDENTITY_ORIGINALS_BUCKET = "identity-originals";
 
 // Retention: 3 years from storage or until the verification purpose ends,
 // whichever comes first. Mirrors the disclosure shown at capture time.
-const RETENTION_YEARS = 3;
-
 export type StoredOriginal = {
   kind: "document" | "selfie" | "selfie_document";
   path: string;
@@ -52,7 +51,7 @@ export async function archiveIdentityOriginals(input: {
   const reportId = typeof reportRef === "string" ? reportRef : reportRef?.id;
   const now = new Date();
   const retentionUntil = new Date(now);
-  retentionUntil.setFullYear(retentionUntil.getFullYear() + RETENTION_YEARS);
+  retentionUntil.setFullYear(retentionUntil.getFullYear() + IDENTITY_RETENTION_YEARS);
   const outcome: ArchiveOutcome = {
     stored: 0,
     paths: [],

@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray } from "@/lib/passengers";
+import {
+  IDENTITY_CONSENT_VERSION,
+  identityConsentScope,
+  validConsentSignature,
+} from "@/lib/identity-consent";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const leadFromEmail = process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
@@ -17,6 +22,10 @@ type InviteRow = {
 
 function bad(error: string, status = 400) { return NextResponse.json({ ok: false, error }, { status }); }
 function hash(value: string) { return createHash("sha256").update(value).digest("hex"); }
+function consentEvidenceHash(value: string) {
+  const secret = process.env.TRAVELYT_CONSENT_HASH_SECRET || process.env.TRAVELYT_ADMIN_SESSION_SECRET || "travelyt-consent-evidence";
+  return hash(`${secret}:${value}`);
+}
 function validToken(token: string) { return /^[A-Za-z0-9_-]{40,100}$/.test(token); }
 function active(row: InviteRow) {
   return Boolean(row.verification_invite_expires_at && Date.parse(row.verification_invite_expires_at) > Date.now() && row.status !== "expired");
@@ -41,7 +50,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "identity:traveler-invite:post", 12); if (limited) return limited;
   const supabase = getSupabaseAdmin(); if (!supabase) return bad("Identity backend is not configured.", 503);
-  const body = await request.json().catch(() => ({})) as { token?: string; action?: "request_code" | "consent"; emailCode?: string; consent?: boolean; documentType?: string };
+  const body = await request.json().catch(() => ({})) as {
+    token?: string;
+    action?: "request_code" | "consent";
+    emailCode?: string;
+    consent?: boolean;
+    consentVersion?: string;
+    signatureName?: string;
+    documentType?: string;
+  };
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!validToken(token)) return bad("Verification link is invalid.", 404);
   const { data, error } = await loadInvite(supabase, token);
@@ -65,7 +82,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, status: "code_sent", expiresAt });
   }
 
-  if (body.action !== "consent" || body.consent !== true) return bad("Your consent is required to continue.");
+  const signatureName = typeof body.signatureName === "string"
+    ? body.signatureName.trim().replace(/\s+/g, " ").slice(0, 160)
+    : "";
+  if (
+    body.action !== "consent" ||
+    body.consent !== true ||
+    body.consentVersion !== IDENTITY_CONSENT_VERSION ||
+    !validConsentSignature(signatureName)
+  ) return bad("Review the identity disclosure and enter your legal name as an electronic signature.");
   const code = typeof body.emailCode === "string" ? body.emailCode.trim() : "";
   if (!/^\d{6}$/.test(code)) return bad("Enter the six-digit code sent to the traveler email.");
   if (!data.verification_invite_otp_hash || !data.verification_invite_otp_expires_at || Date.parse(data.verification_invite_otp_expires_at) <= Date.now()) return bad("Email confirmation has expired. Request a new code.", 410);
@@ -77,11 +102,18 @@ export async function POST(request: Request) {
   }
   const consentAt = new Date().toISOString();
   const documentType = ["passport", "driver_license", "other"].includes(String(body.documentType)) ? body.documentType : "passport";
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const userAgent = request.headers.get("user-agent")?.trim() || "unknown";
   const { error: consentError } = await supabase.from("identity_verifications").update({
     provider: "manual_prelaunch", document_type: documentType, consent_at: consentAt,
+    consent_version: IDENTITY_CONSENT_VERSION,
+    consent_signature_name: signatureName,
+    consent_scope: identityConsentScope("manual_prelaunch"),
+    consent_ip_hash: consentEvidenceHash(forwardedFor),
+    consent_user_agent_hash: consentEvidenceHash(userAgent),
     status: "manual_review",
     verification_invite_otp_verified_at: consentAt,
-    metadata: { ...(data.metadata ?? {}), invite_state: "accepted", self_consent_at: consentAt, raw_document_stored_by_travelyt: false },
+    metadata: { ...(data.metadata ?? {}), invite_state: "accepted", self_consent_at: consentAt, consent_version: IDENTITY_CONSENT_VERSION, raw_document_stored_by_travelyt: false },
   }).eq("id", data.id).is("consent_at", null);
   if (consentError) return bad("Could not submit traveler verification.", 500);
   const { data: booking, error: bookingError } = await supabase.from("bookings").select("passenger_manifest").eq("id", data.booking_id).maybeSingle<{ passenger_manifest: unknown }>();

@@ -22,6 +22,10 @@ import {
   type Booking,
 } from "@/lib/bookings";
 import { normalizePhone, validatePhone } from "@/lib/auth-policy";
+import {
+  IDENTITY_CONSENT_DISCLOSURE,
+  IDENTITY_CONSENT_VERSION,
+} from "@/lib/identity-consent";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 
 type Tab = "overview" | "bookings" | "settings";
@@ -120,6 +124,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [identitySubmitting, setIdentitySubmitting] = useState(false);
+  const [identityConsent, setIdentityConsent] = useState(false);
+  const [identitySignatureName, setIdentitySignatureName] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -146,6 +152,7 @@ export default function ProfilePage() {
 
       setUser(sessionUser);
       setSettings(settingsFromUser(sessionUser));
+      setIdentitySignatureName(settingsFromUser(sessionUser).name);
       setAuthState("ready");
 
       const rows = await getBookings();
@@ -274,7 +281,6 @@ export default function ProfilePage() {
       setError("Sign in again before deleting your account.");
       return;
     }
-
     const confirmed = window.confirm(
       "Delete your Travelyt account? This removes your login and profile. Booking records needed for operations, claims, legal, or safety reasons may be retained as described in the Privacy Policy."
     );
@@ -313,6 +319,10 @@ export default function ProfilePage() {
       setError("Sign in again before requesting verification.");
       return;
     }
+    if (!identityConsent || identitySignatureName.trim().length < 2) {
+      setError("Review the identity disclosure, check the consent box, and enter your legal name.");
+      return;
+    }
 
     setIdentitySubmitting(true);
     setError("");
@@ -326,6 +336,9 @@ export default function ProfilePage() {
       },
       body: JSON.stringify({
         documentType: "driver_license",
+        consentAccepted: true,
+        consentVersion: IDENTITY_CONSENT_VERSION,
+        signatureName: identitySignatureName,
       }),
     });
     const data = (await response.json().catch(() => null)) as {
@@ -570,22 +583,34 @@ export default function ProfilePage() {
                 Identity verification
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-navy/70">
-                Live custody handoffs may require a government ID
-                (driver&apos;s license or passport) plus a selfie or liveness
-                video. Travelyt uses this to confirm the customer, driver, or
-                employee identity attached to each custody event. By
-                continuing, you consent to Travelyt securely keeping a copy of
-                your ID and selfie images to verify your identity as part of
-                our chain of custody, retained for up to 3 years or until that
-                purpose ends, then deleted.
+                {IDENTITY_CONSENT_DISCLOSURE}
               </p>
+              <label className="mt-3 block text-xs font-semibold text-navy/70">
+                Legal name - electronic signature
+                <input
+                  type="text"
+                  value={identitySignatureName}
+                  onChange={(event) => setIdentitySignatureName(event.target.value)}
+                  autoComplete="name"
+                  className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]"
+                />
+              </label>
+              <label className="mt-3 flex items-start gap-2 rounded-lg border border-navy/10 bg-white p-3 text-xs leading-relaxed text-navy/70">
+                <input
+                  type="checkbox"
+                  checked={identityConsent}
+                  onChange={(event) => setIdentityConsent(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                />
+                <span>I have read this disclosure and sign electronically to authorize this identity verification.</span>
+              </label>
               <div className="mt-3 inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
                 Secure verification link pending
               </div>
               <button
                 type="button"
                 onClick={() => void requestIdentityVerification()}
-                disabled={identitySubmitting}
+                disabled={identitySubmitting || !identityConsent || identitySignatureName.trim().length < 2}
                 className="mt-3 block rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
               >
                 {identitySubmitting ? "Requesting..." : "Request verification link"}

@@ -5,6 +5,11 @@ import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray, passengerDisplayName } from "@/lib/passengers";
 import { trustedUserRole } from "@/lib/auth-policy";
 import {
+  IDENTITY_CONSENT_VERSION,
+  identityConsentScope,
+  validConsentSignature,
+} from "@/lib/identity-consent";
+import {
   createStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
@@ -22,6 +27,14 @@ function bad(error: string, status = 400) {
 
 function hash(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function consentEvidenceHash(value: string) {
+  const secret =
+    process.env.TRAVELYT_CONSENT_HASH_SECRET ||
+    process.env.TRAVELYT_ADMIN_SESSION_SECRET ||
+    "travelyt-consent-evidence";
+  return hash(`${secret}:${value}`);
 }
 
 async function sendAdultTravelerInvite(data: {
@@ -70,6 +83,9 @@ export async function POST(request: Request) {
       documentType?: string;
       bookingId?: string;
       passengerId?: string;
+      consentAccepted?: boolean;
+      consentVersion?: string;
+      signatureName?: string;
     };
     const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";
     const passengerId = typeof body.passengerId === "string" ? body.passengerId.trim() : "";
@@ -170,6 +186,27 @@ export async function POST(request: Request) {
       ? (body.documentType as (typeof documentTypes)[number])
       : "driver_license";
     const phone = typeof metadata.phone === "string" ? metadata.phone : null;
+    const signatureName = typeof body.signatureName === "string"
+      ? body.signatureName.trim().replace(/\s+/g, " ").slice(0, 160)
+      : "";
+    if (
+      body.consentAccepted !== true ||
+      body.consentVersion !== IDENTITY_CONSENT_VERSION ||
+      !validConsentSignature(signatureName)
+    ) {
+      return bad("Review the identity disclosure and enter your legal name as an electronic signature.");
+    }
+    const consentAt = new Date().toISOString();
+    const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const userAgent = request.headers.get("user-agent")?.trim() || "unknown";
+    const consentValues = {
+      consent_at: consentAt,
+      consent_version: IDENTITY_CONSENT_VERSION,
+      consent_signature_name: signatureName,
+      consent_scope: identityConsentScope(STRIPE_IDENTITY_PROVIDER),
+      consent_ip_hash: consentEvidenceHash(forwardedFor),
+      consent_user_agent_hash: consentEvidenceHash(userAgent),
+    };
 
     const { data: verified, error: verifiedError } = await supabase
       .from("identity_verifications")
@@ -208,6 +245,11 @@ export async function POST(request: Request) {
       return bad("Could not check verification status.", 500);
     }
     if (existing?.provider_session_id) {
+      const { error: consentUpdateError } = await supabase
+        .from("identity_verifications")
+        .update(consentValues)
+        .eq("id", existing.id);
+      if (consentUpdateError) return bad("Could not save the signed identity consent.", 500);
       const stripe = getStripe();
       if (!stripe) return bad("Stripe Identity is not configured.", 503);
       try {
@@ -231,6 +273,7 @@ export async function POST(request: Request) {
         document_type: documentType,
         liveness_required: true,
         liveness_status: "pending",
+        ...consentValues,
         metadata: {
           source: "profile",
           requested_by: user.id,
