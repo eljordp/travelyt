@@ -11,6 +11,7 @@ function check(name, pass, detail) {
 }
 
 const migration = await readFile(path.join(ROOT, "supabase/migrations/031_identity_consent_retention_and_distinct_agents.sql"), "utf8");
+const retentionBackfill = await readFile(path.join(ROOT, "supabase/migrations/032_backfill_identity_retention_queue.sql"), "utf8");
 const consent = await readFile(path.join(ROOT, "src/lib/identity-consent.ts"), "utf8");
 const profile = await readFile(path.join(ROOT, "src/app/profile/page.tsx"), "utf8");
 const traveler = await readFile(path.join(ROOT, "src/app/verify-traveler/page.tsx"), "utf8");
@@ -30,6 +31,7 @@ check("adult server consent gate", travelerRoute.includes("validConsentSignature
 check("bounded disclosure", consent.includes("approved identity-verification provider") && consent.includes("only when required and authorized"), "Disclosure language does not claim blanket carrier sharing.");
 check("archive fail closed", webhook.includes('status = "manual_review"') && webhook.includes("archive_required_before_custody"), "Provider verification cannot clear custody when required originals were not archived.");
 check("destruction state", migration.includes("raw_deletion_status") && migration.includes("raw_destruction_receipt") && migration.includes("raw_legal_hold_at"), "Retention, destruction proof and legal holds are explicit fields.");
+check("existing originals scheduled", retentionBackfill.includes("jsonb_array_length(raw_document_paths) > 0") && retentionBackfill.includes("raw_deletion_status = 'scheduled'"), "Previously stored originals enter the deletion queue without changing their retention dates.");
 check("private object deletion", retention.includes("IDENTITY_ORIGINALS_BUCKET") && retention.includes(".remove(paths)"), "Deletion removes private storage objects, not only database references.");
 check("destruction receipt", retention.includes("object_path_hashes") && retention.includes("raw_destroyed_at"), "Deletion leaves non-image audit evidence.");
 check("cron authorization", retentionRoute.includes("CRON_SECRET") && retentionRoute.includes("timingSafeEqual"), "The retention worker is not a public deletion endpoint.");
