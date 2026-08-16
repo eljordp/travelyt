@@ -70,6 +70,9 @@ interface DriverAccessCode {
   expiresAt?: string;
   revokedAt?: string;
   revokedBy?: string;
+  codeRotatedAt?: string;
+  codeRotatedBy?: string;
+  codeRotationCount: number;
 }
 
 interface AgentReadinessProfile {
@@ -1184,6 +1187,40 @@ export default function AdminPage() {
     }
   }
 
+  async function rotateDriverCode(code: DriverAccessCode) {
+    if (
+      !confirm(
+        `Reset ${code.driverName}'s access code? Their current code will stop working immediately.`
+      )
+    ) return;
+
+    setError("");
+    setGeneratedDriverCode("");
+    try {
+      const response = await fetch("/api/drivers/access-codes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ id: code.id, action: "rotate" }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        accessCode?: DriverAccessCode;
+        oneTimeCode?: string;
+      };
+      if (!response.ok || !data.accessCode || !data.oneTimeCode) {
+        throw new Error(data.error || "Could not reset driver access code.");
+      }
+      setGeneratedDriverCode(data.oneTimeCode);
+      setDriverCodes((rows) =>
+        rows.map((row) => (row.id === code.id ? data.accessCode! : row))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reset driver access code.");
+    }
+  }
+
   function openStaleCleanupQueue() {
     setDataView("production");
     setArchiveView("active");
@@ -2074,9 +2111,9 @@ export default function AdminPage() {
                 <h2 className="font-bold text-navy">Driver access codes</h2>
               </div>
               <p className="mt-1 text-xs leading-relaxed text-navy/55">
-                Create one code per courier. The full code is shown once; after
-                that only the last characters are visible. Archived codes stay
-                stored for audit but cannot sign in.
+                Create one account per courier. The full access code is shown
+                once; after that only the last characters are visible. Reset a
+                lost code on the same account instead of creating a duplicate.
               </p>
             </div>
             <button
@@ -2121,8 +2158,9 @@ export default function AdminPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-green-800">
-                Send this to the driver privately. If they lose it, revoke and
-                archive this row, then create a new code.
+                Send this to the driver privately. If they lose it, use Reset
+                access on the same account so identity and readiness evidence
+                remain linked to the correct person.
               </p>
             </div>
           )}
@@ -2226,6 +2264,14 @@ export default function AdminPage() {
                   >
                     {driverCodeStatusLabel(code)}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => void rotateDriverCode(code)}
+                    disabled={adminRole !== "admin" || code.status !== "active"}
+                    className="self-start rounded-xl bg-[#ff6868]/10 px-3 py-2 text-xs font-bold text-[#c74444] transition-colors hover:bg-[#ff6868]/20 disabled:opacity-40"
+                  >
+                    Reset access
+                  </button>
                   <button
                     type="button"
                     onClick={() => void revokeDriverCode(code.id)}

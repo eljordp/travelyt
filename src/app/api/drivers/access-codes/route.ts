@@ -4,6 +4,7 @@ import {
   createDriverAccessCode,
   listDriverAccessCodes,
   revokeDriverAccessCode,
+  rotateDriverAccessCode,
 } from "@/lib/driver-access-server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -84,10 +85,21 @@ export async function PATCH(request: Request) {
   try {
     const body = (await request.json()) as {
       id?: string;
-      action?: "revoke";
+      action?: "revoke" | "rotate";
     };
     const id = body.id?.trim();
     if (!id) return bad("Missing driver access code ID.");
+    if (body.action === "rotate") {
+      const rotated = await rotateDriverAccessCode({
+        id,
+        rotatedBy: session?.email,
+      });
+      return NextResponse.json({
+        ok: true,
+        accessCode: rotated.access,
+        oneTimeCode: rotated.code,
+      });
+    }
     if (body.action !== "revoke") return bad("Unsupported driver access action.");
 
     const accessCode = await revokeDriverAccessCode({

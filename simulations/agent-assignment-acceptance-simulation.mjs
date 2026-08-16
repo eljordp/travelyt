@@ -19,6 +19,9 @@ const bookingRoute = await readFile(path.join(ROOT, "src/app/api/bookings/route.
 const adminPage = await readFile(path.join(ROOT, "src/app/admin/page.tsx"), "utf8");
 const readinessRoute = await readFile(path.join(ROOT, "src/app/api/ops/agent-readiness/route.ts"), "utf8");
 const driverPage = await readFile(path.join(ROOT, "src/app/driver/job/[id]/page.tsx"), "utf8");
+const driverAccessServer = await readFile(path.join(ROOT, "src/lib/driver-access-server.ts"), "utf8");
+const driverAccessRoute = await readFile(path.join(ROOT, "src/app/api/drivers/access-codes/route.ts"), "utf8");
+const rotationMigration = await readFile(path.join(ROOT, "supabase/migrations/033_driver_access_rotation.sql"), "utf8");
 
 check("private readiness table", migration.includes("agent_readiness_profiles") && migration.includes("revoke all"), "Readiness evidence is service-role only.");
 check("private assignment table", migration.includes("booking_agent_assignments") && migration.includes("enable row level security"), "Assignments are private operational evidence.");
@@ -40,6 +43,9 @@ check("legacy assignment blocked", bookingRoute.includes("reservedAgentAssignmen
 check("dispatcher selects two agents", adminPage.includes("Primary agent") && adminPage.includes("Backup agent"), "Admin UI requires both roles.");
 check("driver confirms equipment", driverPage.includes("My assigned phone/device is charged") && driverPage.includes("My approved seal kit is present"), "Driver UI captures equipment confirmations.");
 check("no handoff authorization claim", !migration.includes("airline_authorized") && !policy.includes("TSA approved"), "Checkpoint stays carrier-neutral and pre-custody.");
+check("one active account per person", rotationMigration.includes("prevent_duplicate_active_driver_person") && rotationMigration.includes("existing.status = 'active'"), "A person cannot receive a new duplicate active driver credential.");
+check("audited credential reset", driverAccessServer.includes("rotateDriverAccessCode") && driverAccessServer.includes("code_rotation_count"), "A lost code can be replaced without disconnecting readiness evidence.");
+check("admin reset endpoint", driverAccessRoute.includes('action?: "revoke" | "rotate"') && driverAccessRoute.includes("oneTimeCode: rotated.code"), "Only the existing full-admin route returns the replacement once.");
 
 const failed = checks.filter((item) => !item.pass);
 console.log(`Agent assignment checkpoint: ${checks.length - failed.length}/${checks.length} passed`);

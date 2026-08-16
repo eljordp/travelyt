@@ -36,6 +36,9 @@ export type DriverAccessCodeRow = {
   expires_at: string | null;
   revoked_at: string | null;
   revoked_by: string | null;
+  code_rotated_at: string | null;
+  code_rotated_by: string | null;
+  code_rotation_count: number;
 };
 
 export type DriverAccessPublic = {
@@ -53,6 +56,9 @@ export type DriverAccessPublic = {
   expiresAt?: string;
   revokedAt?: string;
   revokedBy?: string;
+  codeRotatedAt?: string;
+  codeRotatedBy?: string;
+  codeRotationCount: number;
 };
 
 function sessionSecret() {
@@ -130,6 +136,9 @@ function toPublic(row: DriverAccessCodeRow): DriverAccessPublic {
     expiresAt: row.expires_at ?? undefined,
     revokedAt: row.revoked_at ?? undefined,
     revokedBy: row.revoked_by ?? undefined,
+    codeRotatedAt: row.code_rotated_at ?? undefined,
+    codeRotatedBy: row.code_rotated_by ?? undefined,
+    codeRotationCount: row.code_rotation_count ?? 0,
   };
 }
 
@@ -434,6 +443,19 @@ export async function createDriverAccessCode(input: {
   const phoneError = validatePhone(driverPhone);
   if (phoneError) throw new Error(phoneError);
   const role = input.role?.trim() || "driver";
+  const personKeyHash = driverPersonKeyHash({ driverName, driverEmail, driverPhone });
+  const { data: existing, error: existingError } = await supabase
+    .from("driver_access_codes")
+    .select("id, driver_name")
+    .eq("person_key_hash", personKeyHash)
+    .eq("status", "active")
+    .maybeSingle<{ id: string; driver_name: string }>();
+  if (existingError) throw existingError;
+  if (existing) {
+    throw new Error(
+      `${existing.driver_name} already has an active driver account. Reset that account's access code instead of creating a duplicate.`
+    );
+  }
   const { data, error } = await supabase
     .from("driver_access_codes")
     .insert({
@@ -441,7 +463,7 @@ export async function createDriverAccessCode(input: {
       canonical_driver_name: canonicalDriverName(driverName),
       driver_email: driverEmail || null,
       driver_phone: driverPhone || null,
-      person_key_hash: driverPersonKeyHash({ driverName, driverEmail, driverPhone }),
+      person_key_hash: personKeyHash,
       role,
       code_hash: hashDriverCode(code),
       code_preview: codePreview(code),
@@ -449,6 +471,43 @@ export async function createDriverAccessCode(input: {
       created_by: input.createdBy || null,
       status: "active",
     })
+    .select("*")
+    .single<DriverAccessCodeRow>();
+
+  if (error) throw error;
+  return { code, access: toPublic(data) };
+}
+
+export async function rotateDriverAccessCode(input: {
+  id: string;
+  rotatedBy?: string;
+}) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("Driver access backend is not configured.");
+
+  const { data: current, error: currentError } = await supabase
+    .from("driver_access_codes")
+    .select("*")
+    .eq("id", input.id)
+    .single<DriverAccessCodeRow>();
+  if (currentError) throw currentError;
+  if (current.status !== "active") {
+    throw new Error("Only an active driver account can have its access code reset.");
+  }
+
+  const code = generateDriverAccessCode();
+  const { data, error } = await supabase
+    .from("driver_access_codes")
+    .update({
+      code_hash: hashDriverCode(code),
+      code_preview: codePreview(code),
+      code_rotated_at: new Date().toISOString(),
+      code_rotated_by: input.rotatedBy || null,
+      code_rotation_count: (current.code_rotation_count ?? 0) + 1,
+      last_used_at: null,
+    })
+    .eq("id", input.id)
+    .eq("status", "active")
     .select("*")
     .single<DriverAccessCodeRow>();
 
