@@ -75,6 +75,17 @@ interface DriverAccessCode {
   codeRotationCount: number;
 }
 
+interface DriverEvidenceItem {
+  id: string;
+  evidenceType: string;
+  originalName: string;
+  contentType: string;
+  byteSize: number;
+  reviewStatus: "pending" | "accepted" | "rejected";
+  uploadedAt: string;
+  downloadUrl: string | null;
+}
+
 interface AgentReadinessProfile {
   driverAccessId: string;
   driverName: string;
@@ -535,6 +546,15 @@ export default function AdminPage() {
   const [newDriverEmail, setNewDriverEmail] = useState("");
   const [newDriverPhone, setNewDriverPhone] = useState("");
   const [generatedDriverCode, setGeneratedDriverCode] = useState("");
+  const [driverOnboardingLink, setDriverOnboardingLink] = useState<{
+    driverName: string;
+    url: string;
+    expiresAt: string;
+  } | null>(null);
+  const [driverEvidencePanel, setDriverEvidencePanel] = useState<{
+    driverName: string;
+    items: DriverEvidenceItem[];
+  } | null>(null);
   const [creatingDriverCode, setCreatingDriverCode] = useState(false);
 
   useEffect(() => {
@@ -1113,6 +1133,8 @@ export default function AdminPage() {
     setPartnerEvents([]);
     setPartnerMigrationRequired(false);
     setGeneratedDriverCode("");
+    setDriverOnboardingLink(null);
+    setDriverEvidencePanel(null);
   }
 
   async function createDriverCode() {
@@ -1218,6 +1240,62 @@ export default function AdminPage() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reset driver access code.");
+    }
+  }
+
+  async function createDriverOnboardingLink(code: DriverAccessCode) {
+    if (
+      !confirm(
+        `Create a private evidence-upload link for ${code.driverName}? Any older active onboarding link for this driver will be revoked.`
+      )
+    ) return;
+    setError("");
+    setDriverOnboardingLink(null);
+    try {
+      const response = await fetch("/api/ops/driver-onboarding-invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ driverAccessId: code.id }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        driverName?: string;
+        url?: string;
+        expiresAt?: string;
+      };
+      if (!response.ok || !data.driverName || !data.url || !data.expiresAt) {
+        throw new Error(data.error || "Could not create driver onboarding link.");
+      }
+      setDriverOnboardingLink({
+        driverName: data.driverName,
+        url: data.url,
+        expiresAt: data.expiresAt,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create driver onboarding link.");
+    }
+  }
+
+  async function loadDriverEvidence(code: DriverAccessCode) {
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/ops/driver-onboarding-invites?driverAccessId=${encodeURIComponent(code.id)}`,
+        { credentials: "same-origin" }
+      );
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        evidence?: DriverEvidenceItem[];
+      };
+      if (!response.ok || !data.evidence) {
+        throw new Error(data.error || "Could not load driver evidence.");
+      }
+      setDriverEvidencePanel({ driverName: code.driverName, items: data.evidence });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load driver evidence.");
     }
   }
 
@@ -2165,6 +2243,58 @@ export default function AdminPage() {
             </div>
           )}
 
+          {driverOnboardingLink && (
+            <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-700">
+                Private onboarding link · {driverOnboardingLink.driverName}
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <code className="min-w-0 flex-1 break-all rounded-xl bg-white px-3 py-2 text-xs font-bold text-navy">
+                  {driverOnboardingLink.url}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard?.writeText(driverOnboardingLink.url)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 py-2 text-xs font-bold text-white"
+                >
+                  <Copy className="h-3.5 w-3.5" strokeWidth={2} />
+                  Copy
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-blue-800">
+                Send privately. It expires {formatDate(driverOnboardingLink.expiresAt)} and allows private evidence upload and identity verification.
+              </p>
+            </div>
+          )}
+
+          {driverEvidencePanel && (
+            <div className="mb-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-navy/65">
+                  Evidence · {driverEvidencePanel.driverName}
+                </p>
+                <button type="button" onClick={() => setDriverEvidencePanel(null)} className="text-xs font-bold text-navy/50 underline">
+                  Close
+                </button>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {driverEvidencePanel.items.length ? driverEvidencePanel.items.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-bold text-navy">{item.evidenceType.replaceAll("_", " ")}</p>
+                      <p className="text-navy/55">{item.originalName} · {(item.byteSize / 1024 / 1024).toFixed(1)} MB · {item.reviewStatus}</p>
+                    </div>
+                    {item.downloadUrl ? (
+                      <a href={item.downloadUrl} target="_blank" rel="noreferrer" className="font-bold text-[#ff6868] underline">Review private file</a>
+                    ) : (
+                      <span className="text-red-600">Download unavailable</span>
+                    )}
+                  </div>
+                )) : <p className="text-sm text-navy/55">No evidence uploaded yet.</p>}
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-3">
             <input
               value={newDriverName}
@@ -2264,6 +2394,22 @@ export default function AdminPage() {
                   >
                     {driverCodeStatusLabel(code)}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => void loadDriverEvidence(code)}
+                    disabled={adminRole !== "admin"}
+                    className="self-start rounded-xl bg-navy/5 px-3 py-2 text-xs font-bold text-navy transition-colors hover:bg-navy/10 disabled:opacity-40"
+                  >
+                    View evidence
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void createDriverOnboardingLink(code)}
+                    disabled={adminRole !== "admin" || code.status !== "active" || !code.driverEmail}
+                    className="self-start rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-40"
+                  >
+                    Create upload link
+                  </button>
                   <button
                     type="button"
                     onClick={() => void rotateDriverCode(code)}

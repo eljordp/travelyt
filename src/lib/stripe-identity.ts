@@ -17,6 +17,7 @@ export async function createStripeIdentitySession(input: {
   role: string;
   documentType: "driver_license" | "passport" | "employee_badge" | "other";
   request: Request;
+  returnPath?: string;
 }) {
   const stripe = getStripe();
   if (!stripe) throw new Error("Stripe Identity is not configured.");
@@ -31,7 +32,7 @@ export async function createStripeIdentitySession(input: {
   return stripe.identity.verificationSessions.create({
     type: "document",
     client_reference_id: input.verificationId,
-    return_url: `${getSiteUrl(input.request)}/profile?identity=return`,
+    return_url: `${getSiteUrl(input.request)}${input.returnPath || "/profile?identity=return"}`,
     provided_details: {
       email: input.email,
       phone: input.phone,
@@ -50,4 +51,3 @@ export async function createStripeIdentitySession(input: {
     },
   });
 }
-

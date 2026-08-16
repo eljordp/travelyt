@@ -22,6 +22,10 @@ const driverPage = await readFile(path.join(ROOT, "src/app/driver/job/[id]/page.
 const driverAccessServer = await readFile(path.join(ROOT, "src/lib/driver-access-server.ts"), "utf8");
 const driverAccessRoute = await readFile(path.join(ROOT, "src/app/api/drivers/access-codes/route.ts"), "utf8");
 const rotationMigration = await readFile(path.join(ROOT, "supabase/migrations/033_driver_access_rotation.sql"), "utf8");
+const onboardingMigration = await readFile(path.join(ROOT, "supabase/migrations/034_agent_onboarding_evidence.sql"), "utf8");
+const onboardingRoute = await readFile(path.join(ROOT, "src/app/api/driver-onboarding/route.ts"), "utf8");
+const onboardingInviteRoute = await readFile(path.join(ROOT, "src/app/api/ops/driver-onboarding-invites/route.ts"), "utf8");
+const onboardingPage = await readFile(path.join(ROOT, "src/app/driver/onboarding/page.tsx"), "utf8");
 
 check("private readiness table", migration.includes("agent_readiness_profiles") && migration.includes("revoke all"), "Readiness evidence is service-role only.");
 check("private assignment table", migration.includes("booking_agent_assignments") && migration.includes("enable row level security"), "Assignments are private operational evidence.");
@@ -46,6 +50,12 @@ check("no handoff authorization claim", !migration.includes("airline_authorized"
 check("one active account per person", rotationMigration.includes("prevent_duplicate_active_driver_person") && rotationMigration.includes("existing.status = 'active'"), "A person cannot receive a new duplicate active driver credential.");
 check("audited credential reset", driverAccessServer.includes("rotateDriverAccessCode") && driverAccessServer.includes("code_rotation_count"), "A lost code can be replaced without disconnecting readiness evidence.");
 check("admin reset endpoint", driverAccessRoute.includes('action?: "revoke" | "rotate"') && driverAccessRoute.includes("oneTimeCode: rotated.code"), "Only the existing full-admin route returns the replacement once.");
+check("private driver evidence storage", onboardingMigration.includes("agent-readiness-evidence") && onboardingMigration.includes("public = false") && onboardingMigration.includes("revoke all"), "Driver evidence is private and service-role controlled.");
+check("expiring onboarding link", onboardingMigration.includes("expires_at") && onboardingInviteRoute.includes("AGENT_ONBOARDING_TTL_HOURS"), "Admin creates a bounded private onboarding capability.");
+check("upload content verification", onboardingRoute.includes("evidenceMagicMatches") && onboardingRoute.includes("bytes.length !== byteSize"), "Declared file type and size are verified before evidence is recorded.");
+check("driver identity provider path", onboardingRoute.includes('action === "start_identity"') && onboardingRoute.includes("createStripeIdentitySession"), "The same provider-backed ID and selfie control is available from onboarding.");
+check("upload does not certify readiness", onboardingPage.includes("pending review") && !onboardingRoute.includes('status: "active"'), "Self-uploaded documents cannot activate a driver.");
+check("admin can review private evidence", onboardingInviteRoute.includes("createSignedUrl") && onboardingPage.includes("Start secure verification"), "Driver and admin surfaces cover submission and controlled review.");
 
 const failed = checks.filter((item) => !item.pass);
 console.log(`Agent assignment checkpoint: ${checks.length - failed.length}/${checks.length} passed`);

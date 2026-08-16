@@ -317,6 +317,25 @@ export async function PATCH(request: Request) {
       );
     }
 
+    let existingActiveAccess: { id: string } | null = null;
+    if (body.action === "approve") {
+      const { data: access, error: accessError } = await supabase
+        .from("driver_access_codes")
+        .select("id")
+        .eq("driver_email", String(application.email).trim().toLowerCase())
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+      if (accessError) {
+        return NextResponse.json(
+          { ok: false, error: "Could not check the driver's existing account." },
+          { status: 500 }
+        );
+      }
+      existingActiveAccess = access;
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from("driver_applications")
       .update({
@@ -336,7 +355,7 @@ export async function PATCH(request: Request) {
     }
 
     let oneTimeCode: string | undefined;
-    if (body.action === "approve") {
+    if (body.action === "approve" && !existingActiveAccess) {
       const created = await createDriverAccessCode({
         driverName: application.full_name,
         driverEmail: application.email,
@@ -347,7 +366,12 @@ export async function PATCH(request: Request) {
       oneTimeCode = created.code;
     }
 
-    return NextResponse.json({ ok: true, application: updated, oneTimeCode });
+    return NextResponse.json({
+      ok: true,
+      application: updated,
+      oneTimeCode,
+      accessAlreadyExists: Boolean(existingActiveAccess),
+    });
   } catch (error) {
     console.error("Could not review driver application", error);
     return NextResponse.json(
