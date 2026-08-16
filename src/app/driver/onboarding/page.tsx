@@ -237,6 +237,11 @@ export default function DriverOnboardingPage() {
                   )}
                 </div>
                 {uploaded && <p className="mt-3 text-xs text-navy/60">Latest: {uploaded.original_name}</p>}
+                {item.type === "training" && (
+                  <a href="/driver/training" target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs font-bold text-[#ff6868] underline">
+                    Open the training checklist
+                  </a>
+                )}
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <input
                     type="file"

@@ -26,6 +26,7 @@ const onboardingMigration = await readFile(path.join(ROOT, "supabase/migrations/
 const onboardingRoute = await readFile(path.join(ROOT, "src/app/api/driver-onboarding/route.ts"), "utf8");
 const onboardingInviteRoute = await readFile(path.join(ROOT, "src/app/api/ops/driver-onboarding-invites/route.ts"), "utf8");
 const onboardingPage = await readFile(path.join(ROOT, "src/app/driver/onboarding/page.tsx"), "utf8");
+const driverTrainingPage = await readFile(path.join(ROOT, "src/app/driver/training/page.tsx"), "utf8");
 
 check("private readiness table", migration.includes("agent_readiness_profiles") && migration.includes("revoke all"), "Readiness evidence is service-role only.");
 check("private assignment table", migration.includes("booking_agent_assignments") && migration.includes("enable row level security"), "Assignments are private operational evidence.");
@@ -56,6 +57,7 @@ check("upload content verification", onboardingRoute.includes("evidenceMagicMatc
 check("driver identity provider path", onboardingRoute.includes('action === "start_identity"') && onboardingRoute.includes("createStripeIdentitySession"), "The same provider-backed ID and selfie control is available from onboarding.");
 check("upload does not certify readiness", onboardingPage.includes("pending review") && !onboardingRoute.includes('status: "active"'), "Self-uploaded documents cannot activate a driver.");
 check("admin can review private evidence", onboardingInviteRoute.includes("createSignedUrl") && onboardingPage.includes("Start secure verification"), "Driver and admin surfaces cover submission and controlled review.");
+check("foundational training is explicit", driverTrainingPage.includes("never claim screening or airline acceptance") && driverTrainingPage.includes("does not authorize airline acceptance, certify insurance"), "The training artifact teaches custody boundaries without overstating certification.");
 
 const failed = checks.filter((item) => !item.pass);
 console.log(`Agent assignment checkpoint: ${checks.length - failed.length}/${checks.length} passed`);
