@@ -86,6 +86,15 @@ interface DriverEvidenceItem {
   downloadUrl: string | null;
 }
 
+interface DriverTrainingCompletion {
+  version: string;
+  signatureName: string;
+  score: number;
+  passed: boolean;
+  reviewStatus: "pending" | "accepted" | "rejected";
+  completedAt: string;
+}
+
 interface AgentReadinessProfile {
   driverAccessId: string;
   driverName: string;
@@ -554,6 +563,7 @@ export default function AdminPage() {
   const [driverEvidencePanel, setDriverEvidencePanel] = useState<{
     driverName: string;
     items: DriverEvidenceItem[];
+    training: DriverTrainingCompletion | null;
   } | null>(null);
   const [creatingDriverCode, setCreatingDriverCode] = useState(false);
 
@@ -1246,7 +1256,7 @@ export default function AdminPage() {
   async function createDriverOnboardingLink(code: DriverAccessCode) {
     if (
       !confirm(
-        `Create a private evidence-upload link for ${code.driverName}? Any older active onboarding link for this driver will be revoked.`
+        `Create an optional private fallback link for ${code.driverName}? Their normal access-code login already opens onboarding automatically. Any older active fallback link will be revoked.`
       )
     ) return;
     setError("");
@@ -1289,11 +1299,16 @@ export default function AdminPage() {
         ok?: boolean;
         error?: string;
         evidence?: DriverEvidenceItem[];
+        training?: DriverTrainingCompletion | null;
       };
       if (!response.ok || !data.evidence) {
         throw new Error(data.error || "Could not load driver evidence.");
       }
-      setDriverEvidencePanel({ driverName: code.driverName, items: data.evidence });
+      setDriverEvidencePanel({
+        driverName: code.driverName,
+        items: data.evidence,
+        training: data.training ?? null,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load driver evidence.");
     }
@@ -2246,7 +2261,7 @@ export default function AdminPage() {
           {driverOnboardingLink && (
             <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-blue-700">
-                Private onboarding link · {driverOnboardingLink.driverName}
+                Optional onboarding fallback · {driverOnboardingLink.driverName}
               </p>
               <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <code className="min-w-0 flex-1 break-all rounded-xl bg-white px-3 py-2 text-xs font-bold text-navy">
@@ -2262,7 +2277,7 @@ export default function AdminPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-blue-800">
-                Send privately. It expires {formatDate(driverOnboardingLink.expiresAt)} and allows private evidence upload and identity verification.
+                This is not required for the normal flow. It expires {formatDate(driverOnboardingLink.expiresAt)} and can be sent privately if the driver cannot use the normal access-code login.
               </p>
             </div>
           )}
@@ -2278,6 +2293,17 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="mt-3 grid gap-2">
+                {driverEvidencePanel.training && (
+                  <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-xs text-green-900">
+                    <p className="font-bold">Foundational training · {driverEvidencePanel.training.score}%</p>
+                    <p className="mt-1">
+                      Signed by {driverEvidencePanel.training.signatureName} · {formatDate(driverEvidencePanel.training.completedAt)} · {driverEvidencePanel.training.reviewStatus} review
+                    </p>
+                    <p className="mt-1 text-green-800">
+                      Knowledge completion is recorded. It does not activate readiness or replace the observed physical drill.
+                    </p>
+                  </div>
+                )}
                 {driverEvidencePanel.items.length ? driverEvidencePanel.items.map((item) => (
                   <div key={item.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -2334,8 +2360,9 @@ export default function AdminPage() {
           )}
 
           <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-900">
-            Active codes open the driver portal. Archived codes are revoked or
-            expired, kept in history, and blocked from future driver sign-in.
+            Active codes open one self-serve path: documents, ID + selfie,
+            training, then operations review. Archived codes are blocked from
+            future driver sign-in.
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-navy/[0.03] p-1 text-xs font-bold text-navy">
@@ -2408,7 +2435,7 @@ export default function AdminPage() {
                     disabled={adminRole !== "admin" || code.status !== "active" || !code.driverEmail}
                     className="self-start rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-40"
                   >
-                    Create upload link
+                    Optional fallback link
                   </button>
                   <button
                     type="button"

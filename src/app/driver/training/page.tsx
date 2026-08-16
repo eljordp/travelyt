@@ -68,7 +68,7 @@ export default function DriverTrainingPage() {
           <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Travelyt foundational driver training · Version 1 · August 2026</p>
           <h1 className="mt-2 text-2xl font-bold text-navy">Custody, seal, scan, and handoff checklist</h1>
           <p className="mt-3 text-sm leading-relaxed text-navy/65">
-            Read every module, check each box on a printed or saved copy, sign the acknowledgment, then upload it as Training evidence through your private onboarding link.
+            Use this printable checklist as a field aid. The scored training module inside driver onboarding is the system-of-record completion path.
           </p>
           <div className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs leading-relaxed text-yellow-900">
             This foundational checklist does not authorize airline acceptance, certify insurance, replace a background check, or replace an observed physical drill. Live customer custody remains blocked until operations clears every readiness item.
@@ -103,9 +103,9 @@ export default function DriverTrainingPage() {
         </section>
 
         <div className="rounded-2xl bg-navy p-5 text-sm text-white print:hidden">
-          Use your browser&apos;s Print command and choose Save as PDF. Sign the saved or printed checklist, then return to your private onboarding link and upload it under Training evidence.
+          Use your browser&apos;s Print command and choose Save as PDF if you want a paper field copy. A signed printout does not replace the scored portal module or operations review.
           <div className="mt-3">
-            <Link href="/driver" className="font-bold text-[#ff9b9b] underline">Return to driver portal</Link>
+            <Link href="/driver/onboarding" className="font-bold text-[#ff9b9b] underline">Return to driver onboarding</Link>
           </div>
         </div>
       </div>

@@ -30,6 +30,7 @@ type DriverSessionResponse = {
     email?: string;
     phone?: string;
     role?: string;
+    accessId?: string;
   } | null;
 };
 
@@ -38,6 +39,19 @@ function isPastTrip(booking: Booking) {
   today.setHours(0, 0, 0, 0);
   const parsed = Date.parse(`${booking.date}T00:00:00`);
   return !Number.isNaN(parsed) && parsed < today.getTime();
+}
+
+async function continueOnboardingIfRequired() {
+  const response = await fetch("/api/driver-onboarding", {
+    credentials: "same-origin",
+  });
+  if (!response.ok) return false;
+  const data = (await response.json()) as {
+    progress?: { submitted?: boolean };
+  };
+  if (data.progress?.submitted) return false;
+  window.location.replace("/driver/onboarding");
+  return true;
 }
 
 export default function DriverDashboard() {
@@ -69,6 +83,7 @@ export default function DriverDashboard() {
           });
           const data = (await response.json()) as DriverSessionResponse;
           if (response.ok && data.authenticated && data.driver?.name) {
+            if (data.driver.accessId && await continueOnboardingIfRequired()) return;
             localStorage.setItem(DRIVER_KEY, data.driver.name);
             setDriver(data.driver.name);
           } else {
@@ -116,6 +131,7 @@ export default function DriverDashboard() {
         throw new Error(data.error || "Driver name or access code is incorrect.");
       }
       clearDriverAccessCode();
+      if (data.driver.accessId && await continueOnboardingIfRequired()) return;
       localStorage.setItem(DRIVER_KEY, data.driver.name);
       setDriver(data.driver.name);
       setAccessCode("");

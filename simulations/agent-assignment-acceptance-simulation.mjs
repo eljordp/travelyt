@@ -23,10 +23,13 @@ const driverAccessServer = await readFile(path.join(ROOT, "src/lib/driver-access
 const driverAccessRoute = await readFile(path.join(ROOT, "src/app/api/drivers/access-codes/route.ts"), "utf8");
 const rotationMigration = await readFile(path.join(ROOT, "supabase/migrations/033_driver_access_rotation.sql"), "utf8");
 const onboardingMigration = await readFile(path.join(ROOT, "supabase/migrations/034_agent_onboarding_evidence.sql"), "utf8");
+const trainingMigration = await readFile(path.join(ROOT, "supabase/migrations/035_driver_training_completion.sql"), "utf8");
 const onboardingRoute = await readFile(path.join(ROOT, "src/app/api/driver-onboarding/route.ts"), "utf8");
 const onboardingInviteRoute = await readFile(path.join(ROOT, "src/app/api/ops/driver-onboarding-invites/route.ts"), "utf8");
 const onboardingPage = await readFile(path.join(ROOT, "src/app/driver/onboarding/page.tsx"), "utf8");
 const driverTrainingPage = await readFile(path.join(ROOT, "src/app/driver/training/page.tsx"), "utf8");
+const driverDashboard = await readFile(path.join(ROOT, "src/app/driver/page.tsx"), "utf8");
+const driverTrainingLibrary = await readFile(path.join(ROOT, "src/lib/driver-training.ts"), "utf8");
 
 check("private readiness table", migration.includes("agent_readiness_profiles") && migration.includes("revoke all"), "Readiness evidence is service-role only.");
 check("private assignment table", migration.includes("booking_agent_assignments") && migration.includes("enable row level security"), "Assignments are private operational evidence.");
@@ -58,6 +61,13 @@ check("driver identity provider path", onboardingRoute.includes('action === "sta
 check("upload does not certify readiness", onboardingPage.includes("pending review") && !onboardingRoute.includes('status: "active"'), "Self-uploaded documents cannot activate a driver.");
 check("admin can review private evidence", onboardingInviteRoute.includes("createSignedUrl") && onboardingPage.includes("Start secure verification"), "Driver and admin surfaces cover submission and controlled review.");
 check("foundational training is explicit", driverTrainingPage.includes("never claim screening or airline acceptance") && driverTrainingPage.includes("does not authorize airline acceptance, certify insurance"), "The training artifact teaches custody boundaries without overstating certification.");
+check("session-based onboarding path", onboardingRoute.includes("getDriverSession") && onboardingRoute.includes("authenticated-session"), "The driver's own access-code session opens onboarding without a separately texted link.");
+check("automatic onboarding routing", driverDashboard.includes('window.location.replace("/driver/onboarding")') && driverDashboard.includes("continueOnboardingIfRequired"), "Driver login chains into incomplete onboarding automatically.");
+check("private scored training record", trainingMigration.includes("agent_training_completions") && trainingMigration.includes("enable row level security") && trainingMigration.includes("review_status"), "Training completion is private and reviewable.");
+check("perfect-score knowledge gate", onboardingRoute.includes("DRIVER_TRAINING_PASSING_SCORE") && onboardingRoute.includes('action === "complete_training"'), "The knowledge check is scored server-side and requires the configured passing score.");
+check("training does not auto-activate", onboardingRoute.includes('readinessStatus: "pending_review"') && !onboardingRoute.includes('training_evidence_reference'), "Passing training records evidence but does not certify operational readiness.");
+check("eight operational training modules", (driverTrainingLibrary.match(/title: "/g) ?? []).length === 8 && driverTrainingLibrary.includes("Arrival delivery") && driverTrainingLibrary.includes("Privacy, photo proof, and conduct"), "Training covers service boundaries, readiness, pickup, transit, both handoff directions, incidents, and privacy.");
+check("quiz answers reshuffle", onboardingPage.includes("randomizedQuizOrder") && onboardingPage.includes("setQuizAnswers({})"), "Answer order changes on load and again after a failed attempt.");
 
 const failed = checks.filter((item) => !item.pass);
 console.log(`Agent assignment checkpoint: ${checks.length - failed.length}/${checks.length} passed`);

@@ -13,6 +13,14 @@ import {
   identityConsentScope,
   validConsentSignature,
 } from "@/lib/identity-consent";
+import { getDriverSession } from "@/lib/driver-access-server";
+import {
+  DRIVER_TRAINING_CORRECT_ANSWERS,
+  DRIVER_TRAINING_MODULES,
+  DRIVER_TRAINING_PASSING_SCORE,
+  DRIVER_TRAINING_QUESTIONS,
+  DRIVER_TRAINING_VERSION,
+} from "@/lib/driver-training";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   createStripeIdentitySession,
@@ -22,6 +30,11 @@ import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
+const REQUIRED_EVIDENCE_TYPES: AgentEvidenceType[] = [
+  "insurance",
+  "vehicle_registration",
+  "vehicle_photo",
+];
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
@@ -43,14 +56,20 @@ function isEvidenceType(value: unknown): value is AgentEvidenceType {
   return typeof value === "string" && AGENT_EVIDENCE_TYPES.includes(value as AgentEvidenceType);
 }
 
-async function loadContext(token: string) {
-  const invite = await getActiveOnboardingInvite(token);
+async function loadContext(request: Request, token: string) {
   const supabase = getSupabaseAdmin();
-  if (!invite || !supabase) return null;
+  if (!supabase) return null;
+
+  const invite = token ? await getActiveOnboardingInvite(token) : null;
+  const session = invite ? null : getDriverSession(request);
+  const driverAccessId = invite?.driver_access_id ||
+    (session?.ok ? session.driverAccessId : undefined);
+  if (!driverAccessId) return null;
+
   const { data: driver, error } = await supabase
     .from("driver_access_codes")
     .select("id, driver_name, driver_email, driver_phone, status")
-    .eq("id", invite.driver_access_id)
+    .eq("id", driverAccessId)
     .maybeSingle<{
       id: string;
       driver_name: string;
@@ -59,17 +78,26 @@ async function loadContext(token: string) {
       status: string;
     }>();
   if (error || !driver || driver.status !== "active") return null;
-  return { invite, driver, supabase };
+  return {
+    invite,
+    driver,
+    supabase,
+    uploadScopeId: invite?.id ?? "authenticated-session",
+  };
 }
 
 export async function GET(request: Request) {
   const limited = rateLimit(request, "driver-onboarding:get", 60);
   if (limited) return limited;
   const token = new URL(request.url).searchParams.get("token")?.trim() ?? "";
-  const context = await loadContext(token);
-  if (!context) return bad("This onboarding link is invalid or expired.", 401);
+  const context = await loadContext(request, token);
+  if (!context) return bad("Sign in with your driver access code or use a valid onboarding link.", 401);
 
-  const [{ data: uploads, error: uploadError }, { data: identity, error: identityError }] =
+  const [
+    { data: uploads, error: uploadError },
+    { data: identity, error: identityError },
+    { data: training, error: trainingError },
+  ] =
     await Promise.all([
       context.supabase
         .from("agent_evidence_uploads")
@@ -85,15 +113,42 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle<{ status: string; verified_at: string | null }>(),
+      context.supabase
+        .from("agent_training_completions")
+        .select("training_version, score, passed, review_status, completed_at")
+        .eq("driver_access_id", context.driver.id)
+        .eq("training_version", DRIVER_TRAINING_VERSION)
+        .maybeSingle<{
+          training_version: string;
+          score: number;
+          passed: boolean;
+          review_status: "pending" | "accepted" | "rejected";
+          completed_at: string;
+        }>(),
     ]);
-  if (uploadError || identityError) return bad("Could not load onboarding status.", 500);
+  if (uploadError || identityError || trainingError) return bad("Could not load onboarding status.", 500);
+
+  const documentsComplete = REQUIRED_EVIDENCE_TYPES.every((type) => {
+    const latest = (uploads ?? []).find((upload) => upload.evidence_type === type);
+    return Boolean(latest && latest.review_status !== "rejected");
+  });
+  const identityComplete = identity?.status === "verified";
+  const trainingComplete = training?.passed === true;
 
   return NextResponse.json({
     ok: true,
     driver: { name: context.driver.driver_name },
-    expiresAt: context.invite.expires_at,
+    accessMode: context.invite ? "invite" : "driver_session",
+    expiresAt: context.invite?.expires_at ?? null,
     identity: identity ?? { status: "not_started", verified_at: null },
+    training: training ?? null,
     uploads: uploads ?? [],
+    progress: {
+      documentsComplete,
+      identityComplete,
+      trainingComplete,
+      submitted: documentsComplete && identityComplete && trainingComplete,
+    },
   });
 }
 
@@ -103,8 +158,8 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const action = typeof body.action === "string" ? body.action : "";
-  const context = await loadContext(token);
-  if (!context) return bad("This onboarding link is invalid or expired.", 401);
+  const context = await loadContext(request, token);
+  if (!context) return bad("Sign in with your driver access code or use a valid onboarding link.", 401);
 
   if (action === "prepare_upload") {
     const evidenceType = body.evidenceType;
@@ -117,7 +172,7 @@ export async function POST(request: Request) {
     if (!Number.isInteger(byteSize) || byteSize <= 0 || byteSize > MAX_EVIDENCE_BYTES) {
       return bad("Evidence files must be between 1 byte and 10 MB.");
     }
-    const filePath = `${context.driver.id}/${context.invite.id}/${evidenceType}/${randomUUID()}.${extension}`;
+    const filePath = `${context.driver.id}/${context.uploadScopeId}/${evidenceType}/${randomUUID()}.${extension}`;
     const { data, error } = await context.supabase.storage
       .from(AGENT_EVIDENCE_BUCKET)
       .createSignedUploadUrl(filePath);
@@ -139,7 +194,7 @@ export async function POST(request: Request) {
     const contentType = typeof body.contentType === "string" ? body.contentType : "";
     const byteSize = typeof body.byteSize === "number" ? body.byteSize : 0;
     if (!isEvidenceType(evidenceType)) return bad("Select a valid evidence category.");
-    if (!filePath.startsWith(`${context.driver.id}/${context.invite.id}/${evidenceType}/`)) {
+    if (!filePath.startsWith(`${context.driver.id}/${context.uploadScopeId}/${evidenceType}/`)) {
       return bad("Evidence path is invalid.", 403);
     }
     if (!safeEvidenceExtension(contentType) || byteSize <= 0 || byteSize > MAX_EVIDENCE_BYTES) {
@@ -158,7 +213,7 @@ export async function POST(request: Request) {
       .from("agent_evidence_uploads")
       .insert({
         driver_access_id: context.driver.id,
-        invite_id: context.invite.id,
+        invite_id: context.invite?.id ?? null,
         evidence_type: evidenceType,
         file_path: filePath,
         original_name: originalName,
@@ -229,7 +284,7 @@ export async function POST(request: Request) {
         metadata: {
           source: "driver-onboarding",
           driver_access_id: context.driver.id,
-          invite_id: context.invite.id,
+          invite_id: context.invite?.id ?? null,
           raw_document_stored_by_travelyt: false,
         },
       })
@@ -260,6 +315,70 @@ export async function POST(request: Request) {
         .eq("id", verification.id);
       return bad("Secure identity verification is temporarily unavailable. Readiness remains blocked.", 503);
     }
+  }
+
+  if (action === "complete_training") {
+    const signatureName = typeof body.signatureName === "string"
+      ? body.signatureName.trim().replace(/\s+/g, " ").slice(0, 160)
+      : "";
+    const acknowledgments = body.acknowledgments && typeof body.acknowledgments === "object"
+      ? body.acknowledgments as Record<string, unknown>
+      : {};
+    const quizAnswers = body.quizAnswers && typeof body.quizAnswers === "object"
+      ? body.quizAnswers as Record<string, unknown>
+      : {};
+
+    if (!validConsentSignature(signatureName)) {
+      return bad("Enter your legal name as the training acknowledgment signature.");
+    }
+    if (!DRIVER_TRAINING_MODULES.every((module) => acknowledgments[module.id] === true)) {
+      return bad("Review and acknowledge every training module before submitting.");
+    }
+
+    const correctCount = DRIVER_TRAINING_QUESTIONS.filter(
+      (question) => quizAnswers[question.id] === DRIVER_TRAINING_CORRECT_ANSWERS[question.id]
+    ).length;
+    const score = Math.round((correctCount / DRIVER_TRAINING_QUESTIONS.length) * 100);
+    if (score < DRIVER_TRAINING_PASSING_SCORE) {
+      return NextResponse.json({
+        ok: false,
+        error: `Knowledge check score: ${score}%. Review the lessons and answer every question correctly.`,
+        score,
+      }, { status: 409 });
+    }
+
+    const now = new Date().toISOString();
+    const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const userAgent = request.headers.get("user-agent")?.trim() || "unknown";
+    const { data: training, error } = await context.supabase
+      .from("agent_training_completions")
+      .upsert({
+        driver_access_id: context.driver.id,
+        training_version: DRIVER_TRAINING_VERSION,
+        signature_name: signatureName,
+        module_acknowledgments: acknowledgments,
+        quiz_answers: quizAnswers,
+        score,
+        passed: true,
+        review_status: "pending",
+        reviewed_at: null,
+        reviewed_by: null,
+        review_note: null,
+        completed_at: now,
+        ip_hash: consentEvidenceHash(forwardedFor),
+        user_agent_hash: consentEvidenceHash(userAgent),
+        updated_at: now,
+      }, { onConflict: "driver_access_id,training_version" })
+      .select("training_version, score, passed, review_status, completed_at")
+      .single();
+    if (error) return bad("Could not record training completion.", 500);
+
+    return NextResponse.json({
+      ok: true,
+      training,
+      readinessStatus: "pending_review",
+      message: "Training completion was recorded. Operational readiness still requires admin review.",
+    });
   }
 
   return bad("Unsupported onboarding action.");

@@ -22,12 +22,24 @@ export async function GET(request: Request) {
   if (!supabase) return bad("Driver onboarding is not configured.", 503);
   const driverAccessId = new URL(request.url).searchParams.get("driverAccessId")?.trim() ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(driverAccessId)) return bad("Select a valid driver account.");
-  const { data, error } = await supabase
-    .from("agent_evidence_uploads")
-    .select("id, evidence_type, original_name, content_type, byte_size, review_status, uploaded_at, file_path")
-    .eq("driver_access_id", driverAccessId)
-    .order("uploaded_at", { ascending: false });
-  if (error) return bad("Could not load driver evidence.", 500);
+  const [
+    { data, error },
+    { data: training, error: trainingError },
+  ] = await Promise.all([
+    supabase
+      .from("agent_evidence_uploads")
+      .select("id, evidence_type, original_name, content_type, byte_size, review_status, uploaded_at, file_path")
+      .eq("driver_access_id", driverAccessId)
+      .order("uploaded_at", { ascending: false }),
+    supabase
+      .from("agent_training_completions")
+      .select("training_version, signature_name, score, passed, review_status, completed_at")
+      .eq("driver_access_id", driverAccessId)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (error || trainingError) return bad("Could not load driver evidence.", 500);
   const evidence = await Promise.all(
     (data ?? []).map(async (row) => {
       const { data: signed } = await supabase.storage
@@ -45,7 +57,18 @@ export async function GET(request: Request) {
       };
     })
   );
-  return NextResponse.json({ ok: true, evidence });
+  return NextResponse.json({
+    ok: true,
+    evidence,
+    training: training ? {
+      version: training.training_version,
+      signatureName: training.signature_name,
+      score: training.score,
+      passed: training.passed,
+      reviewStatus: training.review_status,
+      completedAt: training.completed_at,
+    } : null,
+  });
 }
 
 export async function POST(request: Request) {
