@@ -269,6 +269,18 @@ export default function DriverOnboardingPage() {
     }
   }
 
+  if (!status && !error) {
+    return (
+      <DriverChrome title="Driver onboarding">
+        <div className="rounded-2xl bg-white p-6 shadow-sm shadow-navy/5">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Driver onboarding</p>
+          <h1 className="mt-2 text-xl font-bold text-navy">Opening your private readiness path…</h1>
+          <p className="mt-2 text-sm text-navy/60">Checking your driver session and current completion status.</p>
+        </div>
+      </DriverChrome>
+    );
+  }
+
   if (error && !status) {
     return (
       <DriverChrome title="Driver onboarding">
