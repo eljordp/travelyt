@@ -107,7 +107,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-white/70 text-sm">
-            &copy; 2026 Travelyt, Inc. All rights reserved.
+            &copy; 2026 Travelyt. All rights reserved.
           </div>
           <div className="flex gap-6 text-sm text-white/70">
             <Link href="/privacy" className="hover:text-cyan transition-colors">

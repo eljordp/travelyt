@@ -227,7 +227,7 @@ export default function WebsiteHome() {
               </span>
               <span className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />
-                Background-checked handlers
+                Agent verification + training required
               </span>
               <span className="flex items-center gap-2">
                 <BadgeCheck className="h-4 w-4 text-[#ff6868]" strokeWidth={2} />

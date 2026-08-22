@@ -10,7 +10,7 @@ export default function Services() {
         "We pick up your luggage at your door, weigh and seal every bag, and transport it to the handoff point authorized by the participating airline and airport.",
       features: [
         "Scheduled doorstep pickup",
-        "Weighing and tamper-proof sealing",
+        "Weighing and tamper-evident sealing",
         "Airline-rule-aware bag prep",
         "Authorized receiving-point handoff",
         "GPS custody checkpoints",

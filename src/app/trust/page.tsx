@@ -7,14 +7,14 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Trust & Security",
   description:
-    "How Travelyt protects luggage with tamper-evident seals, GPS custody checkpoints, chain-of-custody logs, vetted agents, and insurance coverage.",
+    "How Travelyt is designed to protect luggage with tamper-evident seals, custody checkpoints, documented transfers, agent activation controls, and a pre-custody coverage gate.",
   alternates: {
     canonical: "/trust",
   },
   openGraph: {
     title: "Trust & Security | Travelyt",
     description:
-      "Learn how Travelyt handles luggage with seals, GPS checkpoints, custody logs, vetted agents, and insurance coverage.",
+      "Learn how Travelyt's proposed custody controls use seals, checkpoints, documented transfers, agent activation requirements, and a pre-custody coverage gate.",
     url: "/trust",
   },
 };
@@ -49,15 +49,15 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Vetted Agents",
-    desc: "Every Travelyt agent is ID-verified and trained on handling, sealing, and chain-of-custody procedures. You always know who's handling your bags.",
+    title: "Activation-Gated Agents",
+    desc: "Every Travelyt agent must complete identity verification and scored training on handling, sealing, privacy, exceptions, and custody procedures before activation.",
     icon: (
       <UserCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
   },
   {
-    title: "Operates Within the Rules",
-    desc: "Travelyt is a federally registered motor carrier. We follow TSA guidance on restricted items, airport authority rules on landside pickup and delivery, and FMCSA requirements for property transport.",
+    title: "Route-by-Route Compliance",
+    desc: "Each live route must be cleared against the applicable motor-carrier, airport, airline, restricted-item, insurance, and local operating requirements before launch.",
     icon: (
       <Scale className="w-7 h-7" strokeWidth={1.5} />
     ),

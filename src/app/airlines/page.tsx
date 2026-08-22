@@ -41,7 +41,7 @@ const heroCallouts = [
   },
   {
     title: "Documented custody",
-    desc: "Every handoff is a logged event: verified ID, seal, weight, photo — a documented, append-only record.",
+    desc: "Every handoff is a logged event: verified ID, seal, weight, photo — a documented, timestamped record.",
     icon: <ClipboardCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
@@ -66,7 +66,7 @@ const stages = [
   {
     n: "2",
     title: "Documented custody",
-    desc: "In transit, the bag is bound to a per-bag badge identity. Scan events, seal checks, and photos write to a documented, append-only custody log — who touched the bag, where, and when, with no untracked gap.",
+    desc: "In transit, the bag is bound to a per-bag badge identity. Scan events, seal checks, and photos write to a documented custody log — who handled the bag, where, and when — so missing proof enters the exception process.",
     icon: <MapPin className="w-7 h-7" strokeWidth={1.5} />,
   },
   {
@@ -89,18 +89,18 @@ const opsChecklist = [
     icon: <MapPin className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    title: "Append-only chain-of-custody log",
+    title: "Timestamped chain-of-custody log",
     desc: "A complete digital audit trail per bag, available to your operations and security teams for every pilot movement.",
     icon: <ClipboardCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    title: "ID-verified, vetted agents",
-    desc: "Every agent is identity-verified, background-checked, and trained on sealing and custody procedure.",
+    title: "Activation-gated agents",
+    desc: "Every agent must complete identity verification and scored custody training before activation.",
     icon: <UserCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
-    title: "Insured transport",
-    desc: "Bags move under insurance coverage bound before any live custody, operating within TSA and airport-authority rules.",
+    title: "Coverage gate",
+    desc: "No live custody begins until insurance coverage is bound for the final driver, vehicle, route, and custody model.",
     icon: <ShieldCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {

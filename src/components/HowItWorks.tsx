@@ -15,7 +15,7 @@ export default function HowItWorks() {
       step: "02",
       title: "We Collect",
       description:
-        "A vetted Travelyt agent arrives at your door at the scheduled time. Bags weighed, tagged, and sealed on the spot.",
+        "An activated Travelyt agent arrives at your door at the scheduled time. Bags are weighed, tagged, and sealed on the spot.",
       icon: (
         <MapPin className="w-8 h-8" strokeWidth={1.5} />
       ),
