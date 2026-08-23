@@ -14,6 +14,7 @@
     "simulate:carrier-neutral": "node simulations/carrier-neutral-operations-simulation.mjs",
     "simulate:concierge-controls": "node simulations/concierge-control-library-simulation.mjs",
     "simulate:agent-assignment": "node simulations/agent-assignment-acceptance-simulation.mjs",
+    "simulate:per-bag-seals": "node simulations/per-bag-seal-custody-simulation.mjs",
     "simulate:technical-controls": "node simulations/technical-identity-controls-simulation.mjs",
     "simulate:rj:integrated": "node simulations/rj-ord-integrated-checkpoint.mjs",
     "backup:export": "node scripts/export-backup-ops-kit.mjs",

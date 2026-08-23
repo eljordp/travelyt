@@ -363,7 +363,32 @@ function latestProof(row: BookingRow, kind: Booking["proofs"][number]["kind"]) {
 }
 
 function hasApprovedSeal(row: BookingRow) {
-  return Boolean(latestProof(row, "seal")?.approvedAt);
+  const required = Math.max(1, Number(row.bags ?? 1));
+  const sealProofs = (row.proofs ?? []).filter((proof) => proof.kind === "seal");
+  if (sealProofs.length < required) return false;
+  return sealProofs.slice(-required).every((proof) => Boolean(proof.approvedAt));
+}
+
+function hasAllRequiredSealProofs(row: BookingRow) {
+  const required = Math.max(1, Number(row.bags ?? 1));
+  const sealProofs = (row.proofs ?? []).filter(
+    (proof) =>
+      proof.kind === "seal" &&
+      Boolean(proof.dataUrl) &&
+      Boolean(proof.location) &&
+      Boolean(proof.sealId?.trim()) &&
+      proof.sealStatus === "intact" &&
+      ["zipper", "latch_label", "handle"].includes(proof.sealMethod ?? "")
+  );
+  if (sealProofs.length < required) return false;
+  const latest = sealProofs.slice(-required);
+  const bagIndexes = latest.map((proof) => Number(proof.bagIndex));
+  const sealIds = latest.map((proof) => proof.sealId?.trim().toUpperCase());
+  return (
+    bagIndexes.every((index) => Number.isInteger(index) && index >= 1 && index <= required) &&
+    new Set(bagIndexes).size === required &&
+    new Set(sealIds).size === required
+  );
 }
 
 function hasRequiredProof(row: BookingRow, kind: Booking["proofs"][number]["kind"]) {
@@ -465,6 +490,24 @@ function validateProofShape(proof: Booking["proofs"][number]) {
   if (locationError) return locationError;
   if (proof.kind === "seal" && !proof.sealId?.trim()) {
     return "Seal ID is required.";
+  }
+  if (proof.kind === "seal") {
+    if (!Number.isInteger(proof.bagIndex) || Number(proof.bagIndex) < 1) {
+      return "Bag number is required for every seal proof.";
+    }
+    if (!["zipper", "latch_label", "handle"].includes(proof.sealMethod ?? "")) {
+      return "Seal method is required.";
+    }
+    if (proof.sealStatus !== "intact") {
+      return "Pickup seal status must be intact. Open an exception for a damaged or replaced seal.";
+    }
+  }
+  if (
+    ["airline_handoff", "customer_handoff", "delivery"].includes(proof.kind) &&
+    proof.sealStatus &&
+    proof.sealStatus !== "intact"
+  ) {
+    return "A compromised or replaced seal must enter the exception workflow before transfer.";
   }
   if (proof.kind === "airline_handoff" || proof.kind === "customer_handoff" || proof.kind === "pickup") {
     if (
@@ -1191,8 +1234,8 @@ export async function PATCH(request: Request) {
         if (existing.service === "arrival") {
           return bad("Arrival jobs use airport release, not seal pickup.", 409);
         }
-        if (existing.status !== "arrived" || !hasRequiredProof(existing, "seal")) {
-          return bad("Seal photo, seal ID, and GPS proof are required before pickup can be confirmed.", 409);
+        if (existing.status !== "arrived" || !hasAllRequiredSealProofs(existing)) {
+          return bad("A separate intact seal photo, seal ID, method, and GPS proof are required for every bag before pickup can be confirmed.", 409);
         }
       }
 

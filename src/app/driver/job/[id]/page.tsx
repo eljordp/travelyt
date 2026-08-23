@@ -36,6 +36,15 @@ import { captureCurrentLocation, captureProofPhoto, compressProofPhoto, isNative
 
 const DRIVER_KEY = "travelyt:driver";
 type ProofLocation = NonNullable<Booking["proofs"][number]["location"]>;
+type SealMethod = "zipper" | "latch_label" | "handle";
+type SealStatus = "intact" | "broken" | "replaced";
+type BarcodeDetectorResult = { rawValue: string };
+type BarcodeDetectorLike = {
+  detect(source: ImageBitmap): Promise<BarcodeDetectorResult[]>;
+};
+type BarcodeDetectorConstructor = new (options: {
+  formats: string[];
+}) => BarcodeDetectorLike;
 
 type AgentAssignment = {
   id: string;
@@ -66,6 +75,15 @@ function custodyBlockers(booking: Booking) {
 
 function latestApiError(fallback: string) {
   return getLastApiFailureMessage() || fallback;
+}
+
+function isStructuredBagSealProof(proof: Booking["proofs"][number]) {
+  return (
+    proof.kind === "seal" &&
+    Number.isInteger(proof.bagIndex) &&
+    Boolean(proof.sealMethod) &&
+    Boolean(proof.sealStatus)
+  );
 }
 
 function DriverJobChrome({
@@ -110,6 +128,8 @@ export default function DriverJobPage() {
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [photoNote, setPhotoNote] = useState("");
   const [sealId, setSealId] = useState("");
+  const [sealMethod, setSealMethod] = useState<SealMethod>("zipper");
+  const [sealStatus, setSealStatus] = useState<SealStatus>("intact");
   const [handoffRecipientName, setHandoffRecipientName] = useState("");
   const [handoffRecipientRole, setHandoffRecipientRole] = useState("");
   const [handoffOrganization, setHandoffOrganization] = useState("");
@@ -202,9 +222,29 @@ export default function DriverJobPage() {
     );
   }
 
+  async function detectSealCode(file: File) {
+    const Detector = (
+      window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }
+    ).BarcodeDetector;
+    if (!Detector || !file.type.startsWith("image/")) return;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const detector = new Detector({
+        formats: ["qr_code", "code_128", "code_39"],
+      });
+      const [result] = await detector.detect(bitmap);
+      bitmap.close();
+      const detected = result?.rawValue?.trim().toUpperCase();
+      if (detected) setSealId(detected);
+    } catch {
+      // Manual entry remains available when camera barcode detection is unsupported.
+    }
+  }
+
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    void detectSealCode(file);
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
@@ -219,6 +259,8 @@ export default function DriverJobPage() {
     setPendingPhoto(null);
     setPhotoNote("");
     setSealId("");
+    setSealMethod("zipper");
+    setSealStatus("intact");
     setHandoffRecipientName("");
     setHandoffRecipientRole("");
     setHandoffOrganization("");
@@ -261,9 +303,11 @@ export default function DriverJobPage() {
   // ledger logging must never break the booking proof flow.
   async function logCustody(
     eventType: CustodyEventType,
-    location?: ProofLocation
+    location?: ProofLocation,
+    sourceBooking?: Booking
   ) {
-    if (!booking) return;
+    const custodyBooking = sourceBooking ?? booking;
+    if (!custodyBooking) return;
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -272,17 +316,28 @@ export default function DriverJobPage() {
       if (code) headers["x-travelyt-driver-code"] = code;
       const name = getStoredDriverName();
       if (name) headers["x-travelyt-driver-name"] = name;
+      const observedSealStatus = [...custodyBooking.proofs]
+        .reverse()
+        .find((proof) => proof.kind !== "seal" && proof.sealStatus)?.sealStatus;
       await fetch("/api/custody", {
         method: "POST",
         headers,
         credentials: "same-origin",
         body: JSON.stringify({
           action: "scan_booking",
-          bookingId: booking.id,
+          bookingId: custodyBooking.id,
           eventType,
           actorRole: "agent",
           lat: location?.latitude ?? null,
           lng: location?.longitude ?? null,
+          seals: custodyBooking.proofs
+            .filter((proof) => proof.kind === "seal")
+            .map((proof) => ({
+              bagIndex: proof.bagIndex,
+              sealId: proof.sealId,
+              sealMethod: proof.sealMethod,
+              sealStatus: observedSealStatus ?? proof.sealStatus,
+            })),
         }),
       });
     } catch {
@@ -390,6 +445,18 @@ export default function DriverJobPage() {
       setError("Enter the seal ID before confirming pickup.");
       return;
     }
+    if (sealStatus !== "intact") {
+      setError("A broken or replaced seal cannot start custody. Stop and open a seal exception.");
+      return;
+    }
+    const existingSealProofs = booking.proofs.filter(
+      isStructuredBagSealProof
+    );
+    const bagIndex = existingSealProofs.length + 1;
+    if (bagIndex > booking.bags) {
+      setError("All booked bags already have seal proof. Refresh the job before continuing.");
+      return;
+    }
     const location = await captureLocation();
     if (!location) return;
     const proofSaved = await addProof(booking.id, {
@@ -398,11 +465,23 @@ export default function DriverJobPage() {
       timestamp: new Date().toISOString(),
       location,
       sealId: cleanSealId,
+      bagIndex,
+      bagLabel: `Bag ${bagIndex} of ${booking.bags}`,
+      sealMethod,
+      sealStatus,
       driverName: driver ?? undefined,
       note: photoNote || undefined,
     });
     if (!proofSaved) {
       setError(latestApiError("Seal proof could not be saved."));
+      return;
+    }
+    const sealedCount = proofSaved.proofs.filter(
+      isStructuredBagSealProof
+    ).length;
+    if (sealedCount < booking.bags) {
+      setBooking(proofSaved);
+      clearPhoto();
       return;
     }
     const updated = await updateBooking(booking.id, {
@@ -414,12 +493,23 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("custody_accepted", location);
+    void logCustody("custody_accepted", location, updated);
     clearPhoto();
   }
 
   async function markAirlineHandoff() {
     if (!booking || !pendingPhoto) return;
+    if (sealStatus !== "intact") {
+      void recordClientOpsException(
+        booking.id,
+        "SEAL_STATUS_STOP",
+        `Normal airline handoff stopped because the observed seal status was ${sealStatus}.`,
+        "critical",
+        { sealStatus, workflow: "airline_handoff" }
+      );
+      setError("Stop the transfer. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
+      return;
+    }
     const recipientName = handoffRecipientName.trim();
     const organization = handoffOrganization.trim();
     const badgeOrReference = handoffReference.trim();
@@ -436,6 +526,7 @@ export default function DriverJobPage() {
       timestamp: new Date().toISOString(),
       location,
       sealId: latestSeal,
+      sealStatus,
       driverName: driver ?? undefined,
       handoff: {
         recipientName,
@@ -460,7 +551,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("carrier_transfer", location);
+    void logCustody("carrier_transfer", location, updated);
     clearPhoto();
     if (updated?.status === "delivered") {
       setTimeout(() => router.push("/driver"), 800);
@@ -469,6 +560,17 @@ export default function DriverJobPage() {
 
   async function markPassengerTerminalHandoff() {
     if (!booking || !pendingPhoto) return;
+    if (sealStatus !== "intact") {
+      void recordClientOpsException(
+        booking.id,
+        "SEAL_STATUS_STOP",
+        `Normal traveler handoff stopped because the observed seal status was ${sealStatus}.`,
+        "critical",
+        { sealStatus, workflow: "traveler_return" }
+      );
+      setError("Stop the transfer. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
+      return;
+    }
     const recipientName = handoffRecipientName.trim();
     if (!recipientName || !passengerIdentityMatched) {
       setError("Enter the receiving traveler name and confirm the approved identity match.");
@@ -483,6 +585,7 @@ export default function DriverJobPage() {
       timestamp: new Date().toISOString(),
       location,
       sealId: latestSeal,
+      sealStatus,
       driverName: driver ?? undefined,
       handoff: {
         recipientName,
@@ -506,7 +609,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("traveler_return", location);
+    void logCustody("traveler_return", location, updated);
     clearPhoto();
   }
 
@@ -555,6 +658,17 @@ export default function DriverJobPage() {
 
   async function markDelivered() {
     if (!booking || !pendingPhoto) return;
+    if (sealStatus !== "intact") {
+      void recordClientOpsException(
+        booking.id,
+        "SEAL_STATUS_STOP",
+        `Normal delivery stopped because the observed seal status was ${sealStatus}.`,
+        "critical",
+        { sealStatus, workflow: "delivery" }
+      );
+      setError("Stop delivery. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
+      return;
+    }
     const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
     const location = await captureLocation();
     if (!location) return;
@@ -563,6 +677,7 @@ export default function DriverJobPage() {
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
       location,
+      sealStatus,
       sealId: latestSeal,
       driverName: driver ?? undefined,
       note: photoNote || undefined,
@@ -580,7 +695,7 @@ export default function DriverJobPage() {
       return;
     }
     setBooking(updated);
-    void logCustody("recipient_confirmed", location);
+    void logCustody("recipient_confirmed", location, updated);
     clearPhoto();
     setTimeout(() => router.push("/driver"), 800);
   }
@@ -596,9 +711,13 @@ export default function DriverJobPage() {
   const isDepartureService = booking.service !== "arrival";
   const isArrivalService = booking.service !== "departure";
   const airlineHandoffAuthorized = carrierHandoffAuthorized(booking);
-  const latestSealProof = [...booking.proofs]
-    .reverse()
-    .find((proof) => proof.kind === "seal");
+  const allSealProofs = booking.proofs.filter((proof) => proof.kind === "seal");
+  const sealProofs = allSealProofs.filter(isStructuredBagSealProof);
+  const nextSealBagNumber = Math.min(sealProofs.length + 1, booking.bags);
+  const everySealApproved =
+    (sealProofs.length >= booking.bags &&
+      sealProofs.slice(-booking.bags).every((proof) => Boolean(proof.approvedAt))) ||
+    (sealProofs.length === 0 && Boolean(allSealProofs.at(-1)?.approvedAt));
   const blockers = custodyBlockers(booking);
   const custodyBlocked =
     booking.status === "arrived" && isMine && blockers.length > 0;
@@ -611,7 +730,7 @@ export default function DriverJobPage() {
     isDepartureService &&
     booking.status === "picked_up" &&
     isMine &&
-    !latestSealProof?.approvedAt;
+    !everySealApproved;
   const needsPickupPhoto =
     booking.status === "arrived" && isMine && isDepartureService;
   const needsAirportRelease =
@@ -620,7 +739,7 @@ export default function DriverJobPage() {
     booking.status === "picked_up" &&
     isMine &&
     isDepartureService &&
-    Boolean(latestSealProof?.approvedAt);
+    everySealApproved;
   const needsAirlineHandoff = needsDepartureHandoff && airlineHandoffAuthorized;
   const needsPassengerHandoff = needsDepartureHandoff && !airlineHandoffAuthorized;
   const needsDeliveryPhoto =
@@ -633,7 +752,7 @@ export default function DriverJobPage() {
       needsPassengerHandoff ||
       needsDeliveryPhoto);
   const proofActionTitle = needsPickupPhoto
-    ? "Seal proof"
+    ? `Seal proof — bag ${nextSealBagNumber} of ${booking.bags}`
     : needsAirportRelease
       ? "Airport release proof"
       : needsAirlineHandoff
@@ -642,7 +761,7 @@ export default function DriverJobPage() {
           ? "Passenger terminal handoff proof"
           : "Delivery proof";
   const proofActionBody = needsPickupPhoto
-    ? "Attach the seal, enter the printed seal code, then capture a clear bag photo with GPS."
+    ? "Attach this bag's seal, scan or enter the printed seal code, choose the attachment method, then capture a clear photo with GPS. Repeat for every bag before custody starts."
     : needsAirportRelease
       ? "Capture the bags at the airport release point and record who released them to Travelyt."
       : needsAirlineHandoff
@@ -733,8 +852,8 @@ export default function DriverJobPage() {
         eyebrow: "Waiting",
         title: "Customer seal approval",
         body: airlineHandoffAuthorized
-          ? "The seal photo is on file. Customer approval is required before the authorized airline handoff."
-          : "The seal photo is on file. Customer approval is required before returning the bags to the traveler at the terminal.",
+          ? "All seal photos are on file. The customer must approve every bag before the authorized airline handoff."
+          : "All seal photos are on file. The customer must approve every bag before the bags return to the traveler at the terminal.",
         tone: "waiting" as const,
       };
     }
@@ -763,7 +882,7 @@ export default function DriverJobPage() {
     currentTone: currentStep.tone,
     isDepartureService,
     isArrivalService,
-    latestSealProof,
+    everySealApproved,
   });
 
   return (
@@ -951,25 +1070,71 @@ export default function DriverJobPage() {
               </span>
             </div>
             {needsPickupPhoto && (
+              <div className="mb-4 space-y-4">
+                <div className="rounded-xl border border-navy/10 bg-navy/[0.03] p-4 text-xs leading-relaxed text-navy/70">
+                  Recording <strong>bag {nextSealBagNumber} of {booking.bags}</strong>. Each bag needs its own serial, method, photo, timestamp, GPS point, and customer approval.
+                </div>
+                <div>
+                  <label
+                    htmlFor="seal-id"
+                    className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5"
+                  >
+                    Seal ID
+                  </label>
+                  <input
+                    id="seal-id"
+                    value={sealId}
+                    onChange={(event) => {
+                      setSealId(event.target.value.toUpperCase());
+                      setError("");
+                    }}
+                    placeholder="Example: TVT-S-00000001"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all uppercase tracking-wide"
+                  />
+                  <p className="mt-1 text-xs text-navy/60">
+                    The camera attempts to read QR, Code 128, or Code 39 automatically; manual entry remains available.
+                  </p>
+                </div>
+                <div>
+                  <label
+                    htmlFor="seal-method"
+                    className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5"
+                  >
+                    Attachment method
+                  </label>
+                  <select
+                    id="seal-method"
+                    value={sealMethod}
+                    onChange={(event) => setSealMethod(event.target.value as SealMethod)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                  >
+                    <option value="zipper">Pull-tight through zipper pulls</option>
+                    <option value="latch_label">VOID label across latch or seam</option>
+                    <option value="handle">Pull-tight through handle loop</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            {(needsAirlineHandoff || needsPassengerHandoff || needsDeliveryPhoto) && (
               <div className="mb-4">
                 <label
-                  htmlFor="seal-id"
+                  htmlFor="seal-status"
                   className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5"
                 >
-                  Seal ID
+                  Observed seal status
                 </label>
-                <input
-                  id="seal-id"
-                  value={sealId}
-                  onChange={(event) => {
-                    setSealId(event.target.value.toUpperCase());
-                    setError("");
-                  }}
-                  placeholder="Example: TVT-483921"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all uppercase tracking-wide"
-                />
+                <select
+                  id="seal-status"
+                  value={sealStatus}
+                  onChange={(event) => setSealStatus(event.target.value as SealStatus)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-navy outline-none transition-all focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10"
+                >
+                  <option value="intact">Intact — serials match</option>
+                  <option value="broken">Broken / compromised</option>
+                  <option value="replaced">Replaced / re-sealed</option>
+                </select>
                 <p className="mt-1 text-xs text-navy/60">
-                  Use the printed number on the tamper-evident seal.
+                  Broken or replaced stops the normal transfer and opens an operations exception.
                 </p>
               </div>
             )}
@@ -1124,7 +1289,9 @@ export default function DriverJobPage() {
                     {locationStatus === "working"
                       ? "Capturing location..."
                       : needsPickupPhoto
-                        ? "Confirm seal + pickup"
+                        ? nextSealBagNumber < booking.bags
+                          ? `Save bag ${nextSealBagNumber} seal`
+                          : "Confirm final seal + pickup"
                         : needsAirportRelease
                           ? "Confirm airport release"
                           : needsAirlineHandoff
@@ -1239,7 +1406,11 @@ export default function DriverJobPage() {
                       {proofTitle(p.kind)}
                     </div>
                     {p.sealId && (
-                      <div className="text-navy/70">Seal {p.sealId}</div>
+                      <div className="text-navy/70">
+                        {p.bagLabel ? `${p.bagLabel} · ` : ""}Seal {p.sealId}
+                        {p.sealMethod ? ` · ${sealMethodLabel(p.sealMethod)}` : ""}
+                        {p.sealStatus ? ` · ${p.sealStatus}` : ""}
+                      </div>
                     )}
                     {p.approvedAt && (
                       <div className="text-green-700">Customer approved</div>
@@ -1296,14 +1467,14 @@ function getWorkflowSteps({
   currentTone,
   isDepartureService,
   isArrivalService,
-  latestSealProof,
+  everySealApproved,
 }: {
   booking: Booking;
   currentKey: string;
   currentTone: StepTone;
   isDepartureService: boolean;
   isArrivalService: boolean;
-  latestSealProof?: Booking["proofs"][number];
+  everySealApproved: boolean;
 }): WorkflowStep[] {
   const steps: Array<Omit<WorkflowStep, "state">> = [
     { id: "accept", label: "Accept" },
@@ -1348,7 +1519,7 @@ function getWorkflowSteps({
     const state: WorkflowStepState = workflowStepDone(
       step.id,
       booking,
-      latestSealProof
+      everySealApproved
     )
       ? "done"
       : "pending";
@@ -1362,7 +1533,7 @@ function getWorkflowSteps({
 function workflowStepDone(
   stepId: string,
   booking: Booking,
-  latestSealProof?: Booking["proofs"][number]
+  everySealApproved = false
 ) {
   const status = booking.status;
   const acceptedOrLater = [
@@ -1406,7 +1577,7 @@ function workflowStepDone(
   if (stepId === "custody") return custodyOrLater;
   if (stepId === "seal_approval") {
     return (
-      Boolean(latestSealProof?.approvedAt) ||
+      everySealApproved ||
       ["in_transit", "delivery_pending", "delivered", "closed"].includes(status)
     );
   }
@@ -1538,6 +1709,12 @@ function proofTitle(kind: Booking["proofs"][number]["kind"]) {
   if (kind === "customer_handoff") return "Passenger terminal handoff";
   if (kind === "airline_handoff") return "Airline handoff";
   return "Delivery";
+}
+
+function sealMethodLabel(method: NonNullable<Booking["proofs"][number]["sealMethod"]>) {
+  if (method === "latch_label") return "VOID label";
+  if (method === "handle") return "handle loop";
+  return "zipper pulls";
 }
 
 function Row({ label, value }: { label: string; value: string }) {

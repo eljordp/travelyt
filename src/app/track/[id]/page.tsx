@@ -347,7 +347,12 @@ function TrackPageInner() {
                         <p className="font-bold text-navy">{proofTitle(proof.kind)}</p>
                         {proof.sealId && (
                           <p className="mt-1 inline-flex rounded-full bg-navy/5 px-2.5 py-1 text-xs font-bold text-navy">
-                            Seal {proof.sealId}
+                            {proof.bagLabel ? `${proof.bagLabel} · ` : ""}Seal {proof.sealId}
+                          </p>
+                        )}
+                        {proof.sealMethod && (
+                          <p className="mt-2 text-xs text-navy/60">
+                            Method: {proof.sealMethod === "latch_label" ? "VOID label" : proof.sealMethod === "handle" ? "handle loop" : "zipper pulls"} · Status: {proof.sealStatus ?? "recorded"}
                           </p>
                         )}
                         <p className="mt-2 text-xs text-navy/55">

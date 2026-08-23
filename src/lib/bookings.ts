@@ -119,6 +119,10 @@ export interface PhotoProof {
     verificationMethod: "employee_badge" | "driver_license" | "passport" | "manual";
   };
   sealId?: string;
+  bagIndex?: number;
+  bagLabel?: string;
+  sealMethod?: "zipper" | "latch_label" | "handle";
+  sealStatus?: "intact" | "broken" | "replaced";
   driverName?: string;
   note?: string;
   approvedAt?: string;

@@ -153,9 +153,48 @@ export async function POST(request: Request) {
       : "agent";
     const lat = body.lat != null ? Number(body.lat) : null;
     const lng = body.lng != null ? Number(body.lng) : null;
+    const submittedSeals = Array.isArray(body.seals)
+      ? body.seals.filter((seal): seal is Record<string, unknown> => Boolean(seal) && typeof seal === "object")
+      : [];
+    const validSealMethods = new Set(["zipper", "latch_label", "handle"]);
+    const validSealStatuses = new Set(["intact", "broken", "replaced"]);
+    if (eventType === "custody_accepted" && submittedSeals.length > 0) {
+      const completeSealIndexes = new Set(
+        submittedSeals
+          .filter(
+            (seal) =>
+              String(seal.sealId ?? "").trim() &&
+              validSealMethods.has(String(seal.sealMethod ?? "")) &&
+              String(seal.sealStatus ?? "") === "intact"
+          )
+          .map((seal) => Number(seal.bagIndex))
+      );
+      if (completeSealIndexes.size !== bags.length) {
+        return NextResponse.json(
+          { error: "Every bag needs an intact seal serial and attachment method before custody starts." },
+          { status: 409 }
+        );
+      }
+    }
 
     const events = [];
-    for (const bag of bags) {
+    for (const [index, bag] of bags.entries()) {
+      const submittedSeal = submittedSeals.find(
+        (seal) => Number(seal.bagIndex) === index + 1
+      );
+      const sealEvidence = submittedSeal
+        ? {
+            sealSerial: String(submittedSeal.sealId ?? "").trim().toUpperCase(),
+            sealMethod: validSealMethods.has(String(submittedSeal.sealMethod ?? ""))
+              ? String(submittedSeal.sealMethod)
+              : null,
+            sealStatus: validSealStatuses.has(String(submittedSeal.sealStatus ?? ""))
+              ? String(submittedSeal.sealStatus)
+              : null,
+            bagIndex: index + 1,
+            bagBadge: bag.badge_code,
+          }
+        : null;
       const event = await appendCustodyEvent({
         bagId: bag.id,
         eventType,
@@ -164,7 +203,10 @@ export async function POST(request: Request) {
         verifiedMethod: "access_code",
         lat: Number.isFinite(lat) ? lat : null,
         lng: Number.isFinite(lng) ? lng : null,
-        note: typeof body.note === "string" ? body.note : null,
+        note: JSON.stringify({
+          note: typeof body.note === "string" ? body.note : null,
+          seal: sealEvidence,
+        }),
       });
       if (event) events.push(event);
     }
