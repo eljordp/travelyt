@@ -190,7 +190,16 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-navy/70 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#ff6868] font-semibold hover:underline">Sign in</Link>
+          <Link
+            href="/login"
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.href = `/login?next=${encodeURIComponent(nextPath())}`;
+            }}
+            className="text-[#ff6868] font-semibold hover:underline"
+          >
+            Sign in
+          </Link>
         </p>
       </div>
     </div>

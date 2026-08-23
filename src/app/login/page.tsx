@@ -189,7 +189,16 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-navy/70 mt-6">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-[#ff6868] font-semibold hover:underline">Create one</Link>
+          <Link
+            href="/register"
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.href = `/register?next=${encodeURIComponent(nextPath())}`;
+            }}
+            className="text-[#ff6868] font-semibold hover:underline"
+          >
+            Create one
+          </Link>
         </p>
         <p className="mt-3 text-center text-xs text-navy/55">
           Need route updates?{" "}

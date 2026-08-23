@@ -35,6 +35,7 @@ import {
   trackBookingRequestCreated,
   trackLeadSubmission,
 } from "@/lib/analytics";
+import { normalizeBookingPassengers } from "@/lib/passengers";
 import AppChrome from "@/components/AppChrome";
 
 type ServiceType = "departure" | "arrival" | "both" | "";
@@ -76,6 +77,7 @@ type GroupTraveler = {
 };
 
 const STEPS = ["Service", "Trip Details", "Contact", "Review"];
+const QUOTE_DRAFT_KEY = "travelyt:quote-auth-draft:v1";
 const MONTHS = [
   ["01", "Jan"],
   ["02", "Feb"],
@@ -149,6 +151,31 @@ export default function QuotePage() {
   useEffect(() => {
     const handle = window.setTimeout(() => {
       const params = new URLSearchParams(window.location.search);
+      if (params.get("resume") === "1") {
+        try {
+          const rawDraft = window.sessionStorage.getItem(QUOTE_DRAFT_KEY);
+          if (rawDraft) {
+            const draft = JSON.parse(rawDraft) as {
+              form?: FormData;
+              dateParts?: DateParts;
+              travelers?: GroupTraveler[];
+              promoCode?: string;
+            };
+            if (draft.form && draft.dateParts && Array.isArray(draft.travelers)) {
+              setForm(draft.form);
+              setDateParts(draft.dateParts);
+              setTravelers(draft.travelers);
+              setPromoCode(draft.promoCode);
+              setPromoInput(draft.promoCode || "");
+              setStep(3);
+              window.sessionStorage.removeItem(QUOTE_DRAFT_KEY);
+              return;
+            }
+          }
+        } catch {
+          window.sessionStorage.removeItem(QUOTE_DRAFT_KEY);
+        }
+      }
       const airport = params.get("airport");
       const date = params.get("date");
       const service = params.get("service");
@@ -250,6 +277,48 @@ export default function QuotePage() {
       else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
       if (form.phone.trim() && !/^[+\d][\d\s().-]{6,}$/.test(form.phone.trim())) {
         e.phone = "Enter a valid phone number";
+      }
+      if (travelers.some((traveler) => !traveler.authorized)) {
+        e.travelers = "Confirm your authority to add each family or group traveler.";
+      } else if (travelers.length > 0 && form.name.trim() && form.email.trim()) {
+        const now = new Date().toISOString();
+        const assignedTravelerBags = travelers.reduce(
+          (sum, traveler) => sum + traveler.bags,
+          0
+        );
+        const normalized = normalizeBookingPassengers(
+          [
+            {
+              id: crypto.randomUUID(),
+              firstName: form.name,
+              lastName: "",
+              category: "account_holder" as const,
+              relationship: "self" as const,
+              bags: form.bags - assignedTravelerBags,
+              consentAt: now,
+            },
+            ...travelers.map((traveler) => ({
+              id: traveler.id,
+              firstName: traveler.firstName,
+              lastName: traveler.lastName,
+              category: "adult" as const,
+              relationship: traveler.relationship,
+              dateOfBirth: traveler.dateOfBirth,
+              email: traveler.email || undefined,
+              bags: traveler.bags,
+              guardianAttestedAt: now,
+              householdAttestedAt: now,
+            })),
+          ],
+          {
+            accountHolderName: form.name,
+            accountHolderEmail: form.email,
+            totalBags: form.bags,
+            travelDate: form.date,
+            now,
+          }
+        );
+        if ("error" in normalized) e.travelers = normalized.error;
       }
     }
     if (step === 3 && !form.restrictedItemsAttested) {
@@ -484,9 +553,19 @@ export default function QuotePage() {
         value: b.priceCents / 100,
         promoCode,
       });
+      window.sessionStorage.removeItem(QUOTE_DRAFT_KEY);
       router.push(`/booking/${b.id}/pay`);
     } catch (err) {
       console.error("Booking submit network error", err);
+      if (err instanceof Error && err.message.toLowerCase().startsWith("sign in")) {
+        window.sessionStorage.setItem(
+          QUOTE_DRAFT_KEY,
+          JSON.stringify({ form, dateParts, travelers, promoCode })
+        );
+        setSubmitting(false);
+        router.push(`/login?next=${encodeURIComponent("/quote?resume=1")}`);
+        return;
+      }
       setErrors((current) => ({
         ...current,
         submit:

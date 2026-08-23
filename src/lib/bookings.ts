@@ -502,7 +502,9 @@ export async function createBooking(
     return saved.booking;
   }
   if (!canUseLocalFallback()) {
-    throw new Error("Booking backend rejected this request.");
+    throw new Error(
+      getLastApiFailureMessage() || "Booking backend rejected this request."
+    );
   }
   upsertLocal(booking);
   return booking;
