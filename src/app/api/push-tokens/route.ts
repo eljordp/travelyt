@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { savePushToken } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
-const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, "push-tokens:post", 20);
@@ -43,30 +41,23 @@ export async function POST(request: Request) {
       persisted,
     });
 
-    if (resendApiKey && leadNotifyEmail) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: leadFromEmail,
-          to: leadNotifyEmail,
-          subject: `Travelyt push token registered (${platform})`,
-          text: [
-            "Travelyt push token registered",
-            "",
-            `Platform: ${platform}`,
-            `User ID:  ${userId ?? "(anonymous)"}`,
-            `Booking:  ${bookingId ?? "(none)"}`,
-            `Received: ${receivedAt}`,
-            `Persisted: ${persisted ? "yes" : "no"}`,
-          ].join("\n"),
-        }),
-      }).catch((err) =>
-        console.warn("token notify email failed", err)
-      );
+    if (leadNotifyEmail) {
+      const delivery = await sendTransactionalEmail({
+        to: leadNotifyEmail,
+        subject: `Travelyt push token registered (${platform})`,
+        text: [
+          "Travelyt push token registered",
+          "",
+          `Platform: ${platform}`,
+          `User ID:  ${userId ?? "(anonymous)"}`,
+          `Booking:  ${bookingId ?? "(none)"}`,
+          `Received: ${receivedAt}`,
+          `Persisted: ${persisted ? "yes" : "no"}`,
+        ].join("\n"),
+      });
+      if (delivery.status === "failed") {
+        console.warn("Push-token notification delivery failed", delivery);
+      }
     }
 
     return NextResponse.json({ ok: true });

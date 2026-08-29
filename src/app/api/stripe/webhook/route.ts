@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { markBookingPaidFromCheckoutSession } from "@/lib/stripe-payments";
 import { verifiedDob } from "@/lib/stripe-identity";
+import {
+  expectedDobMatch,
+  providerIdentityVerdict,
+  requireVerifiedIdentityGate,
+  type StripeIdentityEventType,
+} from "@/lib/identity-verdict";
 import { archiveIdentityOriginals, type ArchiveOutcome } from "@/lib/identity-originals";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
@@ -76,18 +82,7 @@ async function reconcileIdentity(
 
   const now = new Date().toISOString();
   const dob = verifiedDob(session);
-  let status: "pending" | "verified" | "manual_review" | "expired" = "pending";
-  let livenessStatus: "pending" | "passed" | "failed" | "manual_review" = "pending";
-  if (eventType === "identity.verification_session.verified") {
-    status = "verified";
-    livenessStatus = "passed";
-  } else if (eventType === "identity.verification_session.requires_input") {
-    status = "manual_review";
-    livenessStatus = "failed";
-  } else if (eventType === "identity.verification_session.canceled") {
-    status = "expired";
-    livenessStatus = "manual_review";
-  }
+  let verdict = providerIdentityVerdict(eventType as StripeIdentityEventType);
 
   let expectedDob: string | undefined;
   let manifest: unknown;
@@ -103,17 +98,14 @@ async function reconcileIdentity(
       expectedDob = manifest.find((passenger) => passenger.id === record.passenger_id)?.dateOfBirth;
     }
   }
-  const dobMatches = !expectedDob || (Boolean(dob) && expectedDob === dob);
-  if (status === "verified" && !dobMatches) {
-    status = "manual_review";
-    livenessStatus = "manual_review";
-  }
+  const dobMatches = expectedDobMatch(expectedDob, dob);
+  verdict = requireVerifiedIdentityGate(verdict, dobMatches !== false);
 
   // Keep Travelyt's own copies of the capture originals once verified —
   // Stripe alone holding the images is not acceptable for chain of custody.
   let archive: ArchiveOutcome | null = null;
   let archiveError: string | null = null;
-  if (status === "verified") {
+  if (verdict.status === "verified") {
     try {
       archive = await archiveIdentityOriginals({
         stripe,
@@ -127,17 +119,14 @@ async function reconcileIdentity(
     }
   }
   const archived = Boolean(archive && archive.stored > 0);
-  if (status === "verified" && !archived) {
-    status = "manual_review";
-    livenessStatus = "manual_review";
-  }
+  verdict = requireVerifiedIdentityGate(verdict, archived);
 
   const { error: updateError } = await supabase
     .from("identity_verifications")
     .update({
-      status,
-      liveness_status: livenessStatus,
-      verified_at: status === "verified" ? now : null,
+      status: verdict.status,
+      liveness_status: verdict.livenessStatus,
+      verified_at: verdict.status === "verified" ? now : null,
       ...(archive && archived
         ? {
             raw_document_paths: archive.paths,
@@ -152,7 +141,7 @@ async function reconcileIdentity(
         stripe_status: session.status,
         stripe_livemode: session.livemode,
         verified_dob: dob,
-        expected_dob_match: expectedDob ? dobMatches : null,
+        expected_dob_match: dobMatches,
         provider_error_code: session.last_error?.code ?? null,
         raw_document_stored_by_travelyt: archived,
         archive_required_before_custody: true,
@@ -163,7 +152,7 @@ async function reconcileIdentity(
     .eq("id", record.id);
   if (updateError) throw updateError;
 
-  if (status === "verified" && record.booking_id && record.passenger_id && isBookingPassengerArray(manifest)) {
+  if (verdict.status === "verified" && record.booking_id && record.passenger_id && isBookingPassengerArray(manifest)) {
     const updatedManifest = manifest.map((passenger) =>
       passenger.id === record.passenger_id
         ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
@@ -176,7 +165,7 @@ async function reconcileIdentity(
     if (manifestError) throw manifestError;
   }
 
-  if (status === "verified" && record.user_id && !record.booking_id && !record.passenger_id) {
+  if (verdict.status === "verified" && record.user_id && !record.booking_id && !record.passenger_id) {
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
       .select("id, passenger_manifest")

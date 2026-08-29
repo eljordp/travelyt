@@ -14,12 +14,9 @@ import {
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
 import { getStripe } from "@/lib/stripe-server";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 
 const documentTypes = ["driver_license", "passport", "employee_badge", "other"] as const;
-
-const resendApiKey = process.env.RESEND_API_KEY;
-const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
@@ -43,29 +40,24 @@ async function sendAdultTravelerInvite(data: {
   passengerName: string;
   token: string;
 }) {
-  if (!resendApiKey) return false;
   const verifyUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://travelyt.us"}/verify-traveler?token=${encodeURIComponent(data.token)}`;
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: leadFromEmail,
-      to: data.email,
-      subject: "Confirm your Travelyt traveler verification",
-      text: [
-        `You were added to Travelyt booking ${data.bookingId}.`,
-        "",
-        `Open this private link to begin verification: ${verifyUrl}`,
-        "",
-        "For your security, the link alone is not enough. We will send a separate one-time code to this email after you open it.",
-        "Do not forward this link. If you did not expect this message, do not continue.",
-        "",
-        `Traveler: ${data.passengerName}`,
-      ].join("\n"),
-    }),
+  const result = await sendTransactionalEmail({
+    to: data.email,
+    subject: "Confirm your Travelyt traveler verification",
+    text: [
+      `You were added to Travelyt booking ${data.bookingId}.`,
+      "",
+      `Open this private link to begin verification: ${verifyUrl}`,
+      "",
+      "For your security, the link alone is not enough. We will send a separate one-time code to this email after you open it.",
+      "Do not forward this link. If you did not expect this message, do not continue.",
+      "",
+      `Traveler: ${data.passengerName}`,
+    ].join("\n"),
+    idempotencyKey: `traveler-invite:${data.bookingId}:${hash(data.token).slice(0, 24)}`,
   });
-  if (!response.ok) console.error("Resend adult traveler invite failed", await response.text());
-  return response.ok;
+  if (result.status === "failed") console.error("Adult traveler invite delivery failed", result);
+  return result.status === "sent";
 }
 
 export async function POST(request: Request) {

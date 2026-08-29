@@ -4,17 +4,15 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
 import { createDriverAccessCode } from "@/lib/driver-access-server";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 
 const APPLICATION_COLUMNS =
   "id, full_name, email, phone, city, state, vehicle_make_model, license_plate, drivers_license_state, drivers_license_last4, availability, referral_source, notes, status, reviewed_at, reviewed_by, created_at";
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const driverNotifyEmail =
   process.env.DRIVER_NOTIFY_EMAIL ||
   process.env.NOTIFY_EMAIL ||
   process.env.LEAD_NOTIFY_EMAIL;
-const notifyFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 async function sendApplicationNotification(application: {
   fullName: string;
@@ -25,7 +23,7 @@ async function sendApplicationNotification(application: {
   vehicleMakeModel: string;
   availability: string;
 }) {
-  if (!resendApiKey || !driverNotifyEmail) return;
+  if (!driverNotifyEmail) return;
 
   const text = [
     "New Travelyt driver application",
@@ -42,28 +40,14 @@ async function sendApplicationNotification(application: {
   ].join("\n");
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: notifyFromEmail,
-        to: driverNotifyEmail
-          .split(",")
-          .map((address) => address.trim())
-          .filter(Boolean),
-        subject: `New Travelyt driver application: ${application.fullName}`,
-        reply_to: application.email,
-        text,
-      }),
+    const result = await sendTransactionalEmail({
+      to: driverNotifyEmail,
+      subject: `New Travelyt driver application: ${application.fullName}`,
+      replyTo: application.email,
+      text,
     });
-    if (!response.ok) {
-      console.error(
-        "Resend driver application notification failed",
-        await response.text()
-      );
+    if (result.status === "failed") {
+      console.error("Driver application notification delivery failed", result);
     }
   } catch (error) {
     console.error("Resend driver application notification error", error);

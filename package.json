@@ -16,6 +16,8 @@
     "simulate:agent-assignment": "node simulations/agent-assignment-acceptance-simulation.mjs",
     "simulate:per-bag-seals": "node simulations/per-bag-seal-custody-simulation.mjs",
     "simulate:technical-controls": "node simulations/technical-identity-controls-simulation.mjs",
+    "simulate:stripe-identity": "node --experimental-strip-types simulations/stripe-identity-verdict-simulation.mjs",
+    "simulate:communications": "node --experimental-strip-types simulations/communications-readiness-simulation.mjs",
     "simulate:separate-legs": "node simulations/separate-booking-legs-simulation.mjs",
     "simulate:arrival-pricing": "node simulations/arrival-bundle-pricing-simulation.mjs",
     "simulate:rj:integrated": "node simulations/rj-ord-integrated-checkpoint.mjs",

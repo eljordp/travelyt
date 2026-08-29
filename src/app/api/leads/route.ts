@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
-const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 
 function safeText(value: unknown) {
   if (typeof value === "string") return value.trim();
@@ -24,7 +22,7 @@ async function sendLeadNotification(lead: {
   source: string;
   metadata?: Record<string, unknown>;
 }) {
-  if (!resendApiKey || !leadNotifyEmail) return;
+  if (!leadNotifyEmail) return;
 
   const metadataLines = Object.entries(lead.metadata ?? {})
     .map(([key, value]) => `${key}: ${safeText(value) || JSON.stringify(value)}`)
@@ -42,26 +40,18 @@ async function sendLeadNotification(lead: {
     metadataLines || "(no trip metadata)",
   ].join("\n");
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: leadFromEmail,
-      to: leadNotifyEmail,
-      subject:
-        lead.interest === "booking-started"
-          ? `Travelyt booking started: ${lead.email}`
-          : `New Travelyt lead: ${lead.email}`,
-      reply_to: lead.email,
-      text,
-    }),
+  const result = await sendTransactionalEmail({
+    to: leadNotifyEmail,
+    subject:
+      lead.interest === "booking-started"
+        ? `Travelyt booking started: ${lead.email}`
+        : `New Travelyt lead: ${lead.email}`,
+    replyTo: lead.email,
+    text,
   });
 
-  if (!response.ok) {
-    console.error("Resend lead notification failed", await response.text());
+  if (result.status === "failed") {
+    console.error("Lead notification delivery failed", result);
   }
 }
 

@@ -11,6 +11,7 @@ import {
 import { queueBookingNotification } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 import { STRIPE_IDENTITY_PROVIDER } from "@/lib/stripe-identity";
 import { calcPriceBreakdown } from "@/lib/pricing";
 import { getAdminSession, isFullAdminSession, isOpsSession } from "@/lib/admin-auth";
@@ -96,10 +97,7 @@ const standaloneLocationEventKinds: LocationEventInput["kind"][] = [
   "driver_arrived",
 ];
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const leadNotifyEmail = process.env.LEAD_NOTIFY_EMAIL;
-const leadFromEmail =
-  process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
 const proofBucket = "booking-proofs";
 const maxProofBytes = 10 * 1024 * 1024;
 
@@ -693,7 +691,7 @@ function validateBooking(
 }
 
 async function sendBookingEmail(booking: Booking, source: string) {
-  if (!resendApiKey || !leadNotifyEmail) return;
+  if (!leadNotifyEmail) return;
 
   const trackingUrl = `${SITE_URL}/track/${encodeURIComponent(booking.id)}${
     booking.customerAccessToken
@@ -725,24 +723,16 @@ async function sendBookingEmail(booking: Booking, source: string) {
     `Created:  ${booking.createdAt}`,
   ].join("\n");
 
-  const resendResponse = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: leadFromEmail,
-      to: leadNotifyEmail,
-      subject: `New Travelyt booking: ${booking.id} (${booking.name})`,
-      reply_to: booking.email,
-      text: lines,
-    }),
+  const result = await sendTransactionalEmail({
+    to: leadNotifyEmail,
+    subject: `New Travelyt booking: ${booking.id} (${booking.name})`,
+    replyTo: booking.email,
+    text: lines,
+    idempotencyKey: `booking-created:${booking.id}`,
   });
 
-  if (!resendResponse.ok) {
-    const message = await resendResponse.text();
-    console.error("Resend booking notification failed", message);
+  if (result.status === "failed") {
+    console.error("Booking notification delivery failed", result);
   }
 }
 

@@ -8,9 +8,7 @@ import {
   identityConsentScope,
   validConsentSignature,
 } from "@/lib/identity-consent";
-
-const resendApiKey = process.env.RESEND_API_KEY;
-const leadFromEmail = process.env.LEAD_FROM_EMAIL || "Travelyt <info@travelyt.us>";
+import { sendTransactionalEmail } from "@/lib/transactional-email";
 
 type InviteRow = {
   id: string; booking_id: string | null; passenger_id: string | null; subject_name: string | null;
@@ -66,7 +64,7 @@ export async function POST(request: Request) {
   if (!data || !data.booking_id || !data.passenger_id || !active(data)) return bad("Verification link is invalid or expired.", 410);
 
   if (body.action === "request_code") {
-    if (!data.email || !resendApiKey) return bad("Email confirmation is not configured.", 503);
+    if (!data.email) return bad("Email confirmation is not configured.", 503);
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
     const { error: updateError } = await supabase.from("identity_verifications").update({
@@ -74,11 +72,14 @@ export async function POST(request: Request) {
       verification_invite_otp_attempts: 0, verification_invite_otp_verified_at: null,
     }).eq("id", data.id);
     if (updateError) return bad("Could not send email confirmation.", 500);
-    const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({
-      from: leadFromEmail, to: data.email, subject: "Your Travelyt verification code",
+    const delivery = await sendTransactionalEmail({
+      to: data.email,
+      subject: "Your Travelyt verification code",
       text: `Your one-time Travelyt traveler verification code is ${code}. It expires in 10 minutes. Do not share it.`,
-    }) });
-    if (!response.ok) return bad("Could not send email confirmation.", 502);
+      idempotencyKey: `traveler-otp:${data.id}:${hash(code).slice(0, 24)}`,
+    });
+    if (delivery.status === "not_configured") return bad("Email confirmation is not configured.", 503);
+    if (delivery.status === "failed") return bad("Could not send email confirmation.", 502);
     return NextResponse.json({ ok: true, status: "code_sent", expiresAt });
   }
 

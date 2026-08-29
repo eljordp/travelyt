@@ -18,6 +18,7 @@ const traveler = await readFile(path.join(ROOT, "src/app/verify-traveler/page.ts
 const verificationRequest = await readFile(path.join(ROOT, "src/app/api/identity/verification-request/route.ts"), "utf8");
 const travelerRoute = await readFile(path.join(ROOT, "src/app/api/identity/traveler-verification/route.ts"), "utf8");
 const webhook = await readFile(path.join(ROOT, "src/app/api/stripe/webhook/route.ts"), "utf8");
+const identityVerdict = await readFile(path.join(ROOT, "src/lib/identity-verdict.ts"), "utf8");
 const retention = await readFile(path.join(ROOT, "src/lib/identity-retention.ts"), "utf8");
 const retentionRoute = await readFile(path.join(ROOT, "src/app/api/internal/identity-retention/route.ts"), "utf8");
 const accountDelete = await readFile(path.join(ROOT, "src/app/api/account/delete/route.ts"), "utf8");
@@ -29,7 +30,7 @@ check("adult electronic signature", traveler.includes("Legal name - electronic s
 check("server consent gate", verificationRequest.includes("validConsentSignature") && verificationRequest.includes("consent_ip_hash"), "Client text cannot bypass the server-side signed-consent requirement.");
 check("adult server consent gate", travelerRoute.includes("validConsentSignature") && travelerRoute.includes("consent_user_agent_hash"), "Adult consent keeps versioned request evidence.");
 check("bounded disclosure", consent.includes("approved identity-verification provider") && consent.includes("only when required and authorized"), "Disclosure language does not claim blanket carrier sharing.");
-check("archive fail closed", webhook.includes('status = "manual_review"') && webhook.includes("archive_required_before_custody"), "Provider verification cannot clear custody when required originals were not archived.");
+check("archive fail closed", webhook.includes("requireVerifiedIdentityGate(verdict, archived)") && webhook.includes("archive_required_before_custody") && identityVerdict.includes('status: "manual_review"'), "Provider verification cannot clear custody when required originals were not archived.");
 check("destruction state", migration.includes("raw_deletion_status") && migration.includes("raw_destruction_receipt") && migration.includes("raw_legal_hold_at"), "Retention, destruction proof and legal holds are explicit fields.");
 check("existing originals scheduled", retentionBackfill.includes("jsonb_array_length(raw_document_paths) > 0") && retentionBackfill.includes("raw_deletion_status = 'scheduled'"), "Previously stored originals enter the deletion queue without changing their retention dates.");
 check("private object deletion", retention.includes("IDENTITY_ORIGINALS_BUCKET") && retention.includes(".remove(paths)"), "Deletion removes private storage objects, not only database references.");
