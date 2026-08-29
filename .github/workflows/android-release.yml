@@ -23,6 +23,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Configure Firebase for Android push
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_BASE64"
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
+
       - name: Install JS deps + sync Capacitor Android
         run: |
           npm ci

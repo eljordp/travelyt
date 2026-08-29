@@ -119,8 +119,9 @@ Twilio variables once SMS booking alerts are wired.
 ## Push Notification Worker
 
 The Supabase Edge Function in `supabase/functions/send-push-notifications`
-drains queued rows from `push_notification_events`, sends APNs notifications,
-and marks each event `sent` or `failed`.
+drains queued rows from `push_notification_events`, sends APNs notifications
+to iOS or Firebase Cloud Messaging notifications to Android, and marks each
+event `sent` or `failed`.
 
 Set these Supabase function secrets before deploying:
 
@@ -148,6 +149,25 @@ curl -X POST \
 Use `APNS_PRODUCTION=false` only for local debug builds with the development
 APNs entitlement. TestFlight and App Store distribution use the production APNs
 environment, so keep `APNS_PRODUCTION=true` there.
+
+For Android push, create an Android app in Firebase with package name
+`app.travelyt.travelyt`. Keep the downloaded `google-services.json` out of Git
+and store its base64-encoded contents in the GitHub Actions secret
+`GOOGLE_SERVICES_JSON_BASE64`. The Android release workflow restores it before
+Capacitor sync and fails closed if the secret is missing.
+
+Create a Firebase service account with permission to send Firebase Cloud
+Messaging notifications. Store the complete compact JSON document in the
+Supabase function secret `FCM_SERVICE_ACCOUNT_JSON`, then redeploy the worker:
+
+```sh
+supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-service-account.json)"
+npm run edge:check
+supabase functions deploy send-push-notifications
+```
+
+Never commit `google-services.json`, the Firebase service-account JSON, or the
+Android signing keystore.
 
 ## iOS
 

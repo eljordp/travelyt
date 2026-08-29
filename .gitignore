@@ -69,3 +69,7 @@ ops-backups/
 /android/local.properties
 /android/.idea/
 /android/captures/
+/android/app/google-services.json
+/android/*.jks
+/android/*.keystore
+/android/*.p12

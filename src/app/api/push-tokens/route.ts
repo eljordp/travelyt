@@ -31,17 +31,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const record = {
-      token,
-      platform,
-      userId,
-      bookingId,
-      receivedAt: new Date().toISOString(),
-    };
+    const receivedAt = new Date().toISOString();
 
     const persisted = await savePushToken({ token, platform, userId, bookingId });
 
-    console.log("Push token registered", record);
+    console.log("Push token registered", {
+      platform,
+      userId,
+      bookingId,
+      receivedAt,
+      persisted,
+    });
 
     if (resendApiKey && leadNotifyEmail) {
       await fetch("https://api.resend.com/emails", {
@@ -60,11 +60,8 @@ export async function POST(request: Request) {
             `Platform: ${platform}`,
             `User ID:  ${userId ?? "(anonymous)"}`,
             `Booking:  ${bookingId ?? "(none)"}`,
-            `Received: ${record.receivedAt}`,
+            `Received: ${receivedAt}`,
             `Persisted: ${persisted ? "yes" : "no"}`,
-            "",
-            "Token (store securely for push send):",
-            token,
           ].join("\n"),
         }),
       }).catch((err) =>
