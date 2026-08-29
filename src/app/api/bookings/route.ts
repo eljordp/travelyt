@@ -948,6 +948,16 @@ export async function PATCH(request: Request) {
 
     const patch = body.patch ?? {};
     const reason = body.reason?.trim() || undefined;
+    if (
+      patch.pilotEligibilityStatus !== undefined ||
+      patch.pilotEligibilityDecidedAt !== undefined ||
+      patch.pilotEligibilityDecidedBy !== undefined ||
+      patch.pilotEligibilityReason !== undefined ||
+      patch.pilotEligibilityExpiresAt !== undefined ||
+      patch.pilotEligibilitySnapshot !== undefined
+    ) {
+      return bad("Pilot eligibility decisions require the dedicated full-admin review action.", 403);
+    }
     if (existing.service === "both") {
       const allowedLegacyKeys = new Set([
         "status",

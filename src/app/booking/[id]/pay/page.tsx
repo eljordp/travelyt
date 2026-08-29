@@ -14,6 +14,10 @@ import {
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
+import {
+  checkoutEligibilityBlocker,
+  PILOT_ELIGIBILITY_LABELS,
+} from "@/lib/pilot-eligibility";
 
 function purchaseTrackingKey(bookingId: string, checkoutSessionId: string | null) {
   return `travelyt:purchase:${bookingId}:${checkoutSessionId || "confirmed"}`;
@@ -200,6 +204,12 @@ export default function PayPage() {
   }
 
   const isPending = booking.status === "pending";
+  const eligibilityStatus = booking.pilotEligibilityStatus ?? "pending";
+  const eligibilityBlocker = checkoutEligibilityBlocker({
+    status: eligibilityStatus,
+    expiresAt: booking.pilotEligibilityExpiresAt,
+  });
+  const checkoutUnlocked = isPending && !eligibilityBlocker;
 
   return (
     <AppChrome title="Payment">
@@ -233,6 +243,23 @@ export default function PayPage() {
           <div className="px-5 py-5 sm:px-8 sm:py-6 space-y-5">
             {isPending ? (
               <>
+                <div className={`rounded-xl border px-4 py-4 ${
+                  checkoutUnlocked
+                    ? "border-green-200 bg-green-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}>
+                  <p className={`text-sm font-semibold ${
+                    checkoutUnlocked ? "text-green-800" : "text-amber-900"
+                  }`}>
+                    {PILOT_ELIGIBILITY_LABELS[eligibilityStatus]}
+                  </p>
+                  <p className={`mt-1 text-sm leading-relaxed ${
+                    checkoutUnlocked ? "text-green-800/75" : "text-amber-800/80"
+                  }`}>
+                    {eligibilityBlocker ||
+                      `Approved until ${new Date(booking.pilotEligibilityExpiresAt!).toLocaleString()}. Checkout is unlocked.`}
+                  </p>
+                </div>
                 {checkoutState === "cancelled" && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
                     <p className="text-sm font-semibold text-amber-900">
@@ -255,7 +282,7 @@ export default function PayPage() {
                     </p>
                   </div>
                 )}
-                <div className="rounded-xl border border-[#ff6868]/20 bg-[#ff6868]/5 px-4 py-4">
+                {checkoutUnlocked && <div className="rounded-xl border border-[#ff6868]/20 bg-[#ff6868]/5 px-4 py-4">
                   <p className="text-sm font-semibold text-navy">
                     Pay securely with Stripe.
                   </p>
@@ -266,7 +293,7 @@ export default function PayPage() {
                     custody begins. Airline baggage fees, if any, are paid
                     separately to the airline.
                   </p>
-                </div>
+                </div>}
 
                 {checkoutError && (
                   <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -274,16 +301,18 @@ export default function PayPage() {
                   </p>
                 )}
 
-                <button
-                  type="button"
-                  onClick={startCheckout}
-                  disabled={checkoutLoading}
-                  className="block w-full rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] py-4 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
-                >
-                  {checkoutLoading
-                    ? "Opening secure checkout..."
-                    : `Pay ${formatPrice(booking.priceCents)} securely`}
-                </button>
+                {checkoutUnlocked && (
+                  <button
+                    type="button"
+                    onClick={startCheckout}
+                    disabled={checkoutLoading}
+                    className="block w-full rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] py-4 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {checkoutLoading
+                      ? "Opening secure checkout..."
+                      : `Pay ${formatPrice(booking.priceCents)} securely`}
+                  </button>
+                )}
               </>
             ) : (
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4">

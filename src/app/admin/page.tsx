@@ -39,9 +39,11 @@ import {
   TERMINAL_STATUSES,
   type BookingIssueType,
   type Booking,
+  type PilotEligibilityStatus,
 } from "@/lib/bookings";
 import { getSlaAlerts, latestLocationEvent } from "@/lib/ops-rules";
 import { passengerManifestCustodyBlockers } from "@/lib/passengers";
+import { PILOT_ELIGIBILITY_LABELS } from "@/lib/pilot-eligibility";
 
 type DataView = "production" | "demo" | "all";
 
@@ -802,6 +804,50 @@ export default function AdminPage() {
       setAgentAssignments((rows) => [data.assignment!, ...rows.filter((row) => row.bookingId !== input.bookingId || !["assigned", "accepted"].includes(row.status))]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not assign agents.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
+  async function decidePilotEligibility(input: {
+    bookingId: string;
+    decision: Exclude<PilotEligibilityStatus, "pending" | "expired">;
+    reason: string;
+  }) {
+    setUpdatingId(input.bookingId);
+    setError("");
+    try {
+      const response = await fetch("/api/ops/pilot-eligibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          ...input,
+          snapshot: input.decision === "approved"
+            ? {
+                eligibleFlight: true,
+                eligibleTraveler: true,
+                routeWithinPilotArea: true,
+                noticeSatisfied: true,
+                capacityConfirmed: true,
+              }
+            : {},
+        }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        booking?: Booking;
+      };
+      if (!response.ok || !data.booking) {
+        throw new Error(data.error || "Could not save pilot eligibility.");
+      }
+      setBookings((rows) => rows.map((row) =>
+        row.id === data.booking!.id ? data.booking! : row
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save pilot eligibility.");
+      throw err;
     } finally {
       setUpdatingId("");
     }
@@ -2732,6 +2778,7 @@ export default function AdminPage() {
                   agentProfiles={agentReadiness}
                   assignment={assignment}
                   onAssign={assignAgents}
+                  onEligibilityDecision={decidePilotEligibility}
                 />
               );
             })
@@ -2914,6 +2961,7 @@ function BookingCard({
   agentProfiles,
   assignment,
   onAssign,
+  onEligibilityDecision,
 }: {
   booking: Booking;
   disabled: boolean;
@@ -2925,6 +2973,11 @@ function BookingCard({
     primaryDriverAccessId: string;
     backupDriverAccessId: string;
     reason?: string;
+  }) => void | Promise<void>;
+  onEligibilityDecision: (input: {
+    bookingId: string;
+    decision: Exclude<PilotEligibilityStatus, "pending" | "expired">;
+    reason: string;
   }) => void | Promise<void>;
 }) {
   const [primaryAgentId, setPrimaryAgentId] = useState(assignment?.primaryDriverAccessId ?? "");
@@ -2945,6 +2998,8 @@ function BookingCard({
   const [reviewError, setReviewError] = useState("");
   const [reviewEvidenceReference, setReviewEvidenceReference] = useState("");
   const [reviewReason, setReviewReason] = useState("");
+  const [eligibilityReason, setEligibilityReason] = useState("");
+  const [eligibilityBusy, setEligibilityBusy] = useState(false);
 
   async function reviewPassenger(passengerId: string, action: "verify" | "reject") {
     setReviewBusyPassengerId(passengerId);
@@ -3071,6 +3126,15 @@ function BookingCard({
             >
               {getBookingStatusLabel(booking)}
             </span>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              booking.pilotEligibilityStatus === "approved"
+                ? "bg-green-100 text-green-800"
+                : booking.pilotEligibilityStatus === "declined"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-amber-100 text-amber-800"
+            }`}>
+              {PILOT_ELIGIBILITY_LABELS[booking.pilotEligibilityStatus ?? "pending"]}
+            </span>
             {stale && (
               <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800">
                 Past date
@@ -3140,6 +3204,60 @@ function BookingCard({
           </Link>
         </div>
       </div>
+
+      {booking.status === "pending" && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-bold text-navy">Pilot eligibility gate</p>
+          {booking.pilotEligibilityStatus === "pending" || !booking.pilotEligibilityStatus ? (
+            <>
+              <p className="mt-1 text-xs leading-relaxed text-navy/70">
+                Approve only after confirming eligible flight, eligible traveler,
+                route within the pilot area, minimum notice, and available capacity.
+                Approval unlocks Stripe for 24 hours. Waitlisted and declined
+                requests are never sent to checkout.
+              </p>
+              <textarea
+                value={eligibilityReason}
+                onChange={(event) => setEligibilityReason(event.target.value)}
+                placeholder="Required decision reason or capacity note"
+                className="mt-3 min-h-20 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
+              />
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {([
+                  ["approved", "Approve: all 5 checks passed", "bg-green-700 text-white"],
+                  ["waitlisted", "Waitlist — no charge", "bg-amber-200 text-amber-950"],
+                  ["declined", "Decline — no charge", "bg-red-100 text-red-700"],
+                ] as const).map(([decision, label, className]) => (
+                  <button
+                    key={decision}
+                    type="button"
+                    disabled={disabled || eligibilityBusy || eligibilityReason.trim().length < 8}
+                    onClick={() => {
+                      setEligibilityBusy(true);
+                      void Promise.resolve(onEligibilityDecision({
+                        bookingId: booking.id,
+                        decision,
+                        reason: eligibilityReason.trim(),
+                      })).finally(() => setEligibilityBusy(false));
+                    }}
+                    className={`rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40 ${className}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="mt-1 text-xs leading-relaxed text-navy/70">
+              {PILOT_ELIGIBILITY_LABELS[booking.pilotEligibilityStatus]}
+              {booking.pilotEligibilityReason ? ` — ${booking.pilotEligibilityReason}` : ""}
+              {booking.pilotEligibilityExpiresAt
+                ? ` Checkout authorization expires ${formatAuditTime(booking.pilotEligibilityExpiresAt)}.`
+                : " No payment authorization was issued."}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 grid gap-3 text-sm text-navy/70 sm:grid-cols-2">
         <Info label="Service" value={`${getBookingServiceLabel(booking)} · ${booking.bags} bag${booking.bags > 1 ? "s" : ""}`} />

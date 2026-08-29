@@ -4,6 +4,8 @@ import type {
   BookingIssueType,
   BookingLocationEvent,
   BookingStatus,
+  PilotEligibilitySnapshot,
+  PilotEligibilityStatus,
   PhotoProof,
   ServiceType,
   StoredServiceType,
@@ -31,6 +33,12 @@ export const BOOKING_SELECT_COLUMNS = [
   "customer_identity_verified_at",
   "driver_identity_verified_at",
   "status",
+  "pilot_eligibility_status",
+  "pilot_eligibility_decided_at",
+  "pilot_eligibility_decided_by",
+  "pilot_eligibility_reason",
+  "pilot_eligibility_expires_at",
+  "pilot_eligibility_snapshot",
   "price_cents",
   "created_at",
   "paid_at",
@@ -92,6 +100,12 @@ export interface BookingRow {
   customer_identity_verified_at: string | null;
   driver_identity_verified_at: string | null;
   status: BookingStatus;
+  pilot_eligibility_status: PilotEligibilityStatus;
+  pilot_eligibility_decided_at: string | null;
+  pilot_eligibility_decided_by: string | null;
+  pilot_eligibility_reason: string | null;
+  pilot_eligibility_expires_at: string | null;
+  pilot_eligibility_snapshot: PilotEligibilitySnapshot | null;
   price_cents: number;
   created_at: string;
   paid_at: string | null;
@@ -152,6 +166,12 @@ export function rowToBooking(row: BookingRow): Booking {
     customerIdentityVerifiedAt: row.customer_identity_verified_at ?? undefined,
     driverIdentityVerifiedAt: row.driver_identity_verified_at ?? undefined,
     status: row.status,
+    pilotEligibilityStatus: row.pilot_eligibility_status ?? "pending",
+    pilotEligibilityDecidedAt: row.pilot_eligibility_decided_at ?? undefined,
+    pilotEligibilityDecidedBy: row.pilot_eligibility_decided_by ?? undefined,
+    pilotEligibilityReason: row.pilot_eligibility_reason ?? undefined,
+    pilotEligibilityExpiresAt: row.pilot_eligibility_expires_at ?? undefined,
+    pilotEligibilitySnapshot: row.pilot_eligibility_snapshot ?? undefined,
     priceCents: row.price_cents,
     createdAt: row.created_at,
     paidAt: row.paid_at ?? undefined,
@@ -212,6 +232,12 @@ export function bookingToInsert(
     customer_identity_verified_at: booking.customerIdentityVerifiedAt ?? null,
     driver_identity_verified_at: booking.driverIdentityVerifiedAt ?? null,
     status: booking.status,
+    pilot_eligibility_status: booking.pilotEligibilityStatus ?? "pending",
+    pilot_eligibility_decided_at: booking.pilotEligibilityDecidedAt ?? null,
+    pilot_eligibility_decided_by: booking.pilotEligibilityDecidedBy ?? null,
+    pilot_eligibility_reason: booking.pilotEligibilityReason ?? null,
+    pilot_eligibility_expires_at: booking.pilotEligibilityExpiresAt ?? null,
+    pilot_eligibility_snapshot: booking.pilotEligibilitySnapshot ?? {},
     price_cents: booking.priceCents,
     created_at: booking.createdAt,
     paid_at: booking.paidAt ?? null,
@@ -281,6 +307,24 @@ export function bookingPatchToRowPatch(patch: Partial<Booking>) {
     row.driver_identity_verified_at = patch.driverIdentityVerifiedAt ?? null;
   }
   if (patch.status !== undefined) row.status = patch.status;
+  if (patch.pilotEligibilityStatus !== undefined) {
+    row.pilot_eligibility_status = patch.pilotEligibilityStatus;
+  }
+  if (patch.pilotEligibilityDecidedAt !== undefined) {
+    row.pilot_eligibility_decided_at = patch.pilotEligibilityDecidedAt ?? null;
+  }
+  if (patch.pilotEligibilityDecidedBy !== undefined) {
+    row.pilot_eligibility_decided_by = patch.pilotEligibilityDecidedBy ?? null;
+  }
+  if (patch.pilotEligibilityReason !== undefined) {
+    row.pilot_eligibility_reason = patch.pilotEligibilityReason ?? null;
+  }
+  if (patch.pilotEligibilityExpiresAt !== undefined) {
+    row.pilot_eligibility_expires_at = patch.pilotEligibilityExpiresAt ?? null;
+  }
+  if (patch.pilotEligibilitySnapshot !== undefined) {
+    row.pilot_eligibility_snapshot = patch.pilotEligibilitySnapshot ?? {};
+  }
   if (patch.priceCents !== undefined) row.price_cents = patch.priceCents;
   if (patch.createdAt !== undefined) row.created_at = patch.createdAt;
   if (patch.paidAt !== undefined) row.paid_at = patch.paidAt ?? null;

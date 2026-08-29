@@ -35,6 +35,23 @@ export type BookingStatus =
   | "cancelled"
   | "issue";
 
+export type PilotEligibilityStatus =
+  | "pending"
+  | "approved"
+  | "waitlisted"
+  | "declined"
+  | "expired";
+
+export interface PilotEligibilitySnapshot {
+  eligibleFlight?: boolean;
+  eligibleTraveler?: boolean;
+  routeWithinPilotArea?: boolean;
+  noticeSatisfied?: boolean;
+  capacityConfirmed?: boolean;
+  airport?: string;
+  service?: ServiceType;
+}
+
 export type ServiceType = "departure" | "arrival";
 export type LegacyServiceType = "both";
 export type StoredServiceType = ServiceType | LegacyServiceType;
@@ -154,6 +171,12 @@ export interface Booking {
   customerIdentityVerifiedAt?: string;
   driverIdentityVerifiedAt?: string;
   status: BookingStatus;
+  pilotEligibilityStatus?: PilotEligibilityStatus;
+  pilotEligibilityDecidedAt?: string;
+  pilotEligibilityDecidedBy?: string;
+  pilotEligibilityReason?: string;
+  pilotEligibilityExpiresAt?: string;
+  pilotEligibilitySnapshot?: PilotEligibilitySnapshot;
   priceCents: number;
   promoCode?: string;
   discountCents?: number;

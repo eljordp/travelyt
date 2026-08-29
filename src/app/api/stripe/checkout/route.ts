@@ -4,6 +4,7 @@ import type { ServiceType } from "@/lib/bookings";
 import { rateLimit } from "@/lib/rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { getSiteUrl, getStripe } from "@/lib/stripe-server";
+import { checkoutEligibilityBlocker } from "@/lib/pilot-eligibility";
 
 const SERVICE_LABELS: Record<ServiceType, string> = {
   departure: "Departure Pickup",
@@ -73,6 +74,35 @@ export async function POST(request: Request) {
       });
     }
 
+    const eligibilityBlocker = checkoutEligibilityBlocker({
+      status: booking.pilotEligibilityStatus,
+      expiresAt: booking.pilotEligibilityExpiresAt,
+    });
+    if (eligibilityBlocker) {
+      if (
+        booking.pilotEligibilityStatus === "approved" &&
+        booking.pilotEligibilityExpiresAt &&
+        Date.parse(booking.pilotEligibilityExpiresAt) <= Date.now()
+      ) {
+        await supabase
+          .from("bookings")
+          .update({ pilot_eligibility_status: "expired" })
+          .eq("id", booking.id)
+          .eq("status", "pending")
+          .eq("pilot_eligibility_status", "approved");
+      }
+      return bad(eligibilityBlocker, 409);
+    }
+
+    const approvalExpiresAt = Date.parse(booking.pilotEligibilityExpiresAt!);
+    const remainingApprovalSeconds = Math.floor((approvalExpiresAt - Date.now()) / 1000);
+    if (remainingApprovalSeconds < 30 * 60) {
+      return bad(
+        "This pilot approval has less than 30 minutes remaining. No charge has been made; request another review.",
+        409
+      );
+    }
+
     if (booking.priceCents <= 0) {
       const now = new Date().toISOString();
       await supabase
@@ -104,12 +134,19 @@ export async function POST(request: Request) {
       cancel_url: `${siteUrl}/booking/${booking.id}/pay?checkout=cancelled`,
       metadata: {
         bookingId: booking.id,
+        pilotEligibilityDecidedAt: booking.pilotEligibilityDecidedAt || "",
+        pilotEligibilityExpiresAt: booking.pilotEligibilityExpiresAt || "",
       },
       payment_intent_data: {
         metadata: {
           bookingId: booking.id,
+          pilotEligibilityDecidedAt: booking.pilotEligibilityDecidedAt || "",
         },
       },
+      expires_at: Math.min(
+        Math.floor(Date.now() / 1000) + 23 * 60 * 60,
+        Math.floor(approvalExpiresAt / 1000)
+      ),
       line_items: [
         {
           quantity: 1,

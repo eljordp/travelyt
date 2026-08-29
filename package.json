@@ -20,6 +20,8 @@
     "simulate:communications": "node --experimental-strip-types simulations/communications-readiness-simulation.mjs",
     "simulate:separate-legs": "node simulations/separate-booking-legs-simulation.mjs",
     "simulate:arrival-pricing": "node simulations/arrival-bundle-pricing-simulation.mjs",
+    "simulate:pilot-eligibility": "node --experimental-strip-types simulations/pilot-eligibility-gate-simulation.mjs",
+    "simulate:household-sizes": "node --experimental-strip-types simulations/household-size-journey-simulation.mjs",
     "simulate:rj:integrated": "node simulations/rj-ord-integrated-checkpoint.mjs",
     "backup:export": "node scripts/export-backup-ops-kit.mjs",
     "edge:check": "DENO_DIR=/tmp/travelyt-deno-cache deno check --no-lock --node-modules-dir=false supabase/functions/send-push-notifications/index.ts",

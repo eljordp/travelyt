@@ -23,6 +23,10 @@ import {
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 import { latestLocationEvent } from "@/lib/ops-rules";
+import {
+  checkoutEligibilityBlocker,
+  PILOT_ELIGIBILITY_LABELS,
+} from "@/lib/pilot-eligibility";
 
 const VISIBLE_STATUSES: BookingStatus[] = STATUS_ORDER;
 const BOOKING_REFRESH_MS = 30_000;
@@ -106,6 +110,11 @@ export default function BookingPage() {
 
   const terminalStatus =
     booking.status === "cancelled" || booking.status === "issue";
+  const eligibilityStatus = booking.pilotEligibilityStatus ?? "pending";
+  const eligibilityBlocker = checkoutEligibilityBlocker({
+    status: eligibilityStatus,
+    expiresAt: booking.pilotEligibilityExpiresAt,
+  });
   const current = terminalStatus ? -1 : statusIndex(booking.status);
   const lastLocation = latestLocationEvent(booking);
   const enableLiveUpdates = async () => {
@@ -511,14 +520,19 @@ export default function BookingPage() {
           <div className="font-semibold text-navy mb-1">What happens next</div>
           {booking.status === "pending" ? (
             <>
-              Complete secure checkout so Travelyt can confirm the request and
-              prepare driver assignment.
-              <Link
-                href={`/booking/${booking.id}/pay`}
-                className="mt-4 block rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] px-5 py-3 text-center text-sm font-bold text-white transition-opacity hover:opacity-90"
-              >
-                Pay securely with Stripe
-              </Link>
+              <span className="font-semibold text-navy">
+                {PILOT_ELIGIBILITY_LABELS[eligibilityStatus]}.
+              </span>{" "}
+              {eligibilityBlocker ||
+                "Your request is approved and secure checkout is now available."}
+              {!eligibilityBlocker && (
+                <Link
+                  href={`/booking/${booking.id}/pay`}
+                  className="mt-4 block rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] px-5 py-3 text-center text-sm font-bold text-white transition-opacity hover:opacity-90"
+                >
+                  Pay securely with Stripe
+                </Link>
+              )}
             </>
           ) : terminalStatus ? (
             "Travelyt support will review the issue or cancellation before this booking can continue."
