@@ -203,13 +203,32 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   if (!signature) return json({ ok: false, error: "Missing Stripe signature." }, 400);
 
-  let event: Stripe.Event;
+  let event: Stripe.Event | null = null;
   const rawBody = await request.text();
+  const candidateSecrets = [webhookSecret];
+  const previousSecret = process.env.STRIPE_WEBHOOK_SECRET_PREVIOUS;
+  const previousSecretExpiresAt = Date.parse(
+    process.env.STRIPE_WEBHOOK_SECRET_PREVIOUS_EXPIRES_AT ?? ""
+  );
+  if (
+    previousSecret &&
+    Number.isFinite(previousSecretExpiresAt) &&
+    Date.now() < previousSecretExpiresAt
+  ) {
+    candidateSecrets.push(previousSecret);
+  }
 
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (error) {
-    console.error("Stripe webhook signature verification failed", error);
+  let signatureError: unknown;
+  for (const candidateSecret of candidateSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, signature, candidateSecret);
+      break;
+    } catch (error) {
+      signatureError = error;
+    }
+  }
+  if (!event) {
+    console.error("Stripe webhook signature verification failed", signatureError);
     return json({ ok: false, error: "Invalid Stripe signature." }, 400);
   }
 
