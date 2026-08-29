@@ -32,9 +32,9 @@ import { roleRequiresMfa, trustedUserRole } from "@/lib/auth-policy";
 import { getSupabaseBrowser } from "@/lib/supabase-client";
 import {
   formatPrice,
+  getBookingServiceLabel,
   getBookingStatusLabel,
   ISSUE_TYPE_LABELS,
-  SERVICE_LABELS,
   STATUS_LABELS,
   TERMINAL_STATUSES,
   type BookingIssueType,
@@ -1442,7 +1442,7 @@ export default function AdminPage() {
     const rows = filtered.map((booking) => [
       booking.id,
       getBookingStatusLabel(booking),
-      SERVICE_LABELS[booking.service],
+      getBookingServiceLabel(booking),
       booking.airport,
       booking.date,
       booking.bags,
@@ -3142,7 +3142,7 @@ function BookingCard({
       </div>
 
       <div className="mt-4 grid gap-3 text-sm text-navy/70 sm:grid-cols-2">
-        <Info label="Service" value={`${SERVICE_LABELS[booking.service]} · ${booking.bags} bag${booking.bags > 1 ? "s" : ""}`} />
+        <Info label="Service" value={`${getBookingServiceLabel(booking)} · ${booking.bags} bag${booking.bags > 1 ? "s" : ""}`} />
         <Info label="Airport" value={`${booking.airport} · ${formatDate(booking.date)}`} />
         {booking.flightTime && <Info label="Flight time" value={booking.flightTime} />}
         <Info label="Address" value={booking.address} />

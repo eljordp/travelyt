@@ -20,12 +20,12 @@ import {
   type Booking,
   formatPrice,
   getBooking,
+  getBookingServiceLabel,
   getBookingStatusLabel,
   getDriverAccessCode,
   getLastApiFailureMessage,
   getStoredDriverName,
   recordClientOpsException,
-  SERVICE_LABELS,
   subscribe,
   updateBooking,
 } from "@/lib/bookings";
@@ -910,7 +910,7 @@ export default function DriverJobPage() {
             <div className="min-w-0">
               <p className="truncate font-bold text-navy">{customerName}</p>
               <p className="mt-0.5 truncate text-xs font-semibold text-navy/55">
-                {booking.id} · {SERVICE_LABELS[booking.service]} · {booking.bags} bag
+                {booking.id} · {getBookingServiceLabel(booking)} · {booking.bags} bag
                 {booking.bags > 1 ? "s" : ""}
               </p>
             </div>
@@ -1339,7 +1339,7 @@ export default function DriverJobPage() {
           </div>
 
           <div className="space-y-3 border-t border-gray-100 pt-5 text-sm">
-            <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+            <Row label="Service" value={getBookingServiceLabel(booking)} />
             <Row
               label={booking.service === "arrival" ? "Delivery" : "Pickup"}
               value={jobAddress}

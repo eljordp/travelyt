@@ -22,8 +22,7 @@ const rules = {
   familyBundlePercent: 15,
   servicePricesCents: {
     departure: 4900,
-    arrival: 2900,
-    both: 6900,
+    arrival: 4900,
   },
   launchPromoPercent: 30,
 };

@@ -3,6 +3,8 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { CircleCheck, ShieldCheck, Tag } from "lucide-react";
 import {
+  ARRIVAL_ADDITIONAL_BAG_CENTS,
+  ARRIVAL_INCLUDED_BAGS,
   EXPRESS_PICKUP_CENTS,
   EXPRESS_DISTANCE_RATE_CENTS,
   FAMILY_BUNDLE_MIN_BAGS,
@@ -17,14 +19,14 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Travelyt base pricing for departure pickup, arrival delivery, and distance-based route surcharges.",
+    "Travelyt booking pricing for departure pickup, bundled arrival delivery, and distance-based route surcharges.",
   alternates: {
     canonical: "/pricing",
   },
   openGraph: {
     title: "Travelyt Pricing",
     description:
-      "See base per-bag rates for Travelyt pickup, delivery, custody checkpoints, sealing, and distance-based route surcharges.",
+      "See departure per-bag rates and arrival booking bundles for Travelyt custody and delivery services.",
     url: "/pricing",
   },
 };
@@ -34,7 +36,7 @@ const plans = [
     name: "Departure",
     price: SERVICE_PRICES_CENTS.departure / 100,
     unit: "per bag",
-    description: "We collect your bags at your door and move them to the airport. You arrive hands-free.",
+    description: "When pilot availability is confirmed, we collect sealed bags and return them to you at the approved public-terminal meet point.",
     features: [
       "Doorstep bag collection",
       "Weigh, tag, and seal",
@@ -43,24 +45,24 @@ const plans = [
       "Coverage subject to bound policy",
       "Status updates; SMS/email where configured",
     ],
-    cta: "Book Departure",
+    cta: "Request Departure Availability",
     href: "/quote?service=departure",
     popular: false,
   },
   {
     name: "Arrival",
     price: SERVICE_PRICES_CENTS.arrival / 100,
-    unit: "per bag",
-    description: "We collect your bags after your flight lands and deliver them to your address.",
+    unit: `per booking, up to ${ARRIVAL_INCLUDED_BAGS} bags`,
+    description: "Where airport release is authorized and a delivery window is confirmed, we collect bags after arrival and deliver them to your address.",
     features: [
-      "Post-flight bag collection",
+      "Airport release path confirmed before service",
       "Delivery to any address",
       "Status and custody updates",
       "Coverage subject to bound policy",
-      "Flexible delivery windows",
-      "Multi-bag support",
+      "Delivery timing confirmed per booking",
+      `$${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each additional bag`,
     ],
-    cta: "Book Arrival",
+    cta: "Request Arrival Availability",
     href: "/quote?service=arrival",
     popular: false,
   },
@@ -69,8 +71,9 @@ const plans = [
 const addons = [
   { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance, the Travelyt handoff target, and any earlier airline or station requirement` },
   { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
-  { name: "Extra Bag Discount", detail: "$10 off each additional bag on the same booking" },
-  { name: "Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
+  { name: "Arrival Bag Bundle", detail: `$${SERVICE_PRICES_CENTS.arrival / 100} per arrival booking includes up to ${ARRIVAL_INCLUDED_BAGS} bags; additional bags are $${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each` },
+  { name: "Departure Extra Bag Discount", detail: "$10 off each additional departure bag on the same booking" },
+  { name: "Departure Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ departure bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
   { name: "Controlled Handoff Target", detail: `Departure service targets terminal handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; standard service returns bags to the traveler, and airline- or station-specific earlier requirements always control` },
   { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
 ];
@@ -79,8 +82,8 @@ const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
 const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
 
 const competitors = [
-  { name: "Travelyt", departure: "$49", arrival: "$29", sameDay: "By availability", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
-  { name: "Bags VIP", departure: "—", arrival: "$49.95+", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
+  { name: "Travelyt", departure: "$49/bag", arrival: "$49 / 2 bags", sameDay: "By availability", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
+  { name: "Bags VIP", departure: "—", arrival: "$49.95 / 2 bags", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
   { name: "LugLess", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
   { name: "Luggage Forward", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
   { name: "AirPortr (UK/EU)", departure: "Quote based", arrival: "Quote based", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: false },
@@ -97,15 +100,15 @@ export default function PricingPage() {
           <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Pricing</span>
           <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
           <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Straightforward base per-bag rates, with discounts calculated automatically. Routes beyond {INCLUDED_DISTANCE_MILES} miles from the airport add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi with express.
+            Departure is priced per bag. Arrival starts with one booking price for up to {ARRIVAL_INCLUDED_BAGS} bags. Routes beyond {INCLUDED_DISTANCE_MILES} miles from the airport add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi with express.
           </p>
         </div>
       </section>
 
       {/* Plans */}
       <section className="pb-20 -mt-4">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {plans.map((plan) => (
               <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#ff6868]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
                 {plan.popular && (
@@ -157,7 +160,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-2xl font-bold text-navy text-center mb-3">Add-ons & automatic discounts</h2>
           <p className="mx-auto mb-8 max-w-2xl text-center text-sm text-navy/65">
-            Express pickup is a single booking add-on, not a per-bag charge. Pickup timing is confirmed from route distance, traffic, the three-hour Travelyt handoff target, and any earlier airline or station requirement. Extra-bag and family discounts are calculated in the quote flow before promo codes are applied.
+            Express pickup is a single departure-booking add-on, not a per-bag charge. Arrival already bundles the first two bags. Departure extra-bag and family discounts are calculated before promo codes are applied.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {addons.map((a) => (
@@ -281,7 +284,7 @@ export default function PricingPage() {
             </table>
           </div>
           <p className="text-xs text-navy/70 mt-6 text-center">
-            Competitor notes are approximate from public information and quote-flow behavior as of May 2026. No endorsement, affiliation, or partnership is implied.
+            Bags VIP pricing and timing were checked against its public United service page in August 2026. Other competitor notes remain approximate. No endorsement, affiliation, or partnership is implied.
           </p>
         </div>
       </section>

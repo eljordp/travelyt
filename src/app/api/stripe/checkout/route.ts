@@ -8,7 +8,6 @@ import { getSiteUrl, getStripe } from "@/lib/stripe-server";
 const SERVICE_LABELS: Record<ServiceType, string> = {
   departure: "Departure Pickup",
   arrival: "Arrival Delivery",
-  both: "Both Ways",
 };
 
 function formatPrice(cents: number) {
@@ -57,6 +56,12 @@ export async function POST(request: Request) {
     const user = await getRequestUser(request);
     if (!userOwns(row, user?.id) && !tokenMatches(row, body.accessToken)) {
       return bad("You do not have access to this booking.", 403);
+    }
+    if (row.service === "both") {
+      return bad(
+        "This legacy combined booking must be replaced with separate departure and arrival bookings before payment.",
+        409
+      );
     }
 
     const booking = rowToBooking(row);

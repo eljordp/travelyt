@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import BackupShell from "@/app/backup/_components/BackupShell";
 import {
-  BACKUP_SERVICE_LABELS,
+  getBackupServiceLabel,
   BACKUP_STATUS_LABELS,
   backupNextAction,
   formatBackupMoney,
@@ -67,7 +67,7 @@ export default async function BackupBookingsPage() {
                   </p>
                   <p className="mt-1 text-lg font-black text-navy">{booking.name}</p>
                   <p className="mt-1 text-sm text-navy/60">
-                    {BACKUP_SERVICE_LABELS[booking.service]} - {booking.airport}
+                    {getBackupServiceLabel(booking)} - {booking.airport}
                   </p>
                 </div>
                 <div className="text-sm">

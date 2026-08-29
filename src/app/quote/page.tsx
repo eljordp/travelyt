@@ -15,6 +15,8 @@ import {
   type ServiceType as BookingServiceType,
 } from "@/lib/bookings";
 import {
+  ARRIVAL_ADDITIONAL_BAG_CENTS,
+  ARRIVAL_INCLUDED_BAGS,
   EXPRESS_DISTANCE_RATE_CENTS,
   INCLUDED_DISTANCE_MILES,
   STANDARD_DISTANCE_RATE_CENTS,
@@ -38,7 +40,7 @@ import {
 import { normalizeBookingPassengers } from "@/lib/passengers";
 import AppChrome from "@/components/AppChrome";
 
-type ServiceType = "departure" | "arrival" | "both" | "";
+type ServiceType = "departure" | "arrival" | "";
 
 interface FormData {
   service: ServiceType;
@@ -580,7 +582,6 @@ export default function QuotePage() {
   const serviceLabels: Record<string, string> = {
     departure: "Departure Pickup",
     arrival: "Arrival Delivery",
-    both: "Both Ways",
   };
   const distanceMiles = form.distanceMiles.trim()
     ? Number(form.distanceMiles)
@@ -959,6 +960,11 @@ export default function QuotePage() {
                         className="w-10 h-10 rounded-xl bg-gray-100 text-navy font-bold text-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center">+</button>
                       <span className="text-sm text-navy/70">bags</span>
                     </div>
+                    {form.service === "arrival" && (
+                      <p className="mt-2 text-xs text-navy/60">
+                        One arrival booking includes up to {ARRIVAL_INCLUDED_BAGS} bags; each additional bag is {formatPrice(ARRIVAL_ADDITIONAL_BAG_CENTS)}.
+                      </p>
+                    )}
                   </div>
 
                   {form.service !== "arrival" && (
@@ -1132,7 +1138,7 @@ export default function QuotePage() {
                     {priceBreakdown && subtotalCents > 0 && (
                       <>
                         <Row
-                          label="Service subtotal"
+                          label={form.service === "arrival" ? `Arrival base (up to ${ARRIVAL_INCLUDED_BAGS} bags)` : "Service subtotal"}
                           value={formatPrice(priceBreakdown.serviceSubtotalCents)}
                         />
                         {priceBreakdown.expressPickupCents > 0 && (

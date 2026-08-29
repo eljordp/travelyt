@@ -20,7 +20,7 @@ import {
   type BookingStatus,
   formatPrice,
   getBooking,
-  SERVICE_LABELS,
+  getBookingServiceLabel,
   STATUS_LABELS,
   STATUS_ORDER,
   statusIndex,
@@ -195,7 +195,7 @@ function TrackPageInner() {
                 Trip details
               </h2>
               <div className="mt-5 space-y-3 text-sm">
-                <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+                <Row label="Service" value={getBookingServiceLabel(booking)} />
                 <Row label="Airport" value={booking.airport} />
                 <Row
                   label={booking.service === "arrival" ? "Delivery" : "Pickup"}

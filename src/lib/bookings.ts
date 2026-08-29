@@ -35,7 +35,9 @@ export type BookingStatus =
   | "cancelled"
   | "issue";
 
-export type ServiceType = "departure" | "arrival" | "both";
+export type ServiceType = "departure" | "arrival";
+export type LegacyServiceType = "both";
+export type StoredServiceType = ServiceType | LegacyServiceType;
 
 export const ISSUE_TYPE_LABELS = {
   airport_hold: "Airport hold",
@@ -132,6 +134,7 @@ export interface PhotoProof {
 export interface Booking {
   id: string;
   service: ServiceType;
+  legacyService?: LegacyServiceType;
   airport: string;
   address: string;
   date: string;
@@ -739,10 +742,13 @@ export const STATUS_LABELS: Record<BookingStatus, string> = {
 };
 
 export function getBookingStatusLabel(
-  booking: Pick<Booking, "service" | "status">
+  booking: Pick<Booking, "service" | "legacyService" | "status">
 ): string {
   if (booking.status === "cancelled") return "Cancelled";
   if (booking.status === "issue") return "Failed / Issue";
+  if (booking.legacyService === "both") {
+    return "Legacy Combined Booking - Split Required";
+  }
   if (booking.status === "delivery_pending") {
     return booking.service === "departure"
       ? "Passenger Handoff Awaiting Confirmation"
@@ -767,14 +773,6 @@ export function getBookingStatusLabel(
     if (booking.status === "picked_up") return "Airport Release Captured";
     if (booking.status === "in_transit") return "Out for Delivery";
     if (booking.status === "delivered") return "Delivered to Customer";
-  }
-
-  if (booking.service === "both") {
-    if (booking.status === "accepted") return "Driver Accepted";
-    if (booking.status === "en_route") return "Driver En Route";
-    if (booking.status === "arrived") return "Driver Arrived";
-    if (booking.status === "picked_up") return "Seal Awaiting Approval";
-    if (booking.status === "in_transit") return "Airport Handoff Complete";
   }
 
   return STATUS_LABELS[booking.status];
@@ -803,5 +801,12 @@ export function statusIndex(s: BookingStatus): number {
 export const SERVICE_LABELS: Record<ServiceType, string> = {
   departure: "Departure Pickup",
   arrival: "Arrival Delivery",
-  both: "Both Ways",
 };
+
+export function getBookingServiceLabel(
+  booking: Pick<Booking, "service" | "legacyService">
+): string {
+  return booking.legacyService === "both"
+    ? "Legacy Combined Booking - Split Required"
+    : SERVICE_LABELS[booking.service];
+}

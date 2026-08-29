@@ -4,7 +4,7 @@ import BackupShell from "@/app/backup/_components/BackupShell";
 import CopyValue from "@/app/backup/_components/CopyValue";
 import EmergencyLogForm from "@/app/backup/_components/EmergencyLogForm";
 import {
-  BACKUP_SERVICE_LABELS,
+  getBackupServiceLabel,
   BACKUP_STATUS_LABELS,
   backupNextAction,
   backupTrackingUrl,
@@ -54,7 +54,7 @@ export default async function BackupBookingPage({
               </div>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <Field label="Service" value={BACKUP_SERVICE_LABELS[booking.service]} />
+              <Field label="Service" value={getBackupServiceLabel(booking)} />
               <Field label="Airport" value={booking.airport} />
               <Field label="Flight" value={booking.flight || "Not recorded"} />
               <Field label="Travel date" value={booking.date} />

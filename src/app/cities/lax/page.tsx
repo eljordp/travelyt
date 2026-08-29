@@ -3,8 +3,10 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { CircleCheck } from "lucide-react";
 import {
+  ARRIVAL_INCLUDED_BAGS,
   EXPRESS_DISTANCE_RATE_CENTS,
   INCLUDED_DISTANCE_MILES,
+  SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
 import type { Metadata } from "next";
@@ -12,7 +14,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "LAX Baggage Service",
   description:
-    "Travelyt door-to-door baggage pickup and airport handoff for Los Angeles International Airport and the greater LA area.",
+    "Request Travelyt baggage-service availability for Los Angeles International Airport and the greater LA area.",
   alternates: {
     canonical: "/cities/lax",
   },
@@ -43,7 +45,7 @@ export default function LAXPage() {
             Travelyt <span className="text-[#ff6868]">LAX</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
-            Door-to-door baggage service for Los Angeles International Airport. Base pricing includes the first {INCLUDED_DISTANCE_MILES} miles from LAX.
+            Request pilot availability for LAX. Base pricing includes the first {INCLUDED_DISTANCE_MILES} route miles, but a quote does not confirm a live service area, terminal location, or delivery SLA.
           </p>
           <Link href="/quote?airport=LAX" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
             Get a Quote for LAX
@@ -54,12 +56,12 @@ export default function LAXPage() {
       {/* How it works locally */}
       <section className="py-20">
         <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-navy text-center mb-12">How it works in LA</h2>
+          <h2 className="text-3xl font-bold text-navy text-center mb-12">Proposed LA pilot flow</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "01", title: "We come to you", desc: "Anywhere in the greater LA area — your home, hotel, Airbnb, or office. Our agent arrives at your scheduled time." },
+              { step: "01", title: "Availability confirmed", desc: "Travelyt first confirms the address, route, agent, operating window, and eligible public-terminal handoff point." },
               { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal your bags on-site. GPS custody checkpoints are recorded from pickup through handoff so you can follow the bag status from your phone." },
-              { step: "03", title: "You skip the drag", desc: "Drive or ride to LAX hands-free. We meet you curbside with your bags ready for the counter — or, for arrivals, we deliver after your flight lands." },
+              { step: "03", title: "Confirmed handoff", desc: "A departure rehearsal returns sealed bags to the traveler at an approved public meet point. Arrival delivery remains unavailable until airport release authority and an SLA are confirmed." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#ff6868]/20 mb-3">{s.step}</div>
@@ -109,8 +111,8 @@ export default function LAXPage() {
           <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
-              { name: "Departure", price: "$49", unit: "/bag" },
-              { name: "Arrival", price: "$29", unit: "/bag" },
+              { name: "Departure", price: `$${SERVICE_PRICES_CENTS.departure / 100}`, unit: "/bag" },
+              { name: "Arrival", price: `$${SERVICE_PRICES_CENTS.arrival / 100}`, unit: `/${ARRIVAL_INCLUDED_BAGS} bags` },
             ].map((p) => (
               <div key={p.name} className="bg-[#f5f0ee] rounded-2xl p-6">
                 <div className="text-sm font-semibold text-navy/70 mb-2">{p.name}</div>
@@ -130,9 +132,9 @@ export default function LAXPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
               { num: "88M+", label: "Annual LAX passengers" },
-              { num: "50mi", label: "Service radius" },
-              { num: "9", label: "LAX terminals covered" },
-              { num: "4hr", label: "Max delivery window" },
+              { num: "30mi", label: "Base-pricing radius" },
+              { num: "TBD", label: "Live terminal coverage" },
+              { num: "TBD", label: "Confirmed delivery SLA" },
             ].map((s) => (
               <div key={s.label}>
                 <div className="text-3xl font-bold text-[#ff6868]">{s.num}</div>

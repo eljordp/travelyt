@@ -2,10 +2,11 @@ import type { ServiceType } from "@/lib/bookings";
 
 export const SERVICE_PRICES_CENTS: Record<ServiceType, number> = {
   departure: 4900,
-  arrival: 2900,
-  both: 6900,
+  arrival: 4900,
 };
 
+export const ARRIVAL_INCLUDED_BAGS = 2;
+export const ARRIVAL_ADDITIONAL_BAG_CENTS = 1000;
 export const EXPRESS_PICKUP_CENTS = 2000;
 export const EXTRA_BAG_DISCOUNT_CENTS = 1000;
 export const FAMILY_BUNDLE_MIN_BAGS = 4;
@@ -46,7 +47,12 @@ export function calcPriceBreakdown(
     safeDistance === undefined
       ? 0
       : Math.max(0, Math.ceil(safeDistance - INCLUDED_DISTANCE_MILES));
-  const serviceSubtotalCents = SERVICE_PRICES_CENTS[service] * safeBags;
+  const serviceSubtotalCents =
+    service === "arrival"
+      ? SERVICE_PRICES_CENTS.arrival +
+        Math.max(0, safeBags - ARRIVAL_INCLUDED_BAGS) *
+          ARRIVAL_ADDITIONAL_BAG_CENTS
+      : SERVICE_PRICES_CENTS.departure * safeBags;
   const expressPickupCents = expressPickup ? EXPRESS_PICKUP_CENTS : 0;
   const distanceRateCents = expressPickup
     ? EXPRESS_DISTANCE_RATE_CENTS
@@ -56,9 +62,11 @@ export function calcPriceBreakdown(
   const subtotalCents =
     serviceSubtotalCents + expressPickupCents + distanceSurchargeCents;
   const extraBagDiscountCents =
-    safeBags > 1 ? (safeBags - 1) * EXTRA_BAG_DISCOUNT_CENTS : 0;
+    service === "departure" && safeBags > 1
+      ? (safeBags - 1) * EXTRA_BAG_DISCOUNT_CENTS
+      : 0;
   const familyBundleDiscountCents =
-    safeBags >= FAMILY_BUNDLE_MIN_BAGS
+    service === "departure" && safeBags >= FAMILY_BUNDLE_MIN_BAGS
       ? Math.round((serviceSubtotalCents * FAMILY_BUNDLE_PERCENT) / 100)
       : 0;
   const automaticDiscountCents = Math.max(

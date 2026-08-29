@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.bookings (
   id text primary key,
-  service text not null check (service in ('departure', 'arrival', 'both')),
+  service text not null check (service in ('departure', 'arrival')),
   airport text not null,
   address text not null,
   travel_date text not null,

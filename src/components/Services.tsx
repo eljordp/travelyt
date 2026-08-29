@@ -7,12 +7,12 @@ export default function Services() {
       label: "Departures",
       title: "Doorstep-to-Airline",
       description:
-        "We pick up your luggage at your door, weigh and seal every bag, and transport it to the handoff point authorized by the participating airline and airport.",
+        "For a confirmed pilot booking, we pick up your luggage, weigh and seal every bag, and return it to you at the approved public-terminal meet point. Carrier handoff is enabled only where separately authorized.",
       features: [
         "Scheduled doorstep pickup",
         "Weighing and tamper-evident sealing",
         "Airline-rule-aware bag prep",
-        "Authorized receiving-point handoff",
+        "Verified traveler terminal return",
         "GPS custody checkpoints",
         "Coverage bound before live custody",
       ],
@@ -27,7 +27,7 @@ export default function Services() {
         "Post-flight bag collection",
         "Door-to-door delivery",
         "Status and custody updates",
-        "Same-day delivery windows",
+        "Delivery timing confirmed per booking",
         "Multi-bag support",
         "Secure chain of custody",
       ],

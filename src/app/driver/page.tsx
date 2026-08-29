@@ -9,10 +9,10 @@ import {
   clearLocalBookings,
   clearDriverAccessCode,
   formatPrice,
+  getBookingServiceLabel,
   getBookingStatusLabel,
   getBookings,
   subscribe,
-  SERVICE_LABELS,
 } from "@/lib/bookings";
 import {
   driverInitials,
@@ -444,7 +444,7 @@ function JobCard({
       <div className="space-y-1 text-sm text-navy/70">
         <div>
           <span className="text-navy/70">Service:</span>{" "}
-          {SERVICE_LABELS[booking.service]} · {booking.bags} bag
+          {getBookingServiceLabel(booking)} · {booking.bags} bag
           {booking.bags > 1 ? "s" : ""}
         </div>
         <div>

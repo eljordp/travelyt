@@ -13,11 +13,11 @@ import {
   type BookingStatus,
   formatPrice,
   getBooking,
+  getBookingServiceLabel,
   getBookingStatusLabel,
   getLastApiFailureMessage,
   sendTravelerVerificationInvite,
   subscribe,
-  SERVICE_LABELS,
   STATUS_ORDER,
   statusIndex,
 } from "@/lib/bookings";
@@ -179,7 +179,7 @@ export default function BookingPage() {
             {getBookingStatusLabel(booking)}
           </h1>
           <p className="text-navy/70">
-            {SERVICE_LABELS[booking.service]} · {booking.bags} bag
+            {getBookingServiceLabel(booking)} · {booking.bags} bag
             {booking.bags > 1 ? "s" : ""} · {booking.date}
           </p>
         </div>
@@ -474,7 +474,7 @@ export default function BookingPage() {
             Trip details
           </h2>
           <div className="space-y-3 text-sm">
-            <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+            <Row label="Service" value={getBookingServiceLabel(booking)} />
             <Row label="Airport" value={booking.airport} />
             <Row label={booking.service === "arrival" ? "Delivery" : "Pickup"} value={booking.address} />
             <Row label="Date" value={booking.date} />

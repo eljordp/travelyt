@@ -16,7 +16,7 @@ import AppChrome from "@/components/AppChrome";
 import {
   formatPrice,
   getBookings,
-  SERVICE_LABELS,
+  getBookingServiceLabel,
   STATUS_LABELS,
   TERMINAL_STATUSES,
   type Booking,
@@ -711,7 +711,7 @@ function BookingsList({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold text-navy">
-              {SERVICE_LABELS[booking.service]} · {booking.airport}
+              {getBookingServiceLabel(booking)} · {booking.airport}
             </span>
             <span className="mt-0.5 block text-xs text-navy/55">
               {formatTripDate(booking.date)} · {booking.bags} bag

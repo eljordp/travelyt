@@ -17,9 +17,10 @@ const rules = {
   familyBundlePercent: 15,
   servicePricesCents: {
     departure: 4900,
-    arrival: 2900,
-    both: 6900,
+    arrival: 4900,
   },
+  arrivalIncludedBags: 2,
+  arrivalAdditionalBagCents: 1000,
   promoCodes: {
     TRAVELYT30: { percentOff: 30, label: "Launch offer - 30% off" },
   },
@@ -72,16 +73,23 @@ function calcPriceBreakdown({ service, bags, expressPickup = false, distanceMile
     typeof distanceMiles === "number"
       ? Math.max(0, Math.ceil(distanceMiles - rules.includedDistanceMiles))
       : 0;
-  const serviceSubtotalCents = rules.servicePricesCents[service] * safeBags;
+  const serviceSubtotalCents =
+    service === "arrival"
+      ? rules.servicePricesCents.arrival +
+        Math.max(0, safeBags - rules.arrivalIncludedBags) *
+          rules.arrivalAdditionalBagCents
+      : rules.servicePricesCents.departure * safeBags;
   const expressPickupCents = expressPickup ? rules.expressPickupCents : 0;
   const distanceRateCents = expressPickup
     ? rules.expressDistanceRateCents
     : rules.standardDistanceRateCents;
   const distanceSurchargeCents = extraDistanceMiles * distanceRateCents;
   const extraBagDiscountCents =
-    safeBags > 1 ? (safeBags - 1) * rules.extraBagDiscountCents : 0;
+    service === "departure" && safeBags > 1
+      ? (safeBags - 1) * rules.extraBagDiscountCents
+      : 0;
   const familyBundleDiscountCents =
-    safeBags >= rules.familyBundleMinBags
+    service === "departure" && safeBags >= rules.familyBundleMinBags
       ? Math.round((serviceSubtotalCents * rules.familyBundlePercent) / 100)
       : 0;
   const automaticDiscountCents = Math.max(
@@ -301,7 +309,7 @@ function runDepartureHappyPath() {
       "Departure service does not have a clean completion state",
       "After airline handoff, the current shared driver state expects a delivery proof next. For departure-only, airline acceptance should be terminal or have a specific 'airline_accepted' completion state.",
       "Driver flow: assigned -> picked_up -> in_transit -> delivered for all service types.",
-      "Make service-specific custody states: departure ends at airline_accepted; arrival ends at delivered_to_customer; both creates two linked legs."
+      "Make service-specific custody states: departure ends at airline_accepted and arrival ends at delivered_to_customer; a round trip is two separate bookings."
     ));
   }
 
@@ -531,7 +539,7 @@ Mode: non-production dry run. No live bookings, payments, emails, or Supabase re
 
 ## Scope
 
-Simulated both directions with moving parties active at the same time:
+Simulated separate departure and arrival bookings with moving parties active at the same time:
 
 - Customer quote and booking request
 - Admin payment/availability confirmation

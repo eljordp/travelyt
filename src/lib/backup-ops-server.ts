@@ -9,7 +9,7 @@ import {
 import type { Booking, BookingAuditEntry, BookingStatus } from "@/lib/bookings";
 import {
   BACKUP_ACTIVE_STATUSES,
-  BACKUP_SERVICE_LABELS,
+  getBackupServiceLabel,
   BACKUP_STATUS_LABELS,
   backupNextAction,
   backupTrackingUrl,
@@ -183,7 +183,7 @@ export function backupCsv(bookings: Booking[]) {
   const rows = bookings.map((booking) => [
     booking.id,
     BACKUP_STATUS_LABELS[booking.status],
-    BACKUP_SERVICE_LABELS[booking.service],
+    getBackupServiceLabel(booking),
     booking.airport,
     booking.date,
     booking.flightTime,

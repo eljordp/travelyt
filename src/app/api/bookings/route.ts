@@ -106,7 +106,6 @@ const maxProofBytes = 10 * 1024 * 1024;
 const serviceLabels: Record<ServiceType, string> = {
   departure: "Departure Pickup",
   arrival: "Arrival Delivery",
-  both: "Both Ways",
 };
 
 function formatPrice(cents: number): string {
@@ -959,6 +958,35 @@ export async function PATCH(request: Request) {
 
     const patch = body.patch ?? {};
     const reason = body.reason?.trim() || undefined;
+    if (existing.service === "both") {
+      const allowedLegacyKeys = new Set([
+        "status",
+        "issueType",
+        "issueNotes",
+        "issueOpenedAt",
+        "archivedAt",
+        "archivedBy",
+      ]);
+      const onlyAdministrativeClosure = Object.keys(patch).every((key) =>
+        allowedLegacyKeys.has(key)
+      );
+      const allowedStatus =
+        patch.status === undefined ||
+        patch.status === "cancelled" ||
+        patch.status === "issue";
+      if (
+        !opsAuthorized(request) ||
+        body.proof ||
+        body.locationEvent ||
+        !onlyAdministrativeClosure ||
+        !allowedStatus
+      ) {
+        return bad(
+          "This legacy combined booking is read-only. Create separate departure and arrival bookings; operations may only archive, cancel, or flag this record.",
+          409
+        );
+      }
+    }
     if (patch.status && !bookingStatuses.includes(patch.status)) {
       return bad("Unsupported booking status.");
     }

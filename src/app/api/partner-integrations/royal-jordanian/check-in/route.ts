@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       id: string; service: string; airport: string; travel_date: string; flight: string | null; bags: number; external_provider: string | null; external_reference: string | null; passenger_manifest: unknown; customer_user_id: string | null;
     }>();
   if (bookingError || !booking) return bad("Booking was not found.", 404);
-  if ((booking.service !== "departure" && booking.service !== "both") || booking.external_provider !== RJ_PROVIDER_ID || !booking.external_reference || !isBookingPassengerArray(booking.passenger_manifest)) return bad("Booking is not eligible for RJ off-site check-in.", 409);
+  if (booking.service !== "departure" || booking.external_provider !== RJ_PROVIDER_ID || !booking.external_reference || !isBookingPassengerArray(booking.passenger_manifest)) return bad("Only a separate departure booking is eligible for RJ off-site check-in.", 409);
   if (!booking.customer_user_id) return bad("Booking owner identity is unavailable.", 409);
   const { data: identities, error: identityError } = await supabase.from("identity_verifications")
     .select("id, booking_id, passenger_id, user_id, verified_at")

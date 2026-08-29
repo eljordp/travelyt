@@ -6,6 +6,7 @@ import type {
   BookingStatus,
   PhotoProof,
   ServiceType,
+  StoredServiceType,
 } from "@/lib/bookings";
 import type { BookingPassenger } from "@/lib/passengers";
 
@@ -72,7 +73,7 @@ export const BOOKING_LIST_SELECT_COLUMNS = BOOKING_SELECT_COLUMNS
 
 export interface BookingRow {
   id: string;
-  service: ServiceType;
+  service: StoredServiceType;
   airport: string;
   address: string;
   travel_date: string;
@@ -127,9 +128,12 @@ export interface BookingRow {
 }
 
 export function rowToBooking(row: BookingRow): Booking {
+  const legacyService = row.service === "both" ? row.service : undefined;
+  const service: ServiceType = row.service === "both" ? "departure" : row.service;
   return {
     id: row.id,
-    service: row.service,
+    service,
+    legacyService,
     airport: row.airport,
     address: row.address,
     date: row.travel_date,

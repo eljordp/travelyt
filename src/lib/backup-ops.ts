@@ -1,4 +1,8 @@
-import type { Booking, BookingStatus } from "@/lib/bookings";
+import {
+  getBookingServiceLabel,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 
 export const BACKUP_ACTIVE_STATUSES: BookingStatus[] = [
   "paid",
@@ -43,11 +47,7 @@ export const BACKUP_STATUS_LABELS: Record<BookingStatus, string> = {
   issue: "Issue / failed",
 };
 
-export const BACKUP_SERVICE_LABELS: Record<Booking["service"], string> = {
-  departure: "Departure Pickup",
-  arrival: "Arrival Delivery",
-  both: "Both Ways",
-};
+export const getBackupServiceLabel = getBookingServiceLabel;
 
 export const BACKUP_LOG_CATEGORIES = [
   { value: "note", label: "General note" },

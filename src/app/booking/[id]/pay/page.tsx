@@ -9,8 +9,8 @@ import {
   formatPrice,
   getBookingAccessToken,
   getBooking,
+  getBookingServiceLabel,
   getBookingTrackingHref,
-  SERVICE_LABELS,
 } from "@/lib/bookings";
 import { INCLUDED_DISTANCE_MILES } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
@@ -215,7 +215,7 @@ export default function PayPage() {
           <div className="px-5 py-5 sm:px-8 sm:py-6 border-b border-gray-100">
             <h2 className="font-bold text-navy mb-4">Order summary</h2>
             <div className="space-y-3 text-sm">
-              <Row label="Service" value={SERVICE_LABELS[booking.service]} />
+              <Row label="Service" value={getBookingServiceLabel(booking)} />
               <Row label="Airport" value={booking.airport} />
               <Row label={booking.service === "arrival" ? "Delivery address" : "Pickup address"} value={booking.address} />
               <Row label="Date" value={booking.date} />

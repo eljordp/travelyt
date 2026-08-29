@@ -106,7 +106,7 @@ export function airportLocalTimeToInstant(date: string, time: string, airport?: 
 export function validateFlightCutoff(
   date: string,
   time: string | undefined,
-  service: "departure" | "arrival" | "both" | string | undefined,
+  service: "departure" | "arrival" | string | undefined,
   distanceMiles?: number,
   airport?: string,
   now = new Date()
