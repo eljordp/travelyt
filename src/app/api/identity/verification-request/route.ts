@@ -12,7 +12,14 @@ import {
 import {
   createStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
+  verifiedDob,
 } from "@/lib/stripe-identity";
+import {
+  providerIdentityVerdict,
+  requireVerifiedIdentityGate,
+  type StripeIdentityEventType,
+} from "@/lib/identity-verdict";
+import { archiveIdentityOriginals } from "@/lib/identity-originals";
 import { getStripe } from "@/lib/stripe-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
 
@@ -58,6 +65,108 @@ async function sendAdultTravelerInvite(data: {
   });
   if (result.status === "failed") console.error("Adult traveler invite delivery failed", result);
   return result.status === "sent";
+}
+
+async function reconcileExistingProfileIdentity(input: {
+  stripe: NonNullable<ReturnType<typeof getStripe>>;
+  supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>;
+  verificationId: string;
+  providerSessionId: string;
+  userId: string;
+  metadata: Record<string, unknown> | null;
+}) {
+  const session = await input.stripe.identity.verificationSessions.retrieve(
+    input.providerSessionId,
+    { expand: ["last_verification_report"] }
+  );
+  const eventType: StripeIdentityEventType | null =
+    session.status === "verified"
+      ? "identity.verification_session.verified"
+      : session.status === "requires_input"
+        ? "identity.verification_session.requires_input"
+        : session.status === "canceled"
+          ? "identity.verification_session.canceled"
+          : null;
+  if (!eventType) {
+    return { status: "pending", url: session.url };
+  }
+
+  const now = new Date().toISOString();
+  let verdict = providerIdentityVerdict(eventType);
+  let archive: Awaited<ReturnType<typeof archiveIdentityOriginals>> | null = null;
+  let archiveError: string | null = null;
+  if (verdict.status === "verified") {
+    try {
+      archive = await archiveIdentityOriginals({
+        stripe: input.stripe,
+        supabase: input.supabase,
+        verificationId: input.verificationId,
+        session,
+      });
+    } catch (error) {
+      archiveError = error instanceof Error ? error.message : "Unknown archive failure.";
+      console.error("Identity original archive failed during return reconciliation", error);
+    }
+  }
+  const archived = Boolean(archive && archive.stored > 0);
+  verdict = requireVerifiedIdentityGate(verdict, archived);
+
+  const { error: updateError } = await input.supabase
+    .from("identity_verifications")
+    .update({
+      status: verdict.status,
+      liveness_status: verdict.livenessStatus,
+      verified_at: verdict.status === "verified" ? now : null,
+      ...(archive && archived
+        ? {
+            raw_document_paths: archive.paths,
+            raw_stored_at: archive.storedAt,
+            raw_retention_until: archive.retentionUntil,
+            raw_export_status: "pending_ash",
+            raw_deletion_status: "scheduled",
+          }
+        : {}),
+      metadata: {
+        ...(input.metadata ?? {}),
+        stripe_status: session.status,
+        stripe_livemode: session.livemode,
+        verified_dob: verifiedDob(session),
+        provider_error_code: session.last_error?.code ?? null,
+        raw_document_stored_by_travelyt: archived,
+        archive_required_before_custody: true,
+        ...(archiveError ? { raw_archive_error: archiveError } : {}),
+        reconciled_at: now,
+        reconciled_via: "profile_return",
+      },
+    })
+    .eq("id", input.verificationId);
+  if (updateError) throw updateError;
+
+  if (verdict.status === "verified") {
+    const { data: bookings, error: bookingsError } = await input.supabase
+      .from("bookings")
+      .select("id, passenger_manifest")
+      .eq("customer_user_id", input.userId)
+      .is("customer_identity_verified_at", null)
+      .returns<Array<{ id: string; passenger_manifest: unknown }>>();
+    if (bookingsError) throw bookingsError;
+    for (const booking of bookings ?? []) {
+      const passengerManifest = isBookingPassengerArray(booking.passenger_manifest)
+        ? booking.passenger_manifest.map((passenger) =>
+            passenger.category === "account_holder"
+              ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
+              : passenger
+          )
+        : booking.passenger_manifest;
+      const { error: bookingUpdateError } = await input.supabase
+        .from("bookings")
+        .update({ customer_identity_verified_at: now, passenger_manifest: passengerManifest })
+        .eq("id", booking.id);
+      if (bookingUpdateError) throw bookingUpdateError;
+    }
+  }
+
+  return { status: verdict.status, url: null };
 }
 
 export async function POST(request: Request) {
@@ -224,14 +333,19 @@ export async function POST(request: Request) {
 
     const { data: existing, error: existingError } = await supabase
       .from("identity_verifications")
-      .select("id, status, provider_session_id")
+      .select("id, status, provider_session_id, metadata")
       .eq("user_id", user.id)
       .eq("role", role)
       .eq("provider", STRIPE_IDENTITY_PROVIDER)
       .in("status", ["pending", "manual_review"])
       .order("created_at", { ascending: false })
       .limit(1)
-      .maybeSingle<{ id: string; status: string; provider_session_id: string | null }>();
+      .maybeSingle<{
+        id: string;
+        status: string;
+        provider_session_id: string | null;
+        metadata: Record<string, unknown> | null;
+      }>();
     if (existingError) {
       console.error("Stripe Identity lookup failed", existingError);
       return bad("Could not check verification status.", 500);
@@ -245,8 +359,15 @@ export async function POST(request: Request) {
       const stripe = getStripe();
       if (!stripe) return bad("Stripe Identity is not configured.", 503);
       try {
-        const session = await stripe.identity.verificationSessions.retrieve(existing.provider_session_id);
-        return NextResponse.json({ ok: true, status: existing.status, existing: true, url: session.url });
+        const reconciled = await reconcileExistingProfileIdentity({
+          stripe,
+          supabase,
+          verificationId: existing.id,
+          providerSessionId: existing.provider_session_id,
+          userId: user.id,
+          metadata: existing.metadata,
+        });
+        return NextResponse.json({ ok: true, ...reconciled, existing: true });
       } catch (error) {
         console.error("Stripe Identity session retrieval failed", error);
         return bad("Could not reopen the secure identity session.", 502);
