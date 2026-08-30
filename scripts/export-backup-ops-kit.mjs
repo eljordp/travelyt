@@ -42,7 +42,7 @@ const STATUS_LABELS = {
 const SERVICE_LABELS = {
   departure: "Departure Pickup",
   arrival: "Arrival Delivery",
-  both: "Both Ways",
+  both: "Legacy Combined Booking - Split Required",
 };
 
 const FAILURE_PLAYBOOKS = [
@@ -689,6 +689,9 @@ function normalizeBooking(row) {
 }
 
 function nextAction(booking) {
+  if (booking.service === "both") {
+    return "Do not operate this legacy combined record. Cancel it or flag it for investigation, then create separate departure and arrival bookings.";
+  }
   if (booking.status === "paid") return "Assign a driver or confirm manual fallback.";
   if (booking.status === "assigned") return "Driver must accept the assigned job.";
   if (booking.status === "accepted") return "Driver starts route and records GPS.";

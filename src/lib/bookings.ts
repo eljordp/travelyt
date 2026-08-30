@@ -479,6 +479,10 @@ export async function createBooking(
     coverageAccepted?: boolean;
   }
 ): Promise<Booking> {
+  const runtimeService = (data as { service?: unknown }).service;
+  if (runtimeService !== "departure" && runtimeService !== "arrival") {
+    throw new Error("Book departure and arrival as separate custody legs.");
+  }
   const { expressPickup, flightTime, coverageAccepted, ...bookingData } = data;
   const priceBreakdown = calcPriceBreakdown(
     data.bags,

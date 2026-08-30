@@ -130,6 +130,22 @@ export async function appendBackupLog(
   if (!input.note.trim() && !input.status && !input.sealId?.trim()) {
     throw new Error("Add a note, status, or seal ID before saving.");
   }
+  if (existing.service === "both") {
+    const investigationNote =
+      input.status === undefined &&
+      input.category === "note" &&
+      Boolean(input.note.trim()) &&
+      !input.sealId?.trim();
+    const administrativeResolution =
+      (input.status === "issue" || input.status === "cancelled") &&
+      (input.category === "note" || input.category === "status") &&
+      !input.sealId?.trim();
+    if (!investigationNote && !administrativeResolution) {
+      throw new Error(
+        "This legacy combined booking is read-only. Only investigation notes, issue status, or cancellation are allowed; create separate departure and arrival bookings for service."
+      );
+    }
+  }
 
   const now = new Date().toISOString();
   const history = Array.isArray(existing.status_history)

@@ -13,6 +13,9 @@ const [
   bookingApi,
   checkout,
   rjCheckIn,
+  backupOps,
+  backupOpsServer,
+  backupExporter,
   baselineMigration,
   separationMigration,
 ] = await Promise.all([
@@ -23,9 +26,21 @@ const [
   read("../src/app/api/bookings/route.ts"),
   read("../src/app/api/stripe/checkout/route.ts"),
   read("../src/app/api/partner-integrations/royal-jordanian/check-in/route.ts"),
+  read("../src/lib/backup-ops.ts"),
+  read("../src/lib/backup-ops-server.ts"),
+  read("../scripts/export-backup-ops-kit.mjs"),
   read("../supabase/migrations/001_bookings.sql"),
   read("../supabase/migrations/036_separate_booking_legs.sql"),
 ]);
+
+const createBookingSource = bookings.slice(
+  bookings.indexOf("export async function createBooking"),
+  bookings.indexOf("export async function updateBooking"),
+);
+const runtimeServiceGuard = createBookingSource.indexOf(
+  'runtimeService !== "departure" && runtimeService !== "arrival"',
+);
+const clientPricing = createBookingSource.indexOf("calcPriceBreakdown(");
 
 const checks = [
   [
@@ -35,6 +50,15 @@ const checks = [
   [
     bookings.includes('export type LegacyServiceType = "both";'),
     "obsolete value is isolated as a legacy persistence type",
+  ],
+  [
+    runtimeServiceGuard >= 0 &&
+      clientPricing >= 0 &&
+      runtimeServiceGuard < clientPricing &&
+      createBookingSource.includes(
+        'throw new Error("Book departure and arrival as separate custody legs.")',
+      ),
+    "client booking creation rejects an invalid runtime service before pricing or local fallback",
   ],
   [
     bookings.includes("Legacy Combined Booking - Split Required"),
@@ -67,6 +91,27 @@ const checks = [
   [
     rjCheckIn.includes('booking.service !== "departure"'),
     "RJ integration accepts departure bookings only",
+  ],
+  [
+    backupOps.includes('booking.legacyService === "both"') &&
+      backupOps.includes("Do not operate this legacy combined record"),
+    "Backup Ops renders legacy combined rows as manual-resolution records",
+  ],
+  [
+    backupOpsServer.includes('existing.service === "both"') &&
+      backupOpsServer.includes('input.status === "issue"') &&
+      backupOpsServer.includes('input.status === "cancelled"') &&
+      backupOpsServer.includes("investigationNote") &&
+      backupOpsServer.includes("administrativeResolution") &&
+      backupOpsServer.includes("!investigationNote && !administrativeResolution") &&
+      backupOpsServer.includes("!input.sealId?.trim()"),
+    "Backup Ops permits only investigation, issue, or cancellation handling for legacy combined rows",
+  ],
+  [
+    backupExporter.includes('both: "Legacy Combined Booking - Split Required"') &&
+      backupExporter.includes('booking.service === "both"') &&
+      backupExporter.includes("Do not operate this legacy combined record"),
+    "static Backup Ops exports warn against operating legacy combined rows",
   ],
   [
     baselineMigration.includes("service in ('departure', 'arrival')"),

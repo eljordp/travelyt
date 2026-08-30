@@ -178,6 +178,9 @@ export function isBackupActiveBooking(booking: Booking) {
 }
 
 export function backupNextAction(booking: Booking) {
+  if (booking.legacyService === "both") {
+    return "Do not operate this legacy combined record. Cancel it or flag it for investigation, then create separate departure and arrival bookings.";
+  }
   if (booking.status === "paid") return "Assign a driver or confirm manual fallback.";
   if (booking.status === "assigned") return "Driver must accept the assigned job.";
   if (booking.status === "accepted") return "Driver starts route and records GPS.";
