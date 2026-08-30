@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   PHONE_DELIVERY_PROOF_MAX_AGE_MS,
   isCurrentPhoneDeliveryReceipt,
@@ -7,10 +7,13 @@ import {
   type PhoneDeliveryReceipt,
 } from "@/lib/phone-verification-proof";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
-import { emailDeliveryReadiness } from "@/lib/transactional-email";
+import {
+  EMAIL_DELIVERY_PROOF_MAX_AGE_MS,
+  emailDeliveryReadiness,
+} from "@/lib/transactional-email";
 
 export async function GET(request: Request) {
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) {
     return NextResponse.json({ ok: false, error: "Admin access is required." }, { status: 401 });
   }
@@ -22,22 +25,24 @@ export async function GET(request: Request) {
     process.env.TRAVELYT_CONSENT_HASH_SECRET,
   );
   const supabase = getSupabaseAdmin();
-  let latestPaymentEmailSentAt: string | null = null;
+  let latestPaymentEmailDeliveredAt: string | null = null;
   let latestPhoneReceipt: PhoneDeliveryReceipt | null = null;
   let latestPhoneVerifiedAt: string | null = null;
   if (supabase) {
     const emailResult = await supabase
       .from("booking_payment_receipts")
-      .select("sent_at")
-      .eq("status", "sent")
-      .not("sent_at", "is", null)
-      .order("sent_at", { ascending: false })
+      .select("delivered_at")
+      .eq("status", "delivered")
+      .eq("provider_config_hash", email.providerConfigHash ?? "configuration-unavailable")
+      .gte("delivered_at", new Date(Date.now() - EMAIL_DELIVERY_PROOF_MAX_AGE_MS).toISOString())
+      .not("delivered_at", "is", null)
+      .order("delivered_at", { ascending: false })
       .limit(1)
-      .maybeSingle<{ sent_at: string }>();
+      .maybeSingle<{ delivered_at: string }>();
     if (emailResult.error) {
       console.error("Could not load durable email delivery proof", emailResult.error);
     } else {
-      latestPaymentEmailSentAt = emailResult.data?.sent_at ?? null;
+      latestPaymentEmailDeliveredAt = emailResult.data?.delivered_at ?? null;
     }
 
     if (phoneProviderConfiguration.ok) {
@@ -78,11 +83,14 @@ export async function GET(request: Request) {
     ok: true,
     email: {
       provider: email.provider,
-      configured: email.apiKeyConfigured && email.fromAddressConfigured,
+      configured: email.apiKeyConfigured && email.fromAddressConfigured && email.webhookSecretConfigured,
       apiKeyConfigured: email.apiKeyConfigured,
       fromAddressConfigured: email.fromAddressConfigured,
-      deliveryTested: Boolean(latestPaymentEmailSentAt),
-      latestDeliveryTestedAt: latestPaymentEmailSentAt,
+      webhookSecretConfigured: email.webhookSecretConfigured,
+      providerConfigurationBound: Boolean(email.providerConfigHash),
+      deliveryTested: Boolean(latestPaymentEmailDeliveredAt),
+      latestDeliveryTestedAt: latestPaymentEmailDeliveredAt,
+      deliveryProofMaxAgeDays: EMAIL_DELIVERY_PROOF_MAX_AGE_MS / (24 * 60 * 60 * 1000),
     },
     sms: {
       provider: phoneProviderConfiguration.ok

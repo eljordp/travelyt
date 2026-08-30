@@ -320,7 +320,7 @@ test("A verified label without identity evidence does not clear custody", () => 
   ]);
 });
 
-test("The family flow is connected to invite, OTP consent, review, and custody routes", async () => {
+test("The family flow is connected to invite, atomic OTP, Stripe verification, rejection review, and custody routes", async () => {
   const [verifyPage, inviteRoute, verificationRoute, reviewRoute, custodyRoute] = await Promise.all([
     readFile(path.join(root, "src/app/verify-traveler/page.tsx"), "utf8"),
     readFile(path.join(root, "src/app/api/identity/verification-request/route.ts"), "utf8"),
@@ -331,8 +331,11 @@ test("The family flow is connected to invite, OTP consent, review, and custody r
   assert.match(verifyPage, /request_code/);
   assert.match(verifyPage, /action: "consent"/);
   assert.match(inviteRoute, /verificationStatus: "invite_sent"/);
-  assert.match(verificationRoute, /verificationStatus: "manual_review"/);
-  assert.match(reviewRoute, /action === "verify" \? "verified" : "rejected"/);
+  assert.match(verificationRoute, /consume_traveler_verification_otp/);
+  assert.match(verificationRoute, /createStripeIdentitySession/);
+  assert.match(verificationRoute, /verificationStatus: "pending"/);
+  assert.match(reviewRoute, /action !== "reject"/);
+  assert.doesNotMatch(reviewRoute, /status:\s*"verified"/);
   assert.match(custodyRoute, /passengerManifestCustodyBlockers/);
 });
 

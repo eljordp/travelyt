@@ -119,9 +119,11 @@ function TravelerVerificationContent() {
           emailCode,
         }),
       });
-      const data = (await response.json()) as { ok?: boolean; error?: string };
+      const data = (await response.json()) as { ok?: boolean; error?: string; url?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || "Could not submit verification.");
+      if (!data.url) throw new Error("Secure identity verification did not return a continuation link.");
       setTraveler((current) => current ? { ...current, status: "submitted", emailCodeRequired: false } : current);
+      window.location.assign(data.url);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not submit verification.");
     } finally {
@@ -142,7 +144,7 @@ function TravelerVerificationContent() {
               </span>
               <h1 className="mt-4 text-2xl font-bold text-navy">Your step is complete</h1>
               <p className="mt-2 text-sm leading-relaxed text-navy/65">
-                Your consent is attached to the group booking. Travelyt must still complete the approved document and liveness review before custody can begin.
+                Your consent is attached to the group booking. Complete the secure document and selfie verification; custody remains blocked until the signed provider result, date of birth, and original-image archive are reconciled.
               </p>
             </div>
           ) : traveler ? (
@@ -183,7 +185,7 @@ function TravelerVerificationContent() {
 
               <label className="mt-4 flex items-start gap-3 rounded-xl border border-navy/10 bg-[#f7f8fb] p-4 text-sm leading-relaxed text-navy/70">
                 <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]" />
-                <span>{IDENTITY_CONSENT_DISCLOSURE} No raw identity document is stored in the booking manifest.</span>
+                <span>{IDENTITY_CONSENT_DISCLOSURE} Original images are stored only in Travelyt&apos;s private identity archive, never in the booking manifest.</span>
               </label>
 
               <label className="mt-4 block text-xs font-bold uppercase tracking-wider text-navy/60">

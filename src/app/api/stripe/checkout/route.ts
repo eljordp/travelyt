@@ -7,6 +7,7 @@ import { markBookingPaidFromCheckoutSession } from "@/lib/stripe-payments";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { getSiteUrl, getStripe } from "@/lib/stripe-server";
 import { checkoutEligibilityBlocker } from "@/lib/pilot-eligibility";
+import { verifyStoredServerPricingQuote } from "@/lib/server-pricing-quote";
 
 const SERVICE_LABELS: Record<ServiceType, string> = {
   departure: "Departure Pickup",
@@ -87,6 +88,27 @@ export async function POST(request: Request) {
         alreadyPaid: true,
         url: `${getSiteUrl(request)}/booking/${booking.id}`,
       });
+    }
+
+    const pricingIntegrity = verifyStoredServerPricingQuote({
+      bookingId: row.id,
+      service: booking.service,
+      airport: row.airport,
+      address: row.address,
+      bags: row.bags,
+      priceCents: row.price_cents,
+      quoteValue: row.pricing_quote,
+      fingerprint: row.pricing_fingerprint,
+    });
+    if (!pricingIntegrity.ok) {
+      console.error("Checkout blocked by pricing provenance", {
+        bookingId: row.id,
+        error: pricingIntegrity.error,
+      });
+      return bad(
+        "This booking needs a fresh server-verified route quote. No checkout or charge was created.",
+        409
+      );
     }
 
     const eligibilityBlocker = checkoutEligibilityBlocker({

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { arePartnerIntegrationsEnabled } from "@/lib/partner-integrations";
 import { rateLimit } from "@/lib/rate-limit";
 import { executeRjGatewayCheckIn, getRjIntegrationReadiness, RJ_PROVIDER_ID, RjIntegrationError, validateRjCheckInInput } from "@/lib/rj-check-in";
@@ -13,13 +13,13 @@ function fingerprint(value: unknown) { return createHash("sha256").update(JSON.s
 
 export async function GET(request: Request) {
   const limited = rateLimit(request, "rj-check-in:get", 30); if (limited) return limited;
-  if (!isFullAdminSession(request)) return bad("Full admin access is required.", 403);
+  if ((await getVerifiedAdminSession(request))?.role !== "admin") return bad("Full admin access is required.", 403);
   return NextResponse.json({ ok: true, enabled: arePartnerIntegrationsEnabled(), readiness: getRjIntegrationReadiness() });
 }
 
 export async function POST(request: Request) {
   const limited = rateLimit(request, "rj-check-in:post", 10); if (limited) return limited;
-  const session = getAdminSession(request); if (!session || session.role !== "admin") return bad("Full admin access is required.", 403);
+  const session = await getVerifiedAdminSession(request); if (!session || session.role !== "admin") return bad("Full admin access is required.", 403);
   if (!arePartnerIntegrationsEnabled()) return bad("Partner integrations are not enabled.", 404);
   const body = await request.json().catch(() => ({})) as { bookingId?: string; idempotencyKey?: string };
   const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";

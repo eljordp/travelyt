@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import type { BookingAuditEntry } from "@/lib/bookings";
-import type { BookingRow } from "@/lib/booking-mappers";
-import { BOOKING_SELECT_COLUMNS, rowToBooking } from "@/lib/booking-mappers";
-import { getAdminSession } from "@/lib/admin-auth";
+import { rowToBooking } from "@/lib/booking-mappers";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
-  agentReadinessBlockers,
-  bookingAssignmentBlockers,
-  differentAgentPersonBlockers,
   normalizeAcceptanceMinutes,
   type AgentAssignmentRow,
-  type AgentReadinessProfileRow,
-  type DriverAccessReadinessRow,
 } from "@/lib/agent-assignment";
+import {
+  agentAssignmentTransitionFailure,
+  type AgentAssignmentTransitionResult,
+} from "@/lib/agent-assignment-transition";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
@@ -54,7 +51,7 @@ async function driverNames(supabase: NonNullable<ReturnType<typeof getSupabaseAd
 export async function GET(request: Request) {
   const limited = rateLimit(request, "ops:agent-assignments:get", 60);
   if (limited) return limited;
-  if (!getAdminSession(request)) return bad("Operations access is required.", 401);
+  if (!(await getVerifiedAdminSession(request))) return bad("Operations access is required.", 401);
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Agent assignment backend is not configured.", 503);
   const url = new URL(request.url);
@@ -84,7 +81,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "ops:agent-assignments:post", 30);
   if (limited) return limited;
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) return bad("Operations access is required.", 401);
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Agent assignment backend is not configured.", 503);
@@ -103,173 +100,36 @@ export async function POST(request: Request) {
   }
   if (primaryId === backupId) return bad("Primary and backup agents must be different.");
 
-  const [{ data: booking, error: bookingError }, { data: current, error: currentError }] =
-    await Promise.all([
-      supabase.from("bookings").select(BOOKING_SELECT_COLUMNS).eq("id", bookingId).maybeSingle<BookingRow>(),
-      supabase.from("booking_agent_assignments").select("*").eq("booking_id", bookingId)
-        .in("status", ["assigned", "accepted"]).order("assigned_at", { ascending: false })
-        .limit(1).maybeSingle<AgentAssignmentRow>(),
-    ]);
-  if (bookingError) return bad("Could not load booking.", 500);
-  if (currentError) {
-    if (tableMissing(currentError)) return bad("Apply migration 030 before assigning agents.", 409);
-    return bad("Could not check current assignment.", 500);
-  }
-  if (!booking) return bad("Booking not found.", 404);
-  if (current?.status === "accepted") {
-    return bad("An accepted assignment cannot be replaced from this checkpoint.", 409);
-  }
-  const now = new Date();
-  const reassignment = booking.status === "assigned" && Boolean(current);
-  if (booking.status === "accepted" && !current) {
-    return bad("This booking is already accepted and requires operations reconciliation.", 409);
-  }
-  const bookingForGate = reassignment ? { ...booking, status: "paid" as const } : booking;
-  const bookingBlockers = bookingAssignmentBlockers(bookingForGate, now);
-  if (bookingBlockers.length) {
-    return bad("Booking is not ready for agent assignment.", 409, bookingBlockers);
-  }
-  if (reassignment && !body.reason?.trim()) {
-    return bad("Record a reason before replacing an awaiting assignment.");
-  }
-
-  const { data: accessRows, error: accessError } = await supabase
-    .from("driver_access_codes")
-    .select("id, driver_name, canonical_driver_name, driver_email, driver_phone, person_key_hash, status, expires_at")
-    .in("id", [primaryId, backupId]);
-  if (accessError) return bad("Could not load individual agent access.", 500);
-  const accessById = new Map(
-    ((accessRows ?? []) as DriverAccessReadinessRow[]).map((row) => [row.id, row]),
-  );
-  const { data: readinessRows, error: readinessError } = await supabase
-    .from("agent_readiness_profiles")
-    .select("*")
-    .in("driver_access_id", [primaryId, backupId]);
-  if (readinessError) {
-    if (tableMissing(readinessError)) return bad("Apply migration 030 before assigning agents.", 409);
-    return bad("Could not load agent readiness evidence.", 500);
-  }
-  const readinessById = new Map(
-    ((readinessRows ?? []) as AgentReadinessProfileRow[]).map((row) => [row.driver_access_id, row]),
-  );
-  const personBlockers = differentAgentPersonBlockers(
-    accessById.get(primaryId),
-    accessById.get(backupId),
-  );
-  if (personBlockers.length) {
-    return bad("Primary and backup must be different verified people.", 409, personBlockers);
-  }
-  const primaryBlockers = agentReadinessBlockers(accessById.get(primaryId), readinessById.get(primaryId), now);
-  const backupBlockers = agentReadinessBlockers(accessById.get(backupId), readinessById.get(backupId), now);
-  const readinessBlockers = [
-    ...primaryBlockers.map((item) => `Primary: ${item}`),
-    ...backupBlockers.map((item) => `Backup: ${item}`),
-  ];
-  if (readinessBlockers.length) {
-    return bad("Primary and backup readiness must be current.", 409, readinessBlockers);
-  }
-
-  const { data: activeAssignments, error: activeError } = await supabase
-    .from("booking_agent_assignments")
-    .select("booking_id, primary_driver_access_id, backup_driver_access_id")
-    .in("status", ["assigned", "accepted"])
-    .limit(500);
-  if (activeError) return bad("Could not check agent schedules.", 500);
-  const possibleConflicts = (activeAssignments ?? []).filter((assignment) =>
-    assignment.booking_id !== bookingId &&
-    [primaryId, backupId].some((id) =>
-      assignment.primary_driver_access_id === id || assignment.backup_driver_access_id === id,
-    ),
-  );
-  if (possibleConflicts.length) {
-    const { data: conflictBookings, error: conflictError } = await supabase
-      .from("bookings")
-      .select("id, travel_date")
-      .in("id", possibleConflicts.map((row) => row.booking_id))
-      .eq("travel_date", booking.travel_date)
-      .limit(1);
-    if (conflictError) return bad("Could not check agent schedules.", 500);
-    if (conflictBookings?.length) {
-      return bad("A selected agent already has an active primary or backup assignment on this travel date.", 409);
-    }
-  }
-
-  const assignedAt = now.toISOString();
-  const acceptanceDueAt = new Date(
-    now.getTime() + normalizeAcceptanceMinutes(body.acceptanceMinutes) * 60_000,
-  ).toISOString();
-  if (current) {
-    const { error: closeError } = await supabase.from("booking_agent_assignments").update({
-      status: "superseded",
-      decline_reason: body.reason?.trim().slice(0, 500) || "Reassigned by dispatch.",
-      closed_at: assignedAt,
-      updated_at: assignedAt,
-    }).eq("id", current.id).eq("status", "assigned");
-    if (closeError) return bad("Could not close the previous assignment.", 500);
-  }
-  const { data: assignment, error: insertError } = await supabase
-    .from("booking_agent_assignments")
-    .insert({
-      booking_id: bookingId,
-      primary_driver_access_id: primaryId,
-      backup_driver_access_id: backupId,
-      status: "assigned",
-      assigned_by: session.email,
-      assigned_at: assignedAt,
-      acceptance_due_at: acceptanceDueAt,
-      updated_at: assignedAt,
-    })
-    .select("*")
-    .single<AgentAssignmentRow>();
-  if (insertError || !assignment) {
-    if (current) {
-      await supabase.from("booking_agent_assignments").update({
-        status: "assigned",
-        decline_reason: null,
-        closed_at: null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", current.id).eq("status", "superseded");
-    }
-    console.error("Agent assignment insert failed", insertError);
-    return bad("Could not create the agent assignment.", 500);
-  }
-  const primaryName = accessById.get(primaryId)!.driver_name;
-  const history: BookingAuditEntry[] = Array.isArray(booking.status_history)
-    ? [...booking.status_history]
-    : [];
-  history.push({
-    id: crypto.randomUUID(),
-    action: "status_change",
-    fromStatus: booking.status,
-    toStatus: "assigned",
-    actorRole: session.role,
-    actorName: session.email,
-    reason: body.reason?.trim() || `Assigned primary agent ${primaryName} with a verified backup.`,
-    timestamp: assignedAt,
+  const { data, error } = await supabase.rpc("transition_agent_assignment", {
+    p_action: "assign",
+    p_booking_id: bookingId,
+    p_expected_assignment_id: null,
+    p_primary_driver_access_id: primaryId,
+    p_backup_driver_access_id: backupId,
+    p_driver_access_id: null,
+    p_acceptance_minutes: normalizeAcceptanceMinutes(body.acceptanceMinutes),
+    p_acceptance_checklist: {},
+    p_reason: body.reason?.trim().slice(0, 500) || null,
+    p_actor_role: session.role,
+    p_actor_name: session.email,
+    p_ip_hash: null,
+    p_user_agent_hash: null,
   });
-  const { data: updatedBooking, error: updateError } = await supabase
-    .from("bookings")
-    .update({
-      status: "assigned",
-      driver_name: primaryName,
-      assigned_at: assignedAt,
-      accepted_at: null,
-      driver_identity_verified_at: readinessById.get(primaryId)!.identity_verified_at,
-      status_history: history,
-    })
-    .eq("id", bookingId)
-    .select(BOOKING_SELECT_COLUMNS)
-    .single<BookingRow>();
-  if (updateError || !updatedBooking) {
-    await supabase.from("booking_agent_assignments").update({
-      status: "revoked", closed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    }).eq("id", assignment.id);
-    return bad("Assignment was recorded but the booking could not be updated; it was revoked.", 502);
+  if (error) {
+    const failure = agentAssignmentTransitionFailure(error, "Could not create the agent assignment.");
+    return bad(failure.message, failure.status);
   }
-  const names = new Map([[primaryId, primaryName], [backupId, accessById.get(backupId)!.driver_name]]);
+  const transition = data as AgentAssignmentTransitionResult | null;
+  if (!transition?.assignment || !transition.booking) {
+    return bad("Atomic assignment returned an incomplete result.", 500);
+  }
+  const names = new Map([
+    [transition.assignment.primary_driver_access_id, transition.primaryDriverName],
+    [transition.assignment.backup_driver_access_id, transition.backupDriverName],
+  ]);
   return NextResponse.json({
     ok: true,
-    assignment: publicAssignment(assignment, names),
-    booking: rowToBooking(updatedBooking),
+    assignment: publicAssignment(transition.assignment, names),
+    booking: rowToBooking(transition.booking),
   });
 }

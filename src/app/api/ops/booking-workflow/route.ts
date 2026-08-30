@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { isBookingPassengerArray } from "@/lib/passengers";
 import { airportLocalTimeToInstant } from "@/lib/booking-time";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
@@ -11,7 +11,7 @@ const MAX_NOTE = 500;
 function bad(error: string, status = 400) { return NextResponse.json({ ok: false, error }, { status }); }
 
 export async function POST(request: Request) {
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session || session.role !== "admin") return bad("Full admin access is required.", 403);
   const supabase = getSupabaseAdmin(); if (!supabase) return bad("Booking backend is not configured.", 503);
   const body = await request.json().catch(() => ({})) as {

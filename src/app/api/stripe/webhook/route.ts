@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { markBookingPaidFromCheckoutSession } from "@/lib/stripe-payments";
-import { verifiedDob } from "@/lib/stripe-identity";
+import {
+  accountHolderNameMatchesVerifiedIdentity,
+  verifiedIdentityProfile,
+} from "@/lib/stripe-identity";
 import {
   expectedDobMatch,
   providerIdentityVerdict,
   requireVerifiedIdentityGate,
   type StripeIdentityEventType,
 } from "@/lib/identity-verdict";
-import { archiveIdentityOriginals, type ArchiveOutcome } from "@/lib/identity-originals";
+import {
+  archiveIdentityOriginals,
+  identityArchiveComplete,
+  type ArchiveOutcome,
+} from "@/lib/identity-originals";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray } from "@/lib/passengers";
@@ -57,7 +64,8 @@ async function reconcileDispute(dispute: Stripe.Dispute, eventId: string) {
 
 async function reconcileIdentity(
   eventSession: Stripe.Identity.VerificationSession,
-  eventType: Stripe.Event.Type
+  eventId: string,
+  eventCreated: number,
 ) {
   const stripe = getStripe();
   const supabase = getSupabaseAdmin();
@@ -68,23 +76,38 @@ async function reconcileIdentity(
   });
   const { data: record, error: recordError } = await supabase
     .from("identity_verifications")
-    .select("id, user_id, booking_id, passenger_id, metadata")
+    .select("id, user_id, booking_id, passenger_id, subject_name, email, status, verified_at, metadata")
     .eq("provider_session_id", session.id)
     .maybeSingle<{
       id: string;
       user_id: string | null;
       booking_id: string | null;
       passenger_id: string | null;
+      subject_name: string | null;
+      email: string | null;
+      status: string;
+      verified_at: string | null;
       metadata: Record<string, unknown> | null;
     }>();
   if (recordError) throw recordError;
   if (!record) return;
 
   const now = new Date().toISOString();
-  const dob = verifiedDob(session);
-  let verdict = providerIdentityVerdict(eventType as StripeIdentityEventType);
+  const verifiedProfile = verifiedIdentityProfile(session);
+  const dob = verifiedProfile.dateOfBirth;
+  const currentProviderEvent: StripeIdentityEventType | null =
+    session.status === "verified"
+      ? "identity.verification_session.verified"
+      : session.status === "requires_input"
+        ? "identity.verification_session.requires_input"
+        : session.status === "canceled"
+          ? "identity.verification_session.canceled"
+          : null;
+  if (!currentProviderEvent) return;
+  let verdict = providerIdentityVerdict(currentProviderEvent);
 
   let expectedDob: string | undefined;
+  let expectedName: string | undefined;
   let manifest: unknown;
   if (record.booking_id && record.passenger_id) {
     const { data: booking, error: bookingError } = await supabase
@@ -95,11 +118,22 @@ async function reconcileIdentity(
     if (bookingError) throw bookingError;
     manifest = booking?.passenger_manifest;
     if (isBookingPassengerArray(manifest)) {
-      expectedDob = manifest.find((passenger) => passenger.id === record.passenger_id)?.dateOfBirth;
+      const passenger = manifest.find((candidate) => candidate.id === record.passenger_id);
+      expectedDob = passenger?.dateOfBirth;
+      expectedName = passenger
+        ? `${passenger.firstName} ${passenger.lastName}`.trim()
+        : record.subject_name ?? undefined;
     }
   }
   const dobMatches = expectedDobMatch(expectedDob, dob);
-  verdict = requireVerifiedIdentityGate(verdict, dobMatches !== false);
+  const nameMatches = expectedName
+    ? accountHolderNameMatchesVerifiedIdentity({
+        accountHolderName: expectedName,
+        verifiedFirstName: verifiedProfile.firstName,
+        verifiedLastName: verifiedProfile.lastName,
+      })
+    : true;
+  verdict = requireVerifiedIdentityGate(verdict, dobMatches !== false && nameMatches);
 
   // Keep Travelyt's own copies of the capture originals once verified —
   // Stripe alone holding the images is not acceptable for chain of custody.
@@ -118,8 +152,13 @@ async function reconcileIdentity(
       console.error("Identity original archive failed", error);
     }
   }
-  const archived = Boolean(archive && archive.stored > 0);
+  const archived = identityArchiveComplete(archive);
   verdict = requireVerifiedIdentityGate(verdict, archived);
+
+  // The freshly retrieved provider session is authoritative. Never let a late
+  // requires-input/canceled event regress an identity Travelyt already sealed
+  // as verified with a complete private archive.
+  if (record.status === "verified" && verdict.status !== "verified") return;
 
   const { error: updateError } = await supabase
     .from("identity_verifications")
@@ -141,11 +180,17 @@ async function reconcileIdentity(
         stripe_status: session.status,
         stripe_livemode: session.livemode,
         verified_dob: dob,
+        verified_first_name: verifiedProfile.firstName,
+        verified_last_name: verifiedProfile.lastName,
         expected_dob_match: dobMatches,
+        expected_name_match: nameMatches,
         provider_error_code: session.last_error?.code ?? null,
         raw_document_stored_by_travelyt: archived,
         archive_required_before_custody: true,
         ...(archiveError ? { raw_archive_error: archiveError } : {}),
+        stripe_event_id: eventId,
+        stripe_event_created_at: new Date(eventCreated * 1000).toISOString(),
+        stripe_event_type_reconciled: currentProviderEvent,
         reconciled_at: now,
       },
     })
@@ -168,16 +213,33 @@ async function reconcileIdentity(
   if (verdict.status === "verified" && record.user_id && !record.booking_id && !record.passenger_id) {
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("id, passenger_manifest")
+      .select("id, customer_name, email, passenger_manifest")
       .eq("customer_user_id", record.user_id)
       .is("customer_identity_verified_at", null)
-      .returns<Array<{ id: string; passenger_manifest: unknown }>>();
+      .returns<Array<{ id: string; customer_name: string; email: string; passenger_manifest: unknown }>>();
     if (bookingsError) throw bookingsError;
     for (const booking of bookings ?? []) {
+      const emailMatches = Boolean(
+        record.email && booking.email.trim().toLowerCase() === record.email.trim().toLowerCase()
+      );
+      const nameMatches = accountHolderNameMatchesVerifiedIdentity({
+        accountHolderName: booking.customer_name,
+        verifiedFirstName: verifiedProfile.firstName,
+        verifiedLastName: verifiedProfile.lastName,
+      });
+      if (!emailMatches || !nameMatches || !verifiedProfile.dateOfBirth) continue;
       const passengerManifest = isBookingPassengerArray(booking.passenger_manifest)
         ? booking.passenger_manifest.map((passenger) =>
             passenger.category === "account_holder"
-              ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
+              ? {
+                  ...passenger,
+                  firstName: verifiedProfile.firstName || passenger.firstName,
+                  lastName: verifiedProfile.lastName || passenger.lastName,
+                  email: record.email || passenger.email,
+                  dateOfBirth: verifiedProfile.dateOfBirth,
+                  identityVerifiedAt: now,
+                  verificationStatus: "verified" as const,
+                }
               : passenger
           )
         : booking.passenger_manifest;
@@ -262,7 +324,8 @@ export async function POST(request: Request) {
     ) {
       await reconcileIdentity(
         event.data.object as Stripe.Identity.VerificationSession,
-        event.type
+        event.id,
+        event.created,
       );
     }
 

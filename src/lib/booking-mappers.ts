@@ -41,6 +41,8 @@ export const BOOKING_SELECT_COLUMNS = [
   "pilot_eligibility_expires_at",
   "pilot_eligibility_snapshot",
   "price_cents",
+  "pricing_quote",
+  "pricing_fingerprint",
   "created_at",
   "paid_at",
   "assigned_at",
@@ -113,6 +115,8 @@ export interface BookingRow {
   pilot_eligibility_expires_at: string | null;
   pilot_eligibility_snapshot: PilotEligibilitySnapshot | null;
   price_cents: number;
+  pricing_quote?: Record<string, unknown> | null;
+  pricing_fingerprint?: string | null;
   created_at: string;
   paid_at: string | null;
   assigned_at: string | null;

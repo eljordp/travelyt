@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { backupCsv, listBackupBookings } from "@/lib/backup-ops-server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const limited = rateLimit(request, "backup:export", 30);
   if (limited) return limited;
 
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) return bad("Backup ops access is required.", 401);
 
   try {

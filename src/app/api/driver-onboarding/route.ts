@@ -22,7 +22,9 @@ import {
   DRIVER_TRAINING_VERSION,
 } from "@/lib/driver-training";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 import {
+  accountHolderNameMatchesVerifiedIdentity,
   createStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
@@ -106,13 +108,20 @@ export async function GET(request: Request) {
         .order("uploaded_at", { ascending: false }),
       context.supabase
         .from("identity_verifications")
-        .select("status, verified_at")
+        .select("status, verified_at, expires_at, metadata, raw_document_paths")
         .eq("email", context.driver.driver_email?.toLowerCase() ?? "")
         .eq("role", "driver")
         .eq("provider", STRIPE_IDENTITY_PROVIDER)
+        .contains("metadata", { driver_access_id: context.driver.id })
         .order("created_at", { ascending: false })
         .limit(1)
-        .maybeSingle<{ status: string; verified_at: string | null }>(),
+        .maybeSingle<{
+          status: string;
+          verified_at: string | null;
+          expires_at: string | null;
+          metadata: Record<string, unknown> | null;
+          raw_document_paths: unknown;
+        }>(),
       context.supabase
         .from("agent_training_completions")
         .select("training_version, score, passed, review_status, completed_at")
@@ -130,10 +139,32 @@ export async function GET(request: Request) {
 
   const documentsComplete = REQUIRED_EVIDENCE_TYPES.every((type) => {
     const latest = (uploads ?? []).find((upload) => upload.evidence_type === type);
-    return Boolean(latest && latest.review_status !== "rejected");
+    return latest?.review_status === "accepted";
   });
-  const identityComplete = identity?.status === "verified";
-  const trainingComplete = training?.passed === true;
+  const identityPaths = Array.isArray(identity?.raw_document_paths)
+    ? identity.raw_document_paths
+    : [];
+  const identityHasDocument = identityPaths.some((item) =>
+    Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")
+  );
+  const identityHasSelfie = identityPaths.some((item) =>
+    Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")
+  );
+  const identityNameMatches = Boolean(identity && accountHolderNameMatchesVerifiedIdentity({
+    accountHolderName: context.driver.driver_name,
+    verifiedFirstName: typeof identity.metadata?.verified_first_name === "string"
+      ? identity.metadata.verified_first_name
+      : undefined,
+    verifiedLastName: typeof identity.metadata?.verified_last_name === "string"
+      ? identity.metadata.verified_last_name
+      : undefined,
+  }));
+  const identityComplete = Boolean(
+    identity?.status === "verified" && identity.verified_at &&
+      (!identity.expires_at || Date.parse(identity.expires_at) > Date.now()) &&
+      identityHasDocument && identityHasSelfie && identityNameMatches
+  );
+  const trainingComplete = training?.passed === true && training.review_status === "accepted";
 
   return NextResponse.json({
     ok: true,
@@ -155,6 +186,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "driver-onboarding:post", 30);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "driver-onboarding:post", 30, 60_000);
+  if (durableLimited) return durableLimited;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const action = typeof body.action === "string" ? body.action : "";
@@ -245,17 +278,44 @@ export async function POST(request: Request) {
     if (!stripe) return bad("Stripe Identity is not configured.", 503);
     const { data: existing, error: existingError } = await context.supabase
       .from("identity_verifications")
-      .select("id, status, provider_session_id")
+      .select("id, status, provider_session_id, verified_at, expires_at, metadata, raw_document_paths")
       .eq("email", context.driver.driver_email.toLowerCase())
       .eq("role", "driver")
       .eq("provider", STRIPE_IDENTITY_PROVIDER)
+      .contains("metadata", { driver_access_id: context.driver.id })
       .in("status", ["pending", "manual_review", "verified"])
       .order("created_at", { ascending: false })
       .limit(1)
-      .maybeSingle<{ id: string; status: string; provider_session_id: string | null }>();
+      .maybeSingle<{
+        id: string;
+        status: string;
+        provider_session_id: string | null;
+        verified_at: string | null;
+        expires_at: string | null;
+        metadata: Record<string, unknown> | null;
+        raw_document_paths: unknown;
+      }>();
     if (existingError) return bad("Could not check identity status.", 500);
-    if (existing?.status === "verified") return NextResponse.json({ ok: true, status: "verified" });
-    if (existing?.provider_session_id) {
+    const existingPaths = Array.isArray(existing?.raw_document_paths)
+      ? existing.raw_document_paths
+      : [];
+    const existingVerifiedIsUsable = Boolean(
+      existing?.status === "verified" && existing.verified_at &&
+      (!existing.expires_at || Date.parse(existing.expires_at) > Date.now()) &&
+      existingPaths.some((item) => Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")) &&
+      existingPaths.some((item) => Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")) &&
+      accountHolderNameMatchesVerifiedIdentity({
+        accountHolderName: context.driver.driver_name,
+        verifiedFirstName: typeof existing.metadata?.verified_first_name === "string"
+          ? existing.metadata.verified_first_name
+          : undefined,
+        verifiedLastName: typeof existing.metadata?.verified_last_name === "string"
+          ? existing.metadata.verified_last_name
+          : undefined,
+      })
+    );
+    if (existingVerifiedIsUsable) return NextResponse.json({ ok: true, status: "verified" });
+    if (existing?.status !== "verified" && existing?.provider_session_id) {
       const session = await stripe.identity.verificationSessions.retrieve(existing.provider_session_id);
       return NextResponse.json({ ok: true, status: existing.status, url: session.url });
     }

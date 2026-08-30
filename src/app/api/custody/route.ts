@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeDriverRequest } from "@/lib/driver-access-server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   bookingAccessTokenMatches,
   getBagByBadge,
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   // badges panel and the customer tracking page).
   const bookingId = params.get("bookingId")?.trim() ?? "";
   if (bookingId) {
-    if (!getAdminSession(request)) {
+    if (!(await getVerifiedAdminSession(request))) {
       const token = params.get("token")?.trim() ?? "";
       if (!(await bookingAccessTokenMatches(bookingId, token))) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     verifyChain(bag.id),
   ]);
 
-  const adminSession = getAdminSession(request);
+  const adminSession = await getVerifiedAdminSession(request);
   const customerToken = params.get("token")?.trim() ?? "";
   const hasCustomerAccess = adminSession
     ? false
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
 // action "scan_booking": append one event per bag in one driver-gated transaction.
 export async function POST(request: Request) {
   const auth = await authorizeDriverRequest(request);
-  const adminSession = getAdminSession(request);
+  const adminSession = await getVerifiedAdminSession(request);
 
   let body: Record<string, unknown>;
   try {

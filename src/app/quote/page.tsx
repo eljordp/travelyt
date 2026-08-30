@@ -230,7 +230,13 @@ export default function QuotePage() {
   }
 
   function set(field: keyof FormData, value: string | number | boolean) {
-    setForm((f) => ({ ...f, [field]: value }));
+    setForm((f) => ({
+      ...f,
+      [field]: value,
+      ...((field === "address" || field === "airport")
+        ? { distanceMiles: "" }
+        : {}),
+    }));
     setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
     if (field === "address" || field === "airport") {
       setAddressStatus("idle");
@@ -256,6 +262,9 @@ export default function QuotePage() {
     if (step === 1) {
       if (!form.airport) e.airport = "Select an airport";
       if (!form.address.trim()) e.address = "Enter your pickup or delivery address";
+      else if (addressStatus !== "verified") {
+        e.address = "Verify the address to calculate the server route before continuing";
+      }
       if (!form.flight.trim()) e.flight = "Enter the flight number";
       const dateError = validateTravelDateTime(form.date, form.flightTime);
       if (dateError) e.date = dateError;
@@ -433,7 +442,7 @@ export default function QuotePage() {
       if (!response.ok || !data.ok || typeof data.distanceMiles !== "number") {
         setAddressStatus("error");
         setAddressMessage(
-          data.error || "Could not verify address. Use manual mileage for now."
+          data.error || "Could not verify the route. Try again before continuing."
         );
         return;
       }
@@ -445,7 +454,7 @@ export default function QuotePage() {
         }));
         setAddressStatus("error");
         setAddressMessage(
-          "Address verified, but Google route mileage is not enabled yet. Enter the route miles manually so pricing does not use a straight-line estimate."
+          "Address verified, but Google route mileage is unavailable. Try again before continuing so pricing does not use a straight-line estimate."
         );
         return;
       }
@@ -471,7 +480,7 @@ export default function QuotePage() {
       );
     } catch {
       setAddressStatus("error");
-      setAddressMessage("Could not verify address. Use manual mileage for now.");
+      setAddressMessage("Could not verify the route. Try again before continuing.");
     }
   }
 
@@ -531,10 +540,9 @@ export default function QuotePage() {
           declaredValueCents && declaredValueCents > 0
             ? "declared_value"
             : "standard",
-        coverageAcceptedAt:
-          declaredValueCents && declaredValueCents > 0
-            ? new Date().toISOString()
-            : undefined,
+        coverageAccepted:
+          Boolean(declaredValueCents && declaredValueCents > 0) &&
+          form.coverageNoticeAccepted,
         restrictedItemsAttestedAt: new Date().toISOString(),
         passengers: [
           {
@@ -807,7 +815,7 @@ export default function QuotePage() {
 
                   <div>
                     <label htmlFor="quote-distance" className={labelClass}>
-                      Route distance from airport <span className="text-navy/70 font-normal normal-case">(optional)</span>
+                      Verified route distance from airport
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -817,9 +825,9 @@ export default function QuotePage() {
                         type="number"
                         min="0"
                         step="0.1"
-                        placeholder="Example: 34"
+                        placeholder="Verify the address above"
                         value={form.distanceMiles}
-                        onChange={(e) => set("distanceMiles", e.target.value)}
+                        readOnly
                         className={`w-full px-4 py-3 rounded-xl border ${errors.distanceMiles ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all text-navy`}
                       />
                       <span className="shrink-0 text-sm font-semibold text-navy/60">

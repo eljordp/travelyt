@@ -561,10 +561,12 @@ export default function AdminPage() {
     expiresAt: string;
   } | null>(null);
   const [driverEvidencePanel, setDriverEvidencePanel] = useState<{
+    driverAccessId: string;
     driverName: string;
     items: DriverEvidenceItem[];
     training: DriverTrainingCompletion | null;
   } | null>(null);
+  const [driverReviewNote, setDriverReviewNote] = useState("");
   const [creatingDriverCode, setCreatingDriverCode] = useState(false);
 
   useEffect(() => {
@@ -1383,13 +1385,61 @@ export default function AdminPage() {
         throw new Error(data.error || "Could not load driver evidence.");
       }
       setDriverEvidencePanel({
+        driverAccessId: code.id,
         driverName: code.driverName,
         items: data.evidence,
         training: data.training ?? null,
       });
+      setDriverReviewNote("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load driver evidence.");
     }
+  }
+
+  async function reviewDriverEvidence(input: {
+    itemType: "evidence" | "training";
+    evidenceId?: string;
+    trainingVersion?: string;
+    decision: "accepted" | "rejected";
+  }) {
+    const panel = driverEvidencePanel;
+    if (!panel) return;
+    if (input.decision === "rejected" && !driverReviewNote.trim()) {
+      setError("Enter a review note before rejecting evidence.");
+      return;
+    }
+    setError("");
+    const response = await fetch("/api/ops/driver-onboarding-invites", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        driverAccessId: panel.driverAccessId,
+        ...input,
+        note: driverReviewNote.trim(),
+      }),
+    });
+    const data = (await response.json()) as { ok?: boolean; error?: string };
+    if (!response.ok || !data.ok) {
+      setError(data.error || "Could not save the evidence review.");
+      return;
+    }
+    setDriverEvidencePanel((current) => {
+      if (!current || current.driverAccessId !== panel.driverAccessId) return current;
+      return {
+        ...current,
+        training: input.itemType === "training" && current.training
+          ? { ...current.training, reviewStatus: input.decision }
+          : current.training,
+        items: input.itemType === "evidence"
+          ? current.items.map((item) => item.id === input.evidenceId
+              ? { ...item, reviewStatus: input.decision }
+              : item)
+          : current.items,
+      };
+    });
+    setDriverReviewNote("");
+    await loadAgentOperations();
   }
 
   function openStaleCleanupQueue() {
@@ -2371,6 +2421,16 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="mt-3 grid gap-2">
+                <label className="grid gap-1 text-[11px] font-bold uppercase tracking-wider text-navy/50">
+                  Review note (required for rejection)
+                  <input
+                    value={driverReviewNote}
+                    onChange={(event) => setDriverReviewNote(event.target.value)}
+                    disabled={adminRole !== "admin"}
+                    placeholder="Why this evidence was accepted or rejected"
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal normal-case tracking-normal text-navy outline-none focus:border-[#ff6868] disabled:bg-gray-50"
+                  />
+                </label>
                 {driverEvidencePanel.training && (
                   <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-xs text-green-900">
                     <p className="font-bold">Foundational training · {driverEvidencePanel.training.score}%</p>
@@ -2380,6 +2440,24 @@ export default function AdminPage() {
                     <p className="mt-1 text-green-800">
                       Knowledge completion is recorded. It does not activate readiness or replace the observed physical drill.
                     </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={adminRole !== "admin"}
+                        onClick={() => void reviewDriverEvidence({ itemType: "training", trainingVersion: driverEvidencePanel.training!.version, decision: "accepted" })}
+                        className="rounded-lg bg-green-700 px-2.5 py-1.5 font-bold text-white disabled:opacity-50"
+                      >
+                        Accept training
+                      </button>
+                      <button
+                        type="button"
+                        disabled={adminRole !== "admin"}
+                        onClick={() => void reviewDriverEvidence({ itemType: "training", trainingVersion: driverEvidencePanel.training!.version, decision: "rejected" })}
+                        className="rounded-lg bg-red-700 px-2.5 py-1.5 font-bold text-white disabled:opacity-50"
+                      >
+                        Reject training
+                      </button>
+                    </div>
                   </div>
                 )}
                 {driverEvidencePanel.items.length ? driverEvidencePanel.items.map((item) => (
@@ -2388,11 +2466,29 @@ export default function AdminPage() {
                       <p className="font-bold text-navy">{item.evidenceType.replaceAll("_", " ")}</p>
                       <p className="text-navy/55">{item.originalName} · {(item.byteSize / 1024 / 1024).toFixed(1)} MB · {item.reviewStatus}</p>
                     </div>
-                    {item.downloadUrl ? (
-                      <a href={item.downloadUrl} target="_blank" rel="noreferrer" className="font-bold text-[#ff6868] underline">Review private file</a>
-                    ) : (
-                      <span className="text-red-600">Download unavailable</span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {item.downloadUrl ? (
+                        <a href={item.downloadUrl} target="_blank" rel="noreferrer" className="font-bold text-[#ff6868] underline">Review private file</a>
+                      ) : (
+                        <span className="text-red-600">Download unavailable</span>
+                      )}
+                      <button
+                        type="button"
+                        disabled={adminRole !== "admin"}
+                        onClick={() => void reviewDriverEvidence({ itemType: "evidence", evidenceId: item.id, decision: "accepted" })}
+                        className="rounded-lg bg-green-700 px-2.5 py-1.5 font-bold text-white disabled:opacity-50"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        disabled={adminRole !== "admin"}
+                        onClick={() => void reviewDriverEvidence({ itemType: "evidence", evidenceId: item.id, decision: "rejected" })}
+                        className="rounded-lg bg-red-700 px-2.5 py-1.5 font-bold text-white disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 )) : <p className="text-sm text-navy/55">No evidence uploaded yet.</p>}
               </div>
@@ -2847,19 +2943,10 @@ function agentReadinessForm(profile?: AgentReadinessProfile): Record<string, str
   if (!profile) return {};
   return {
     status: profile.status,
-    identityEvidenceReference: profile.identityEvidenceReference ?? "",
-    identityVerifiedAt: dateInputValue(profile.identityVerifiedAt),
-    identityExpiresAt: dateInputValue(profile.identityExpiresAt),
-    trainingEvidenceReference: profile.trainingEvidenceReference ?? "",
-    trainingCompletedAt: dateInputValue(profile.trainingCompletedAt),
     trainingExpiresAt: dateInputValue(profile.trainingExpiresAt),
-    insuranceEvidenceReference: profile.insuranceEvidenceReference ?? "",
-    insuranceVerifiedAt: dateInputValue(profile.insuranceVerifiedAt),
     insuranceExpiresAt: dateInputValue(profile.insuranceExpiresAt),
     vehicleMakeModel: profile.vehicleMakeModel ?? "",
     licensePlate: profile.licensePlate ?? "",
-    vehicleEvidenceReference: profile.vehicleEvidenceReference ?? "",
-    vehicleVerifiedAt: dateInputValue(profile.vehicleVerifiedAt),
     vehicleExpiresAt: dateInputValue(profile.vehicleExpiresAt),
     notes: profile.notes ?? "",
   };
@@ -2952,22 +3039,17 @@ function AgentReadinessEditor({
             {selected.identityExpiresAt ? ` Expires ${new Date(selected.identityExpiresAt).toLocaleDateString()}.` : ""}
             Identity evidence cannot be manually certified here.
           </div>
+          <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-xs leading-relaxed text-green-900">
+            Training, insurance, and vehicle evidence references and review times come directly from accepted onboarding records. Operations can set only expirations and vehicle details here.
+          </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            {field("trainingEvidenceReference", "Training evidence ref")}
-            {field("trainingCompletedAt", "Training completed", "date")}
             {field("trainingExpiresAt", "Training expires", "date")}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {field("insuranceEvidenceReference", "Insurance evidence ref")}
-            {field("insuranceVerifiedAt", "Insurance verified", "date")}
             {field("insuranceExpiresAt", "Insurance expires", "date")}
+            {field("vehicleExpiresAt", "Vehicle evidence expires", "date")}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2">
             {field("vehicleMakeModel", "Vehicle")}
             {field("licensePlate", "Plate")}
-            {field("vehicleEvidenceReference", "Vehicle evidence ref")}
-            {field("vehicleVerifiedAt", "Vehicle verified", "date")}
-            {field("vehicleExpiresAt", "Vehicle expires", "date")}
           </div>
           {field("notes", "Internal readiness note")}
           {selected.blockers.length > 0 && (
@@ -3051,7 +3133,6 @@ function BookingCard({
   const [reviewBusyPassengerId, setReviewBusyPassengerId] = useState("");
   const [reviewedPassengerStatuses, setReviewedPassengerStatuses] = useState<Record<string, "verified" | "rejected">>({});
   const [reviewError, setReviewError] = useState("");
-  const [reviewEvidenceReference, setReviewEvidenceReference] = useState("");
   const [reviewReason, setReviewReason] = useState("");
   const [eligibilityReason, setEligibilityReason] = useState("");
   const [eligibilityBusy, setEligibilityBusy] = useState(false);
@@ -3091,7 +3172,7 @@ function BookingCard({
     booking.arrivalReleaseStatus,
   ]);
 
-  async function reviewPassenger(passengerId: string, action: "verify" | "reject") {
+  async function rejectPassengerVerification(passengerId: string) {
     setReviewBusyPassengerId(passengerId);
     setReviewError("");
     try {
@@ -3102,8 +3183,7 @@ function BookingCard({
         body: JSON.stringify({
           bookingId: booking.id,
           passengerId,
-          action,
-          evidenceReference: reviewEvidenceReference,
+          action: "reject",
           reason: reviewReason,
         }),
       });
@@ -3111,8 +3191,7 @@ function BookingCard({
       if (!response.ok || !data.ok) {
         throw new Error(data.error || "Could not complete identity review.");
       }
-      setReviewedPassengerStatuses((current) => ({ ...current, [passengerId]: action === "verify" ? "verified" : "rejected" }));
-      setReviewEvidenceReference("");
+      setReviewedPassengerStatuses((current) => ({ ...current, [passengerId]: "rejected" }));
       setReviewReason("");
     } catch (err) {
       setReviewError(err instanceof Error ? err.message : "Could not complete identity review.");
@@ -3670,14 +3749,10 @@ function BookingCard({
               Traveler identity reviews
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block rounded-xl border border-navy/10 bg-white px-3 py-3 text-xs font-semibold text-navy/70">
-              Document or approved-provider reference
-              <input value={reviewEvidenceReference} onChange={(event) => setReviewEvidenceReference(event.target.value)} placeholder="Provider case or manual ledger reference" className="mt-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]" />
-            </label>
+          <div className="grid gap-3">
             <label className="block rounded-xl border border-navy/10 bg-white px-3 py-3 text-xs font-semibold text-navy/70">
               Rejection reason
-              <input value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} placeholder="Required only when rejecting" className="mt-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]" />
+              <input value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} placeholder="Required before rejecting a traveler verification" className="mt-2 w-full rounded-lg border border-navy/15 px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]" />
             </label>
           </div>
           <div className="mt-3 space-y-2">
@@ -3699,14 +3774,9 @@ function BookingCard({
                   ) : status === "rejected" ? (
                     <span className="rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700">Rejected</span>
                   ) : reviewable ? (
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => void reviewPassenger(passenger.id, "verify")} disabled={Boolean(reviewBusyPassengerId)} className="rounded-lg bg-navy px-3 py-2 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-50">
-                        {reviewBusyPassengerId === passenger.id ? "Saving..." : "Mark verified"}
-                      </button>
-                      <button type="button" onClick={() => void reviewPassenger(passenger.id, "reject")} disabled={Boolean(reviewBusyPassengerId)} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 disabled:cursor-wait disabled:opacity-50">
-                        Reject
-                      </button>
-                    </div>
+                    <button type="button" onClick={() => void rejectPassengerVerification(passenger.id)} disabled={Boolean(reviewBusyPassengerId) || !reviewReason.trim()} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+                      {reviewBusyPassengerId === passenger.id ? "Saving..." : "Reject verification"}
+                    </button>
                   ) : status === "invite_sent" ? (
                     <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-800">Waiting for adult consent</span>
                   ) : (
@@ -3717,7 +3787,7 @@ function BookingCard({
             })}
           </div>
           <p className="mt-3 text-xs leading-relaxed text-navy/55">
-            Only mark a separate adult verified after their private consent plus the required document and liveness review. Raw identity documents do not belong in the booking manifest.
+            Separate-adult verification is provider-derived after private email consent, document capture, selfie/liveness, date-of-birth reconciliation, and secure original-image archival. Admins may reject a failed or invalid review but cannot mark it verified.
           </p>
           {reviewError && <p className="mt-2 text-xs font-semibold text-red-600">{reviewError}</p>}
         </div>
@@ -3760,25 +3830,9 @@ function BookingCard({
             Custody gate clear. Driver can begin pickup or airport release.
           </p>
         )}
-        <button
-          disabled={disabled || identityReady}
-          onClick={() => {
-            const now = new Date().toISOString();
-            const reason =
-              auditReason.trim() ||
-              "Admin marked manual customer and driver ID review complete.";
-            void onPatch({
-              customerIdentityVerifiedAt:
-                booking.customerIdentityVerifiedAt ?? now,
-              driverIdentityVerifiedAt:
-                booking.driverIdentityVerifiedAt ?? now,
-            }, reason);
-            setAuditReason("");
-          }}
-          className="rounded-xl bg-navy px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {identityReady ? "IDs verified" : "Admin override: mark ID review complete"}
-        </button>
+        <p className="rounded-xl border border-navy/10 bg-white px-4 py-3 text-xs leading-relaxed text-navy/65">
+          Identity timestamps are provider-derived. Customer verification comes from the signed Stripe Identity result; driver verification comes from the active readiness record attached to the accepted assignment. Operations cannot override either timestamp.
+        </p>
         {!restrictedReady && (
           <p className="mt-2 text-xs font-semibold text-yellow-800">
             The customer declaration cannot be supplied by an admin override;

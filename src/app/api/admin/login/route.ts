@@ -53,7 +53,13 @@ export async function POST(request: Request) {
       });
       setAdminSessionCookie(
         response,
-        createAdminSession(verified.email, verified.role),
+        createAdminSession({
+          userId: verified.userId,
+          email: verified.email,
+          role: verified.role,
+          authSource: "supabase",
+          mfaFactorFingerprint: verified.mfaFactorFingerprint,
+        }),
       );
       return response;
     }
@@ -81,7 +87,14 @@ export async function POST(request: Request) {
       email: email.trim().toLowerCase(),
       role,
     });
-    setAdminSessionCookie(response, createAdminSession(email, role));
+    setAdminSessionCookie(
+      response,
+      createAdminSession({
+        email,
+        role,
+        authSource: "break_glass",
+      }),
+    );
     return response;
   } catch {
     return bad("Could not sign in.");

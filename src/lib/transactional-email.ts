@@ -1,7 +1,10 @@
+import { createHash } from "node:crypto";
+
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+export const EMAIL_DELIVERY_PROOF_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export type TransactionalEmailResult =
-  | { status: "sent"; providerMessageId?: string }
+  | { status: "accepted"; providerMessageId: string }
   | { status: "not_configured" }
   | { status: "failed"; providerStatus?: number };
 
@@ -10,7 +13,19 @@ export function emailDeliveryReadiness() {
     provider: "resend" as const,
     apiKeyConfigured: Boolean(process.env.RESEND_API_KEY?.trim()),
     fromAddressConfigured: Boolean(process.env.LEAD_FROM_EMAIL?.trim()),
+    webhookSecretConfigured: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
+    providerConfigHash: emailProviderConfigHash(),
   };
+}
+
+export function emailProviderConfigHash() {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.LEAD_FROM_EMAIL?.trim().toLowerCase();
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();
+  if (!apiKey || !from || !webhookSecret) return null;
+  return createHash("sha256")
+    .update(JSON.stringify({ version: 1, provider: "resend", from, apiKey, webhookSecret }))
+    .digest("hex");
 }
 
 function recipients(value: string | string[]) {
@@ -55,8 +70,15 @@ export async function sendTransactionalEmail(input: {
     if (!response.ok) {
       return { status: "failed", providerStatus: response.status };
     }
-    const result = (await response.json().catch(() => null)) as { id?: string } | null;
-    return { status: "sent", providerMessageId: result?.id };
+    const result = (await response.json().catch(() => null)) as { id?: unknown } | null;
+    const providerMessageId =
+      typeof result?.id === "string" ? result.id.trim() : "";
+    if (!providerMessageId || providerMessageId.length > 255) {
+      // A 2xx response without a provider ID cannot be reconciled to a signed
+      // delivery webhook, so it is not durable evidence of an accepted send.
+      return { status: "failed", providerStatus: response.status };
+    }
+    return { status: "accepted", providerMessageId };
   } catch {
     return { status: "failed" };
   }

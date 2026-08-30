@@ -50,6 +50,7 @@ SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+# Local-rehearsal compatibility only; ignored in production.
 TRAVELYT_ADMIN_ACCESS_CODE=
 TRAVELYT_ADMIN_SESSION_SECRET=
 TRAVELYT_DRIVER_SESSION_SECRET=
@@ -61,6 +62,7 @@ SUPABASE_PUSH_WORKER_URL=
 PUSH_WORKER_SECRET=
 
 RESEND_API_KEY=
+RESEND_WEBHOOK_SECRET=
 LEAD_NOTIFY_EMAIL=info@travelyt.us
 LEAD_FROM_EMAIL="Travelyt <info@travelyt.us>"
 
@@ -89,8 +91,8 @@ supabase db push
 
 Confirm Vercel has `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-`RESEND_API_KEY`, `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`,
-`TRAVELYT_ADMIN_ACCESS_CODE`, `TRAVELYT_ADMIN_SESSION_SECRET`,
+`RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `LEAD_NOTIFY_EMAIL`, `LEAD_FROM_EMAIL`,
+`TRAVELYT_ADMIN_SESSION_SECRET`,
 `TRAVELYT_DRIVER_SESSION_SECRET`, `GOOGLE_MAPS_API_KEY`, and the Stripe env
 vars before testing live customer requests.
 
@@ -101,9 +103,10 @@ temporary beta fallback while onboarding the first trusted drivers. The shared
 `TRAVELYT_DRIVER_ACCESS_CODE` fallback only works after the database table
 exists if `TRAVELYT_ALLOW_LEGACY_DRIVER_CODE=true` is deliberately enabled.
 
-Set `GOOGLE_MAPS_API_KEY` to enable server-side pickup-address verification and
-automatic mileage estimates. Without it, customers can still enter mileage
-manually.
+Set `GOOGLE_MAPS_API_KEY` for server-side pickup-address verification and
+Google driving-route pricing. Booking creation fails closed when the key or a
+verified driving route is unavailable; customer-entered mileage is never used
+for pricing, cutoff eligibility, or checkout.
 
 Set `PUSH_WORKER_SECRET` in Vercel and Supabase to the same value so booking
 status/proof updates can wake the Supabase APNs worker immediately after a push

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   return NextResponse.json({
     ok: true,
     authenticated: Boolean(session),

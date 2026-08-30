@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
 
@@ -58,6 +59,8 @@ async function sendLeadNotification(lead: {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "leads:post", 10);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "leads:post", 10, 60_000);
+  if (durableLimited) return durableLimited;
 
   try {
     const body = (await request.json()) as {

@@ -208,7 +208,10 @@ export async function registerPush(hooks: PushHooks = {}): Promise<boolean> {
   return true;
 }
 
-export async function enableBookingPush(bookingId: string): Promise<boolean> {
+export async function enableBookingPush(
+  bookingId: string,
+  accessToken?: string | null
+): Promise<boolean> {
   const trimmedBookingId = bookingId.trim();
   if (!trimmedBookingId) return false;
 
@@ -221,6 +224,7 @@ export async function enableBookingPush(bookingId: string): Promise<boolean> {
           token,
           platform: platform(),
           bookingId: trimmedBookingId,
+          accessToken: accessToken || undefined,
         }),
       }).catch((err) => console.warn("token register failed", err));
     },

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,7 +11,7 @@ const outputDir = path.resolve(
 );
 const evidencePath = path.resolve(
   process.env.TRAVELYT_LIVE_EVIDENCE ||
-    path.join(root, "simulations/evidence/live-evidence-2026-08-29.json")
+    path.join(root, "simulations/evidence/live-evidence-current.json")
 );
 
 async function read(relative) {
@@ -31,6 +32,42 @@ try {
     externalGates: {},
   };
 }
+const evidenceAsOfMs = Date.parse(evidence.asOf ?? "");
+const evidenceAgeMs = Date.now() - evidenceAsOfMs;
+let currentSourceCommit = null;
+let releaseSourceDirty = true;
+try {
+  currentSourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  const status = execFileSync(
+    "git",
+    ["status", "--porcelain", "--untracked-files=all"],
+    { cwd: root, encoding: "utf8" },
+  );
+  releaseSourceDirty = status
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .filter((relative) => !relative.startsWith("simulations/evidence/"))
+    .some((relative) =>
+      ["src/", "supabase/", "simulations/"].some((prefix) => relative.startsWith(prefix)) ||
+      relative === "package.json" || relative === ".env.example"
+    );
+} catch {}
+const evidenceTrusted = Boolean(
+  evidence.schemaVersion === 1 &&
+  Number.isFinite(evidenceAsOfMs) &&
+  evidenceAgeMs >= 0 &&
+  evidenceAgeMs <= 7 * 24 * 60 * 60 * 1000 &&
+  evidence.production?.deploymentVerifiedReady === true &&
+  typeof evidence.production?.deploymentId === "string" &&
+  evidence.production.deploymentId.startsWith("dpl_") &&
+  typeof evidence.production?.baselineCommit === "string" &&
+  currentSourceCommit?.startsWith(evidence.production.baselineCommit) &&
+  !releaseSourceDirty
+);
 const [
   pricing,
   bookingTypes,
@@ -106,6 +143,7 @@ gap(
 );
 
 const fullSixPersonJourney =
+  evidenceTrusted &&
   evidence.journeys.sixPersonRealIndependentAdultEmailOtpPaymentRefundDriverCustodyClose ===
   true;
 gap(
@@ -128,11 +166,13 @@ gap(
 );
 
 const allEmailLanes =
+  evidenceTrusted &&
   evidence.communications.resendPaymentReceiptDelivered === true &&
   evidence.communications.adultFamilyInviteAndOtpRealInboxTested === true &&
   evidence.communications.supabaseSignupConfirmationTested === true &&
   evidence.communications.supabasePasswordRecoveryTested === true;
 const smsLive =
+  evidenceTrusted &&
   evidence.communications.smsPhoneProviderEnabled === true &&
   evidence.communications.smsPhoneOtpDeliveredAndVerified === true;
 gap(
@@ -159,6 +199,7 @@ const identitySourceReady =
   /original/i.test(identityWebhook);
 const identityLive =
   identitySourceReady &&
+  evidenceTrusted &&
   evidence.identity.productionAppVerificationCompleted === true &&
   evidence.identity.signedWebhookReturned200 === true &&
   evidence.identity.originalIdAndSelfieArchiveVerified === true;
@@ -174,9 +215,9 @@ gap(
 gap(
   6,
   "Physical driver rehearsal",
-  evidence.journeys.physicalDriverCustodyRehearsal ? "VERIFIED_DONE" : "EXTERNAL_BLOCKER",
+  evidenceTrusted && evidence.journeys.physicalDriverCustodyRehearsal ? "VERIFIED_DONE" : "EXTERNAL_BLOCKER",
   "Driver onboarding, evidence, training, assignment, seal, GPS, offline, and handoff source paths exist; no signed physical run is recorded in the evidence snapshot.",
-  evidence.journeys.physicalDriverCustodyRehearsal
+  evidenceTrusted && evidence.journeys.physicalDriverCustodyRehearsal
     ? []
     : ["Mo and Mansur complete the portal and one sealed dummy-bag rehearsal with signed after-action result"],
   "Mo and Mansur"
@@ -258,7 +299,10 @@ const counts = Object.fromEntries(
     gaps.filter((item) => item.status === status).length,
   ])
 );
-const verdict = counts.MISSING
+const internalRemediationFailures = Object.entries(internalRemediations)
+  .filter(([, passed]) => !passed)
+  .map(([name]) => name);
+const verdict = counts.MISSING || internalRemediationFailures.length
   ? "NO_GO_TECHNICAL_GAPS"
   : counts.PARTIAL || counts.EXTERNAL_BLOCKER
     ? "CONDITIONAL_NO_GO_LIVE_CUSTODY"
@@ -268,10 +312,14 @@ const result = {
   generatedAt: new Date().toISOString(),
   evidenceAsOf: evidence.asOf,
   evidencePath,
+  evidenceTrusted,
+  currentSourceCommit,
+  releaseSourceDirty,
   verdict,
   counts,
   gaps,
   internalRemediations,
+  internalRemediationFailures,
   accessNeeded: [
     "Twilio Console signed into the Travelyt account; paid/current account plus a Verify Service SID",
     "Supabase Auth Phone provider access to bind the Twilio Verify configuration",
@@ -308,8 +356,10 @@ await writeFile(
 
 console.log(
   JSON.stringify(
-    { verdict, counts, internalRemediations, outputDir },
+    { verdict, counts, evidenceTrusted, internalRemediations, internalRemediationFailures, outputDir },
     null,
     2
   )
 );
+
+if (counts.MISSING || internalRemediationFailures.length) process.exitCode = 1;

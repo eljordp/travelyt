@@ -13,6 +13,7 @@ import {
   type BookingStatus,
   formatPrice,
   getBooking,
+  getBookingAccessToken,
   getBookingServiceLabel,
   getBookingStatusLabel,
   getLastApiFailureMessage,
@@ -119,7 +120,10 @@ export default function BookingPage() {
   const lastLocation = latestLocationEvent(booking);
   const enableLiveUpdates = async () => {
     setPushState("working");
-    const ok = await enableBookingPush(booking.id);
+    const ok = await enableBookingPush(
+      booking.id,
+      booking.customerAccessToken || getBookingAccessToken(booking.id)
+    );
     setPushState(ok ? "enabled" : "denied");
   };
   const approveCustodyProof = async (proofIndex: number) => {

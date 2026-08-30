@@ -561,7 +561,10 @@ export default function DriverJobPage() {
   }
 
   async function acceptJob() {
-    if (!booking) return;
+    if (!booking || !assignment) {
+      setError("Refresh the job to load its current assignment before responding.");
+      return;
+    }
     setAssignmentBusy(true);
     setError("");
     try {
@@ -571,6 +574,7 @@ export default function DriverJobPage() {
         credentials: "same-origin",
         body: JSON.stringify({
           bookingId: booking.id,
+          assignmentId: assignment.id,
           action: "accept",
           checklist: {
             availabilityConfirmed,
@@ -599,7 +603,10 @@ export default function DriverJobPage() {
   }
 
   async function declineJob() {
-    if (!booking) return;
+    if (!booking || !assignment) {
+      setError("Refresh the job to load its current assignment before responding.");
+      return;
+    }
     setAssignmentBusy(true);
     setError("");
     try {
@@ -607,7 +614,12 @@ export default function DriverJobPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ bookingId: booking.id, action: "decline", reason: declineReason }),
+        body: JSON.stringify({
+          bookingId: booking.id,
+          assignmentId: assignment.id,
+          action: "decline",
+          reason: declineReason,
+        }),
       });
       const data = (await response.json()) as { error?: string; booking?: Booking };
       if (!response.ok || !data.booking) throw new Error(data.error || "Could not decline this assignment.");

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import type { AgentReadinessProfileRow } from "@/lib/agent-assignment";
 import { agentReadinessBlockers } from "@/lib/agent-assignment";
 import type { DriverAccessCodeRow } from "@/lib/driver-access-server";
 import { rateLimit } from "@/lib/rate-limit";
-import { STRIPE_IDENTITY_PROVIDER } from "@/lib/stripe-identity";
+import { DRIVER_TRAINING_VERSION } from "@/lib/driver-training";
+import {
+  accountHolderNameMatchesVerifiedIdentity,
+  STRIPE_IDENTITY_PROVIDER,
+} from "@/lib/stripe-identity";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 function bad(error: string, status = 400, migrationRequired = false) {
@@ -64,7 +68,7 @@ function publicProfile(
 export async function GET(request: Request) {
   const limited = rateLimit(request, "ops:agent-readiness:get", 60);
   if (limited) return limited;
-  if (!getAdminSession(request)) return bad("Operations access is required.", 401);
+  if (!(await getVerifiedAdminSession(request))) return bad("Operations access is required.", 401);
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Agent readiness backend is not configured.", 503);
 
@@ -94,9 +98,9 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const limited = rateLimit(request, "ops:agent-readiness:patch", 30);
   if (limited) return limited;
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) return bad("Operations access is required.", 401);
-  if (!isFullAdminSession(request)) {
+  if (session.role !== "admin") {
     return bad("Only full admin can certify agent readiness evidence.", 403);
   }
   const supabase = getSupabaseAdmin();
@@ -112,9 +116,7 @@ export async function PATCH(request: Request) {
     return bad("Select a valid readiness status.");
   }
   const timestampFields = [
-    "identityVerifiedAt", "identityExpiresAt", "trainingCompletedAt",
-    "trainingExpiresAt", "insuranceVerifiedAt", "insuranceExpiresAt",
-    "vehicleVerifiedAt", "vehicleExpiresAt",
+    "trainingExpiresAt", "insuranceExpiresAt", "vehicleExpiresAt",
   ] as const;
   const timestamps = Object.fromEntries(
     timestampFields.map((field) => [field, cleanTimestamp(body[field])]),
@@ -125,30 +127,90 @@ export async function PATCH(request: Request) {
 
   const { data: access, error: accessError } = await supabase
     .from("driver_access_codes")
-    .select("id, driver_email")
+    .select("id, driver_name, driver_email")
     .eq("id", driverAccessId)
-    .maybeSingle<{ id: string; driver_email: string | null }>();
+    .maybeSingle<{ id: string; driver_name: string; driver_email: string | null }>();
   if (accessError || !access) return bad("Individual agent access record was not found.", 404);
   if (!access.driver_email) {
     return bad("Add the agent's email to the individual access record before certifying readiness.", 409);
   }
-  const { data: identity, error: identityError } = await supabase
-    .from("identity_verifications")
-    .select("id, verified_at, expires_at")
-    .eq("email", access.driver_email.trim().toLowerCase())
-    .in("role", ["driver", "employee"])
-    .eq("provider", STRIPE_IDENTITY_PROVIDER)
-    .eq("status", "verified")
-    .order("verified_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ id: string; verified_at: string | null; expires_at: string | null }>();
+  const [
+    { data: identity, error: identityError },
+    { data: training, error: trainingError },
+    { data: evidenceUploads, error: evidenceError },
+  ] = await Promise.all([
+    supabase
+      .from("identity_verifications")
+      .select("id, verified_at, expires_at, metadata, raw_document_paths")
+      .eq("email", access.driver_email.trim().toLowerCase())
+      .in("role", ["driver", "employee"])
+      .eq("provider", STRIPE_IDENTITY_PROVIDER)
+      .eq("status", "verified")
+      .contains("metadata", { driver_access_id: driverAccessId })
+      .order("verified_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{
+        id: string;
+        verified_at: string | null;
+        expires_at: string | null;
+        metadata: Record<string, unknown> | null;
+        raw_document_paths: unknown;
+      }>(),
+    supabase
+      .from("agent_training_completions")
+      .select("id, completed_at, reviewed_at")
+      .eq("driver_access_id", driverAccessId)
+      .eq("training_version", DRIVER_TRAINING_VERSION)
+      .eq("passed", true)
+      .eq("review_status", "accepted")
+      .maybeSingle<{ id: string; completed_at: string; reviewed_at: string | null }>(),
+    supabase
+      .from("agent_evidence_uploads")
+      .select("id, evidence_type, reviewed_at, uploaded_at")
+      .eq("driver_access_id", driverAccessId)
+      .eq("review_status", "accepted")
+      .order("uploaded_at", { ascending: false })
+      .returns<Array<{ id: string; evidence_type: string; reviewed_at: string | null; uploaded_at: string }>>(),
+  ]);
   if (identityError) return bad("Could not verify the agent's provider-backed identity.", 500);
+  if (trainingError || evidenceError) return bad("Could not load accepted readiness evidence.", 500);
+  const identityPaths = Array.isArray(identity?.raw_document_paths)
+    ? identity.raw_document_paths
+    : [];
+  const identityHasDocument = identityPaths.some((item) =>
+    Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")
+  );
+  const identityHasSelfie = identityPaths.some((item) =>
+    Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")
+  );
+  const identityNameMatches = Boolean(identity && accountHolderNameMatchesVerifiedIdentity({
+    accountHolderName: access.driver_name,
+    verifiedFirstName: typeof identity.metadata?.verified_first_name === "string"
+      ? identity.metadata.verified_first_name
+      : undefined,
+    verifiedLastName: typeof identity.metadata?.verified_last_name === "string"
+      ? identity.metadata.verified_last_name
+      : undefined,
+  }));
   const identityCurrent = Boolean(
     identity?.verified_at &&
-      (!identity.expires_at || Date.parse(identity.expires_at) > Date.now()),
+      (!identity.expires_at || Date.parse(identity.expires_at) > Date.now()) &&
+      identityHasDocument && identityHasSelfie && identityNameMatches,
   );
-  if (status === "active" && !identityCurrent) {
-    return bad("A current Stripe Identity verification for this agent email is required before activation.", 409);
+  const latestEvidence = (type: string) =>
+    (evidenceUploads ?? []).find((item) => item.evidence_type === type && item.reviewed_at);
+  const insuranceEvidence = latestEvidence("insurance");
+  const vehicleRegistrationEvidence = latestEvidence("vehicle_registration");
+  const vehiclePhotoEvidence = latestEvidence("vehicle_photo");
+  const activeEvidenceComplete = Boolean(
+    identityCurrent && training?.reviewed_at && insuranceEvidence &&
+      vehicleRegistrationEvidence && vehiclePhotoEvidence
+  );
+  if (status === "active" && !activeEvidenceComplete) {
+    return bad("Accepted current identity, training, insurance, vehicle registration, and vehicle photo evidence are required before activation.", 409);
+  }
+  if (status === "active" && Object.values(timestamps).some((value) => !value || Date.parse(value) <= Date.now())) {
+    return bad("Training, insurance, and vehicle expiration dates must all be in the future before activation.", 409);
   }
 
   const values = {
@@ -157,16 +219,23 @@ export async function PATCH(request: Request) {
     identity_evidence_reference: identityCurrent ? `${STRIPE_IDENTITY_PROVIDER}:${identity!.id}` : null,
     identity_verified_at: identityCurrent ? identity!.verified_at : null,
     identity_expires_at: identityCurrent ? identity!.expires_at : null,
-    training_evidence_reference: cleanText(body.trainingEvidenceReference),
-    training_completed_at: timestamps.trainingCompletedAt,
+    training_evidence_reference: training ? `training:${training.id}` : null,
+    training_completed_at: training?.completed_at ?? null,
     training_expires_at: timestamps.trainingExpiresAt,
-    insurance_evidence_reference: cleanText(body.insuranceEvidenceReference),
-    insurance_verified_at: timestamps.insuranceVerifiedAt,
+    insurance_evidence_reference: insuranceEvidence ? `agent_evidence:${insuranceEvidence.id}` : null,
+    insurance_verified_at: insuranceEvidence?.reviewed_at ?? null,
     insurance_expires_at: timestamps.insuranceExpiresAt,
     vehicle_make_model: cleanText(body.vehicleMakeModel, 120),
     license_plate: cleanText(body.licensePlate, 30)?.toUpperCase() ?? null,
-    vehicle_evidence_reference: cleanText(body.vehicleEvidenceReference),
-    vehicle_verified_at: timestamps.vehicleVerifiedAt,
+    vehicle_evidence_reference: vehicleRegistrationEvidence && vehiclePhotoEvidence
+      ? `agent_evidence:${vehicleRegistrationEvidence.id},agent_evidence:${vehiclePhotoEvidence.id}`
+      : null,
+    vehicle_verified_at: vehicleRegistrationEvidence && vehiclePhotoEvidence
+      ? new Date(Math.max(
+          Date.parse(vehicleRegistrationEvidence.reviewed_at!),
+          Date.parse(vehiclePhotoEvidence.reviewed_at!),
+        )).toISOString()
+      : null,
     vehicle_expires_at: timestamps.vehicleExpiresAt,
     notes: cleanText(body.notes, 1000),
     updated_by: session.email,

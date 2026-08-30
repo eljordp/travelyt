@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Buffer } from "node:buffer";
+import { randomBytes, randomInt } from "node:crypto";
 import {
   BOOKING_LIST_SELECT_COLUMNS,
   BOOKING_SELECT_COLUMNS,
@@ -10,12 +11,18 @@ import {
 } from "@/lib/booking-mappers";
 import { queueBookingNotification } from "@/lib/push-notifications-server";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
-import { STRIPE_IDENTITY_PROVIDER } from "@/lib/stripe-identity";
+import {
+  accountHolderNameMatchesVerifiedIdentity,
+  STRIPE_IDENTITY_PROVIDER,
+} from "@/lib/stripe-identity";
 import { calcPriceBreakdown } from "@/lib/pricing";
-import { getAdminSession, isFullAdminSession, isOpsSession } from "@/lib/admin-auth";
-import { canonicalDriverName, driverNameMatches } from "@/lib/drivers";
+import {
+  getVerifiedAdminSession,
+  type VerifiedAdminSession,
+} from "@/lib/admin-auth";
 import {
   authorizeDriverRequest,
   type DriverAuthorization,
@@ -32,6 +39,8 @@ import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
 import { carrierHandoffAuthorized } from "@/lib/handoff-policy";
 import { recordCustodyCheckpoint } from "@/lib/custody";
+import { resolveServerRouteDistance } from "@/lib/server-route-distance";
+import { buildServerPricingQuote } from "@/lib/server-pricing-quote";
 import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
@@ -79,8 +88,6 @@ const atomicCustodyStatuses = new Set<Booking["status"]>([
 const genericPatchFields = new Set<keyof Booking>([
   "status",
   "customerSignatureName",
-  "customerIdentityVerifiedAt",
-  "driverIdentityVerifiedAt",
   "issueType",
   "issueNotes",
   "issueResolution",
@@ -141,25 +148,25 @@ function reservedAgentAssignmentStatus(status?: Booking["status"]) {
 }
 
 function newAccessToken() {
-  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8);
+  return randomBytes(32).toString("base64url");
+}
+
+function newBookingId() {
+  return `TVT-${randomBytes(10).toString("base64url").toUpperCase()}`;
 }
 
 function newDeliveryConfirmationCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 function legacyAdminCodeAuthorized(request: Request) {
+  // The header is retained only for local rehearsal compatibility. Production
+  // operations must use a current AAL2 Supabase session or the audited,
+  // short-lived break-glass login path.
+  if (process.env.NODE_ENV === "production") return false;
   if (process.env.TRAVELYT_ALLOW_ADMIN_CODE_HEADER !== "true") return false;
   const expected = process.env.TRAVELYT_ADMIN_ACCESS_CODE;
   return Boolean(expected && request.headers.get("x-travelyt-admin-code") === expected);
-}
-
-function adminAuthorized(request: Request) {
-  return isFullAdminSession(request) || legacyAdminCodeAuthorized(request);
-}
-
-function opsAuthorized(request: Request) {
-  return isOpsSession(request) || legacyAdminCodeAuthorized(request);
 }
 
 function tokenMatches(row: BookingRow, token?: string | null) {
@@ -171,14 +178,14 @@ function userOwns(row: BookingRow, userId?: string | null) {
 }
 
 function canReadBooking(
-  request: Request,
   row: BookingRow,
   userId?: string | null,
   token?: string | null,
-  driverAuthorized = false
+  driverAuthorized = false,
+  operationsAuthorized = false,
 ) {
   return (
-    opsAuthorized(request) ||
+    operationsAuthorized ||
     driverAuthorized ||
     userOwns(row, userId) ||
     tokenMatches(row, token)
@@ -192,17 +199,31 @@ function isPastTravelDate(value: string) {
   return !Number.isNaN(parsed) && parsed < today.getTime();
 }
 
-function driverMatchesBooking(row: BookingRow, driverAuth?: DriverAuthorization | null) {
-  return Boolean(
-    driverAuth?.ok &&
-      row.driver_name &&
-      driverAuth.driverName &&
-      driverNameMatches(row.driver_name, driverAuth.driverName)
+type DriverBookingAssignment = {
+  booking_id: string;
+  status: "assigned" | "accepted";
+  primary_driver_access_id: string;
+  accepted_by_driver_access_id: string | null;
+};
+
+function validDriverAssignment(
+  assignment: DriverBookingAssignment | null | undefined,
+  driverAccessId: string,
+  requireAccepted = false,
+) {
+  if (!assignment || assignment.primary_driver_access_id !== driverAccessId) return false;
+  if (requireAccepted) {
+    return assignment.status === "accepted" &&
+      assignment.accepted_by_driver_access_id === driverAccessId;
+  }
+  return assignment.status === "assigned" || (
+    assignment.status === "accepted" &&
+    assignment.accepted_by_driver_access_id === driverAccessId
   );
 }
 
-function driverCanSeeInList(row: BookingRow, driverName?: string) {
-  if (!driverNameMatches(row.driver_name, driverName)) return false;
+function driverCanSeeInList(row: BookingRow, assignedBookingIds: Set<string>) {
+  if (!assignedBookingIds.has(row.id)) return false;
   if (row.archived_at) return false;
   if (row.status === "pending") return false;
   if (row.status === "cancelled" || row.status === "issue") return false;
@@ -459,6 +480,8 @@ function custodyIdentityReady(row: BookingRow) {
 }
 
 function auditActor(
+  adminSession: VerifiedAdminSession | null,
+  adminOverrideAuthorized: boolean,
   request: Request,
   user: Awaited<ReturnType<typeof getRequestUser>>,
   driverAuth: DriverAuthorization
@@ -466,11 +489,10 @@ function auditActor(
   NonNullable<Booking["statusHistory"]>[number],
   "actorRole" | "actorName"
 > {
-  const adminSession = getAdminSession(request);
   if (adminSession?.email) {
     return { actorRole: adminSession.role, actorName: adminSession.email };
   }
-  if (adminAuthorized(request)) {
+  if (adminOverrideAuthorized) {
     return { actorRole: "admin", actorName: "Admin override" };
   }
   if (driverAuth.ok) {
@@ -620,7 +642,9 @@ function validateBooking(
     source?: string;
     flightTime?: string;
     expressPickup?: boolean;
-  }
+    coverageAccepted?: boolean;
+  },
+  verifiedDistanceMiles: number
 ) {
   const service = body.service?.trim() as ServiceType | undefined;
   const airport = body.airport?.trim();
@@ -632,16 +656,13 @@ function validateBooking(
   const name = body.name?.trim();
   const email = body.email?.trim().toLowerCase();
   const phone = body.phone?.trim() || "";
-  const notes = body.notes?.trim() || undefined;
+  const customerNotes = body.notes?.trim() || undefined;
   const declaredValueCents =
     typeof body.declaredValueCents === "number" &&
     Number.isFinite(body.declaredValueCents)
       ? Math.max(0, Math.round(body.declaredValueCents))
       : undefined;
-  const distanceMiles =
-    typeof body.distanceMiles === "number" && Number.isFinite(body.distanceMiles)
-      ? Math.max(0, body.distanceMiles)
-      : undefined;
+  const distanceMiles = verifiedDistanceMiles;
 
   if (service !== "departure" && service !== "arrival") {
     return "Book departure and arrival as separate custody legs.";
@@ -667,7 +688,7 @@ function validateBooking(
   if (!body.restrictedItemsAttestedAt) {
     return "Confirm that your bags do not contain restricted or undeclared high-value items.";
   }
-  if (declaredValueCents && !body.coverageAcceptedAt) {
+  if (declaredValueCents && body.coverageAccepted !== true) {
     return "Confirm the declared-value coverage notice.";
   }
 
@@ -683,9 +704,19 @@ function validateBooking(
     priceBreakdown.promoEligibleCents,
     promoCode
   );
+  const notes = [
+    expressPickup ? "Express pickup requested." : "",
+    `Server-verified driving route: ${distanceMiles.toFixed(1)} miles from ${airport}.`,
+    priceBreakdown.distanceSurchargeCents > 0
+      ? `Distance surcharge: ${formatPrice(priceBreakdown.distanceSurchargeCents)} for ${priceBreakdown.extraDistanceMiles} miles beyond ${priceBreakdown.includedDistanceMiles} at ${formatPrice(priceBreakdown.distanceRateCents)}/mi.`
+      : "",
+    customerNotes,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const booking: Booking = {
-    id: body.id?.trim() || `TVT-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+    id: newBookingId(),
     service,
     airport,
     address,
@@ -697,19 +728,19 @@ function validateBooking(
     name,
     email,
     phone,
-    notes,
+    notes: notes || undefined,
     distanceMiles,
     declaredValueCents,
     coverageElection: declaredValueCents ? "declared_value" : "standard",
-    coverageAcceptedAt: body.coverageAcceptedAt,
+    coverageAcceptedAt: undefined,
     restrictedItemsAttestedAt: body.restrictedItemsAttestedAt,
     customerIdentityVerifiedAt: body.customerIdentityVerifiedAt,
     driverIdentityVerifiedAt: body.driverIdentityVerifiedAt,
-    status: body.status ?? "pending",
+    status: "pending",
     priceCents: Math.max(0, priceBreakdown.totalBeforePromoCents - discountCents),
     promoCode,
     discountCents: discountCents || undefined,
-    createdAt: body.createdAt ?? new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     paidAt: body.paidAt,
     assignedAt: body.assignedAt,
     acceptedAt: body.acceptedAt,
@@ -720,8 +751,7 @@ function validateBooking(
     deliveryPendingAt: body.deliveryPendingAt,
     deliveredAt: body.deliveredAt,
     closedAt: body.closedAt,
-    deliveryConfirmationCode:
-      body.deliveryConfirmationCode || newDeliveryConfirmationCode(),
+    deliveryConfirmationCode: newDeliveryConfirmationCode(),
     customerConfirmedAt: body.customerConfirmedAt,
     customerSignatureName: body.customerSignatureName,
     issueType: body.issueType,
@@ -799,7 +829,13 @@ export async function GET(request: Request) {
   const includeArchived = searchParams.get("includeArchived") === "1";
   const user = await getRequestUser(request);
   const driverAuth = await authorizeDriverRequest(request);
-  const isDriverOnly = driverAuth.ok && !opsAuthorized(request);
+  const adminSession = await getVerifiedAdminSession(request);
+  const hasLegacyAdminOverride = legacyAdminCodeAuthorized(request);
+  const hasOpsAccess = Boolean(adminSession) || hasLegacyAdminOverride;
+  const isDriverOnly = driverAuth.ok && !hasOpsAccess;
+  if (isDriverOnly && !driverAuth.driverAccessId) {
+    return bad("A current person-bound driver account is required.", 403);
+  }
 
   if (id) {
     const { data, error } = await supabase
@@ -809,15 +845,26 @@ export async function GET(request: Request) {
       .maybeSingle<BookingRow>();
 
     if (error) return bad("Could not load booking.", 500);
-    const driverCanRead = data ? driverMatchesBooking(data, driverAuth) : false;
+    let driverCanRead = false;
+    if (data && isDriverOnly && driverAuth.driverAccessId) {
+      const { data: assignment, error: assignmentError } = await supabase
+        .from("booking_agent_assignments")
+        .select("booking_id, status, primary_driver_access_id, accepted_by_driver_access_id")
+        .eq("booking_id", data.id)
+        .eq("primary_driver_access_id", driverAuth.driverAccessId)
+        .in("status", ["assigned", "accepted"])
+        .maybeSingle<DriverBookingAssignment>();
+      if (assignmentError) return bad("Could not verify driver assignment.", 500);
+      driverCanRead = validDriverAssignment(assignment, driverAuth.driverAccessId);
+    }
     if (
       data &&
       !canReadBooking(
-        request,
         data,
         user?.id,
         accessToken,
-        isDriverOnly ? driverCanRead : driverAuth.ok
+        isDriverOnly ? driverCanRead : driverAuth.ok,
+        hasOpsAccess,
       )
     ) {
       return bad("You do not have access to this booking.", 403);
@@ -840,7 +887,27 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const isPrivileged = opsAuthorized(request) || driverAuth.ok;
+  const isPrivileged = hasOpsAccess || driverAuth.ok;
+  let assignedBookingIds = new Set<string>();
+
+  if (isDriverOnly && driverAuth.driverAccessId) {
+    const { data: assignments, error: assignmentError } = await supabase
+      .from("booking_agent_assignments")
+      .select("booking_id, status, primary_driver_access_id, accepted_by_driver_access_id")
+      .eq("primary_driver_access_id", driverAuth.driverAccessId)
+      .in("status", ["assigned", "accepted"])
+      .returns<DriverBookingAssignment[]>();
+    if (assignmentError) return bad("Could not load assigned driver jobs.", 500);
+    assignedBookingIds = new Set(
+      (assignments ?? [])
+        .filter((assignment) => validDriverAssignment(assignment, driverAuth.driverAccessId!))
+        .map((assignment) => assignment.booking_id),
+    );
+    if (assignedBookingIds.size === 0) {
+      return NextResponse.json({ ok: true, bookings: [] });
+    }
+    query = query.in("id", [...assignedBookingIds]);
+  }
 
   if (!isPrivileged) {
     if (!user) return bad("Sign in or provide driver access.", 401);
@@ -851,8 +918,8 @@ export async function GET(request: Request) {
 
   if (error) return bad("Could not load bookings.", 500);
   const rows = ((data ?? []) as unknown as BookingRow[]).filter((row) => {
-    if (isDriverOnly) return driverCanSeeInList(row, driverAuth.driverName);
-    if (row.archived_at && (!includeArchived || !opsAuthorized(request))) {
+    if (isDriverOnly) return driverCanSeeInList(row, assignedBookingIds);
+    if (row.archived_at && (!includeArchived || !hasOpsAccess)) {
       return false;
     }
     return true;
@@ -863,7 +930,7 @@ export async function GET(request: Request) {
     bookings: await Promise.all(rows.map((row) =>
       responseBooking(
         row,
-        opsAuthorized(request) || userOwns(row, user?.id),
+        hasOpsAccess || userOwns(row, user?.id),
         isDriverOnly
       )
     )),
@@ -873,23 +940,62 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "bookings:post", 12);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "bookings:post", 12, 60_000);
+  if (durableLimited) return durableLimited;
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Booking backend is not configured.", 503);
 
   try {
-    const body = (await request.json()) as Partial<Booking> & { source?: string };
-    const validated = validateBooking(body);
+    const body = (await request.json()) as Partial<Booking> & {
+      source?: string;
+      expressPickup?: boolean;
+      coverageAccepted?: boolean;
+    };
+    const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!mapsApiKey) {
+      return bad(
+        "Verified route pricing is not configured. No booking or charge was created.",
+        503
+      );
+    }
+    const verifiedRoute = await resolveServerRouteDistance({
+      apiKey: mapsApiKey,
+      address: body.address ?? "",
+      airportCode: body.airport ?? "",
+      requireDrivingRoute: true,
+    });
+    if (!verifiedRoute.ok) return bad(verifiedRoute.error, verifiedRoute.status);
+    if (verifiedRoute.distanceSource !== "driving_route") {
+      return bad(
+        "A verified driving route is required before booking. No booking or charge was created.",
+        503
+      );
+    }
+
+    // Ignore body.distanceMiles entirely. The canonical address, cutoff, and
+    // price are derived from the server-side geocode and Google route result.
+    const validated = validateBooking(
+      {
+        ...body,
+        address: verifiedRoute.address,
+        airport: verifiedRoute.airport,
+      },
+      verifiedRoute.distanceMiles
+    );
     if (typeof validated === "string") return bad(validated);
 
     const user = await getRequestUser(request);
-    validated.customerAccessToken = validated.customerAccessToken || newAccessToken();
+    validated.customerAccessToken = newAccessToken();
     validated.customerUserId = user?.id;
     validated.status = "pending";
     validated.createdAt = new Date().toISOString();
     // The request carries the customer's affirmative checkbox; the server owns
     // the attestation time so a client cannot backdate the declaration.
     validated.restrictedItemsAttestedAt = new Date().toISOString();
+    validated.coverageAcceptedAt = validated.declaredValueCents
+      ? new Date().toISOString()
+      : undefined;
     validated.paidAt = undefined;
     validated.assignedAt = undefined;
     validated.acceptedAt = undefined;
@@ -900,21 +1006,69 @@ export async function POST(request: Request) {
     validated.driverIdentityVerifiedAt = undefined;
     validated.customerIdentityVerifiedAt = undefined;
     let accountHolderVerifiedAt: string | undefined;
+    let accountHolderVerifiedDob: string | undefined;
+    let accountHolderVerifiedFirstName: string | undefined;
+    let accountHolderVerifiedLastName: string | undefined;
     if (user?.id) {
+      const signedInEmail = user.email?.trim().toLowerCase();
+      if (!signedInEmail || validated.email !== signedInEmail) {
+        return bad("Use the verified email address on your signed-in Travelyt account for the booking owner.", 409);
+      }
       const { data: identity, error: identityError } = await supabase
         .from("identity_verifications")
-        .select("verified_at")
+        .select("verified_at, email, metadata, raw_document_paths")
         .eq("user_id", user.id)
         .eq("role", "customer")
         .eq("provider", STRIPE_IDENTITY_PROVIDER)
         .eq("status", "verified")
         .order("verified_at", { ascending: false })
         .limit(1)
-        .maybeSingle<{ verified_at: string | null }>();
+        .maybeSingle<{
+          verified_at: string | null;
+          email: string | null;
+          metadata: Record<string, unknown> | null;
+          raw_document_paths: unknown;
+        }>();
       if (identityError) {
         console.error("Verified customer identity lookup failed", identityError);
       } else if (identity?.verified_at) {
+        const verifiedFirstName = typeof identity.metadata?.verified_first_name === "string"
+          ? identity.metadata.verified_first_name.trim()
+          : "";
+        const verifiedLastName = typeof identity.metadata?.verified_last_name === "string"
+          ? identity.metadata.verified_last_name.trim()
+          : "";
+        const verifiedDob = typeof identity.metadata?.verified_dob === "string"
+          ? identity.metadata.verified_dob.trim()
+          : "";
+        const archivedPaths = Array.isArray(identity.raw_document_paths)
+          ? identity.raw_document_paths
+          : [];
+        const hasDocument = archivedPaths.some((item) =>
+          Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")
+        );
+        const hasSelfie = archivedPaths.some((item) =>
+          Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")
+        );
+        const identityEmailMatches = identity.email?.trim().toLowerCase() === signedInEmail;
+        const identityNameMatches = accountHolderNameMatchesVerifiedIdentity({
+          accountHolderName: validated.name,
+          verifiedFirstName,
+          verifiedLastName,
+        });
+        const identityDobComplete = /^\d{4}-\d{2}-\d{2}$/.test(verifiedDob);
+        if (!identityEmailMatches || !identityNameMatches || !identityDobComplete || !hasDocument || !hasSelfie) {
+          return bad(
+            "The booking owner does not match the complete verified identity record. Reopen identity verification before booking under this traveler name.",
+            409
+          );
+        }
         accountHolderVerifiedAt = identity.verified_at;
+        accountHolderVerifiedDob = verifiedDob;
+        accountHolderVerifiedFirstName = verifiedFirstName;
+        accountHolderVerifiedLastName = verifiedLastName;
+        validated.name = `${verifiedFirstName} ${verifiedLastName}`.trim();
+        validated.email = signedInEmail;
         validated.customerIdentityVerifiedAt = accountHolderVerifiedAt;
       }
     }
@@ -929,7 +1083,17 @@ export async function POST(request: Request) {
     if (normalizedPassengers.passengers.length > 1 && !user?.id) {
       return bad("Sign in before adding and verifying multiple travelers under one booking.", 401);
     }
-    validated.passengers = normalizedPassengers.passengers;
+    validated.passengers = normalizedPassengers.passengers.map((passenger) =>
+      passenger.category === "account_holder" && accountHolderVerifiedAt
+        ? {
+            ...passenger,
+            firstName: accountHolderVerifiedFirstName || passenger.firstName,
+            lastName: accountHolderVerifiedLastName || passenger.lastName,
+            email: validated.email,
+            dateOfBirth: accountHolderVerifiedDob,
+          }
+        : passenger
+    );
     validated.pickedUpAt = undefined;
     validated.deliveryPendingAt = undefined;
     validated.deliveredAt = undefined;
@@ -947,9 +1111,28 @@ export async function POST(request: Request) {
     validated.deliveryConfirmationCode = newDeliveryConfirmationCode();
 
     const source = body.source?.trim() || "quote-form";
+    const serverQuote = buildServerPricingQuote({
+      bookingId: validated.id,
+      service: validated.service,
+      airport: validated.airport,
+      address: validated.address,
+      bags: validated.bags,
+      expressPickup:
+        validated.service !== "arrival" && body.expressPickup === true,
+      promoCode: validated.promoCode,
+      route: { ...verifiedRoute, distanceSource: "driving_route" },
+    });
+    validated.priceCents = serverQuote.quote.totalCents;
+    validated.distanceMiles = serverQuote.quote.route.distanceMiles;
+    validated.discountCents =
+      serverQuote.quote.promoDiscountCents || undefined;
     const { data, error } = await supabase
       .from("bookings")
-      .insert(bookingToInsert(validated, source))
+      .insert({
+        ...bookingToInsert(validated, source),
+        pricing_quote: serverQuote.quote,
+        pricing_fingerprint: serverQuote.fingerprint,
+      })
       .select("*")
       .single<BookingRow>();
 
@@ -986,6 +1169,10 @@ export async function PATCH(request: Request) {
     const id = body.id?.trim();
     if (!id) return bad("Missing booking ID.");
     const user = await getRequestUser(request);
+    const adminSession = await getVerifiedAdminSession(request);
+    const hasLegacyAdminOverride = legacyAdminCodeAuthorized(request);
+    const hasOpsAccess = Boolean(adminSession) || hasLegacyAdminOverride;
+    const hasAdminAccess = adminSession?.role === "admin" || hasLegacyAdminOverride;
 
     const { data: existing, error: loadError } = await supabase
       .from("bookings")
@@ -1046,7 +1233,7 @@ export async function PATCH(request: Request) {
         patch.status === "cancelled" ||
         patch.status === "issue";
       if (
-        !opsAuthorized(request) ||
+        !hasOpsAccess ||
         body.proof ||
         body.locationEvent ||
         !onlyAdministrativeClosure ||
@@ -1105,10 +1292,6 @@ export async function PATCH(request: Request) {
       patch.archivedAt !== undefined &&
         (patch.archivedAt ?? null) !== (existing.archived_at ?? null)
     );
-    const manualReviewPatch = Boolean(
-      patch.customerIdentityVerifiedAt !== undefined ||
-        patch.driverIdentityVerifiedAt !== undefined
-    );
     const issueRecordPatch = Boolean(
       patch.issueType !== undefined ||
         patch.issueNotes !== undefined ||
@@ -1133,7 +1316,7 @@ export async function PATCH(request: Request) {
     const ownsOrToken =
       userOwns(existing, user?.id) || tokenMatches(existing, body.accessToken);
     const customerClosing = statusChanged && patch.status === "closed";
-    const opsOverrideClosing = customerClosing && opsAuthorized(request);
+    const opsOverrideClosing = customerClosing && hasOpsAccess;
     const travelerClosing = customerClosing && !opsOverrideClosing;
 
     if (
@@ -1154,17 +1337,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (requiresOpsStatus && !opsAuthorized(request)) {
+    if (requiresOpsStatus && !hasOpsAccess) {
       return bad("Operations access is required to set this booking status.", 403);
     }
 
-    if (manualReviewPatch && !opsAuthorized(request)) {
-      return bad("Operations access is required to update manual identity review.", 403);
-    }
-    if (manualReviewPatch && (!reason || reason.length < 12)) {
-      return bad("Record a specific audit reason before applying a manual identity review.", 409);
-    }
-    if (issueRecordPatch && !opsAuthorized(request)) {
+    if (issueRecordPatch && !hasOpsAccess) {
       return bad("Operations access is required to update the issue record.", 403);
     }
 
@@ -1208,22 +1385,12 @@ export async function PATCH(request: Request) {
           403
         );
       }
-      if (!opsAuthorized(request) && !driverAuth.ok) {
+      if (!hasOpsAccess && !driverAuth.ok) {
         return bad("Driver access is required for this update.", 403);
       }
-      if (!opsAuthorized(request) || body.proof || body.locationEvent) {
-        if (driverAuth.perDriverCode && patch.driverName && driverAuth.driverName) {
-          if (canonicalDriverName(patch.driverName) !== canonicalDriverName(driverAuth.driverName)) {
-            await recordOpsException(
-              supabase,
-              id,
-              "DRIVER_ID_MISMATCH",
-              "Driver attempted to claim or update a job under a different name.",
-              "critical",
-              { requestedDriver: patch.driverName, authorizedDriver: driverAuth.driverName }
-            );
-            return bad("This access code is not assigned to that driver.", 403);
-          }
+      if (!hasOpsAccess || body.proof || body.locationEvent) {
+        if (!driverAuth.driverAccessId) {
+          return bad("A current person-bound driver account is required.", 403);
         }
         if (existing.status === "pending") {
           return bad("Travelyt must confirm this booking before driver action.", 409);
@@ -1234,7 +1401,15 @@ export async function PATCH(request: Request) {
         if (patch.status === "assigned") {
           return bad("Operations must assign bookings before drivers can accept them.", 403);
         }
-        if (!driverMatchesBooking(existing, driverAuth)) {
+        const { data: assignment, error: assignmentError } = await supabase
+          .from("booking_agent_assignments")
+          .select("booking_id, status, primary_driver_access_id, accepted_by_driver_access_id")
+          .eq("booking_id", id)
+          .eq("primary_driver_access_id", driverAuth.driverAccessId)
+          .eq("status", "accepted")
+          .maybeSingle<DriverBookingAssignment>();
+        if (assignmentError) return bad("Could not verify driver assignment.", 500);
+        if (!validDriverAssignment(assignment, driverAuth.driverAccessId, true)) {
           await recordOpsException(
             supabase,
             id,
@@ -1245,6 +1420,7 @@ export async function PATCH(request: Request) {
               requestedDriver: patch.driverName,
               assignedDriver: existing.driver_name,
               authorizedDriver: driverAuth.driverName,
+              authorizedDriverAccessId: driverAuth.driverAccessId,
               requestedStatus: patch.status,
             }
           );
@@ -1281,7 +1457,9 @@ export async function PATCH(request: Request) {
           return bad("Assign this booking before updating custody status.", 409);
         }
       }
-    } else if (!canReadBooking(request, existing, user?.id, body.accessToken)) {
+    } else if (
+      !canReadBooking(existing, user?.id, body.accessToken, false, hasOpsAccess)
+    ) {
       return bad("You do not have access to this booking.", 403);
     }
 
@@ -1334,49 +1512,8 @@ export async function PATCH(request: Request) {
       }
     }
 
-    if (requiresDriver && !opsAuthorized(request)) {
+    if (requiresDriver && !hasOpsAccess) {
       const nextStatus = patch.status;
-      if (nextStatus === "assigned" || nextStatus === "accepted") {
-        const assignedDriver = existing.driver_name || driverAuth.driverName;
-        if (!assignedDriver) return bad("Select the driver assigned to this access code.", 403);
-        if (
-          nextStatus === "accepted" &&
-          !driverMatchesBooking(existing, driverAuth)
-        ) {
-          return bad("This booking is assigned to a different driver.", 403);
-        }
-
-        const { data: conflicts, error: conflictError } = await supabase
-          .from("bookings")
-          .select("id")
-          .eq("travel_date", existing.travel_date)
-          .eq("driver_name", assignedDriver)
-          .in("status", [
-            "assigned",
-            "accepted",
-            "en_route",
-            "arrived",
-            "picked_up",
-            "in_transit",
-            "delivery_pending",
-          ])
-          .neq("id", id)
-          .limit(1);
-
-        if (conflictError) return bad("Could not check driver availability.", 500);
-        if (conflicts?.length) {
-          await recordOpsException(
-            supabase,
-            id,
-            "DRIVER_SCHEDULE_CONFLICT",
-            `${assignedDriver} already has an active job on this travel date.`,
-            "critical",
-            { driverName: assignedDriver, conflictingBookingId: conflicts[0].id }
-          );
-          return bad("This driver already has an active job on this travel date.", 409);
-        }
-      }
-
       const custodyStarts =
         nextStatus === "picked_up" ||
         (existing.service === "arrival" && nextStatus === "in_transit");
@@ -1484,7 +1621,13 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const actor = auditActor(request, user, driverAuth);
+    const actor = auditActor(
+      adminSession,
+      hasAdminAccess,
+      request,
+      user,
+      driverAuth,
+    );
 
     // Seal the booking-wide close checkpoint before changing the booking row.
     // The RPC is atomic across every expected bag and idempotent, so a failed
@@ -1566,7 +1709,7 @@ export async function PATCH(request: Request) {
 
       await queueBookingNotification(closedRow, "status");
       const includeAccessToken =
-        opsAuthorized(request) ||
+        hasOpsAccess ||
         userOwns(closedRow, user?.id) ||
         tokenMatches(closedRow, body.accessToken);
       return NextResponse.json({
@@ -1577,16 +1720,6 @@ export async function PATCH(request: Request) {
 
     const rowPatch = bookingPatchToRowPatch(body.patch ?? {});
     const now = new Date().toISOString();
-    if (patch.customerIdentityVerifiedAt !== undefined) {
-      rowPatch.customer_identity_verified_at = patch.customerIdentityVerifiedAt
-        ? existing.customer_identity_verified_at ?? now
-        : null;
-    }
-    if (patch.driverIdentityVerifiedAt !== undefined) {
-      rowPatch.driver_identity_verified_at = patch.driverIdentityVerifiedAt
-        ? existing.driver_identity_verified_at ?? now
-        : null;
-    }
     if (patch.status === "accepted" && !patch.acceptedAt) {
       rowPatch.accepted_at = now;
     }
@@ -1617,12 +1750,6 @@ export async function PATCH(request: Request) {
     const history = Array.isArray(existing.status_history)
       ? [...existing.status_history]
       : [];
-    const manualReviewCompleted = Boolean(
-      (!existing.customer_identity_verified_at && patch.customerIdentityVerifiedAt) ||
-        (!existing.driver_identity_verified_at && patch.driverIdentityVerifiedAt) ||
-        (!existing.restricted_items_attested_at && patch.restrictedItemsAttestedAt)
-    );
-
     if (statusChanged && patch.status) {
       history.push(
         auditEntry({
@@ -1647,16 +1774,6 @@ export async function PATCH(request: Request) {
             (patch.archivedAt
               ? "Archived from active operations queue."
               : "Restored to active operations queue."),
-        })
-      );
-    } else if (manualReviewCompleted) {
-      history.push(
-        auditEntry({
-          action: "manual_review_override",
-          fromStatus: existing.status,
-          toStatus: existing.status,
-          ...actor,
-          reason: reason || "Identity and customer declaration review marked complete.",
         })
       );
     } else if (storedProof) {
@@ -1742,7 +1859,7 @@ export async function PATCH(request: Request) {
     }
 
     const includeAccessToken =
-      opsAuthorized(request) ||
+      hasOpsAccess ||
       userOwns(data, user?.id) ||
       tokenMatches(data, body.accessToken);
     return NextResponse.json({

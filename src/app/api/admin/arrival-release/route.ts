@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isFullAdminSession, getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   BOOKING_SELECT_COLUMNS,
   rowToBooking,
@@ -47,11 +47,11 @@ function validTransition(
 export async function POST(request: Request) {
   const limited = rateLimit(request, "admin:arrival-release", 20);
   if (limited) return limited;
-  if (!isFullAdminSession(request)) {
+  const session = await getVerifiedAdminSession(request);
+  if (session?.role !== "admin") {
     return bad("Full admin access is required to record airport-release authority.", 403);
   }
 
-  const session = getAdminSession(request);
   const supabase = getSupabaseAdmin();
   if (!session || !supabase) {
     return bad("Arrival-release authority controls are not configured.", 503);

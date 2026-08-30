@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   BOOKING_SELECT_COLUMNS,
   rowToBooking,
@@ -26,7 +26,7 @@ function bad(error: string, status = 400) {
 }
 
 export async function POST(request: Request) {
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session || session.role !== "admin") {
     return bad("Full admin access is required.", 403);
   }

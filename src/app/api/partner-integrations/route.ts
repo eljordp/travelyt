@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import {
+  getVerifiedAdminSession,
+  isVerifiedFullAdminSession,
+} from "@/lib/admin-auth";
 import {
   arePartnerIntegrationsEnabled,
   partnerIntegrations,
@@ -72,10 +75,6 @@ function isMissingPartnerTable(error: unknown) {
       ? String((error as { message?: unknown }).message || "")
       : String(error || "");
   return /partner_integrations|partner_events|does not exist|schema cache/i.test(message);
-}
-
-function adminAuthorized(request: Request) {
-  return Boolean(getAdminSession(request));
 }
 
 function textField(
@@ -187,7 +186,7 @@ export async function GET(request: Request) {
 
   const limited = rateLimit(request, "partner-integrations:get", 60);
   if (limited) return limited;
-  if (!adminAuthorized(request)) return bad("Admin access is required.", 401);
+  if (!(await getVerifiedAdminSession(request))) return bad("Admin access is required.", 401);
 
   const supabase = getSupabaseAdmin();
   if (!supabase) {
@@ -246,7 +245,7 @@ export async function POST(request: Request) {
 
   const limited = rateLimit(request, "partner-integrations:post", 20);
   if (limited) return limited;
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) return bad("Admin access is required.", 401);
 
   const supabase = getSupabaseAdmin();
@@ -347,7 +346,7 @@ export async function PATCH(request: Request) {
 
   const limited = rateLimit(request, "partner-integrations:patch", 20);
   if (limited) return limited;
-  if (!isFullAdminSession(request)) {
+  if (!(await isVerifiedFullAdminSession(request))) {
     return bad("Only admin can change partner integration settings.", 403);
   }
 

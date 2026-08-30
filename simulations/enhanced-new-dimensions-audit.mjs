@@ -14,6 +14,15 @@ try {
 } catch {
   // The source-only audit still runs, but it must not infer live readiness.
 }
+const liveEvidenceAsOfMs = Date.parse(liveEvidence?.asOf ?? "");
+const liveEvidenceSchemaCurrent = Boolean(
+  liveEvidence?.schemaVersion === 1 &&
+  Number.isFinite(liveEvidenceAsOfMs) &&
+  Date.now() - liveEvidenceAsOfMs >= 0 &&
+  Date.now() - liveEvidenceAsOfMs <= 7 * 24 * 60 * 60 * 1000 &&
+  typeof liveEvidence?.production?.deploymentId === "string" &&
+  liveEvidence.production.deploymentId.startsWith("dpl_")
+);
 
 let currentSourceCommit = null;
 let releaseSourceDirty = true;
@@ -70,6 +79,7 @@ if (liveEvidence?.production?.baselineCommit && currentSourceCommit) {
 }
 
 const productionEvidenceMatchesSource = Boolean(
+  liveEvidenceSchemaCurrent &&
   liveEvidence?.production?.deploymentVerifiedReady &&
     deployedReleaseSourceMatches &&
     !releaseSourceDirty,
@@ -83,6 +93,8 @@ const files = {
   quote: "src/app/quote/page.tsx",
   identityRequest: "src/app/api/identity/verification-request/route.ts",
   stripeIdentity: "src/lib/stripe-identity.ts",
+  identityOriginals: "src/lib/identity-originals.ts",
+  identityReview: "src/app/api/identity/verification-review/route.ts",
   travelerVerification: "src/app/api/identity/traveler-verification/route.ts",
   passengerLogic: "src/lib/passengers.ts",
   offlineCustody: "src/lib/offline-custody.ts",
@@ -127,8 +139,12 @@ check(
   has("identityRequest", /createStripeIdentitySession/) &&
   has("stripeIdentity", /require_live_capture:\s*true/) &&
   has("stripeIdentity", /require_matching_selfie:\s*true/) &&
-  has("stripeWebhook", /verifiedDob/) &&
-  has("stripeWebhook", /expected_dob_match/)
+  has("stripeWebhook", /verifiedIdentityProfile/) &&
+  has("stripeWebhook", /expected_dob_match/) &&
+  has("stripeWebhook", /expected_name_match/) &&
+  has("stripeWebhook", /identityArchiveComplete/) &&
+  has("identityOriginals", /return hasDocument && hasSelfie/) &&
+  has("identityReview", /action !== "reject"/)
     ? liveIdentityVerified ? "PASS" : "PARTIAL" : "MISSING",
   "Fake traveler / forged-ID admission",
   liveIdentityVerified
@@ -296,3 +312,4 @@ const readiness = Object.entries(result.readinessLayers).map(([key, value]) => `
 const report = `# Travelyt Enhanced New-Dimensions Audit\n\n**Verdict: ${result.verdict}**\n\nThis audit evaluates the requested Aug 8 dimensions against current source${liveEvidence ? ` plus the time-bound live evidence snapshot dated ${liveEvidence.asOf}` : " only"}. It does not claim airline authorization or a live pilot.\n\n## Result\n\n- ${counts.PASS} pass, ${counts.PARTIAL} partial, ${counts.MISSING} missing workflow, ${counts.EXTERNAL} external gate\n- Source controls, production proof, integrated journeys, physical rehearsal, and external authority are reported as separate readiness layers. A source pass never substitutes for live evidence or third-party authorization.\n\n| Result | ID | Scenario |\n|---|---|---|\n${rows}\n\n## Readiness Layers\n\n${readiness}\n\n## Findings\n\n${details}\n\n## Boundary\n\nA counter refusal, absent RJ staff, screening rejection, or airline API ambiguity can be modelled in software; it cannot be passed as a real-world proof without the carrier's written procedure, API/sandbox behavior where applicable, bound insurance, and a timed physical rehearsal.\n\n## Non-actions\n\n${result.nonActions.map((item) => `- ${item}`).join("\n")}\n`;
 await writeFile(path.join(outputDir, "travelyt-enhanced-new-dimensions-report.md"), report);
 console.log(JSON.stringify({ verdict: result.verdict, counts: result.counts, outputDir }));
+if (counts.MISSING > 0) process.exitCode = 1;

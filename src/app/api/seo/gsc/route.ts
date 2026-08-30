@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   getAccessToken,
   gscConfig,
@@ -79,7 +79,9 @@ function groupByWordSet(rows: GscRow[]) {
 export async function GET(request: Request) {
   const limited = rateLimit(request, "seo-gsc:get", 60);
   if (limited) return limited;
-  if (!getAdminSession(request)) return json({ ok: false, error: "Admin access is required." }, 401);
+  if (!(await getVerifiedAdminSession(request))) {
+    return json({ ok: false, error: "Admin access is required." }, 401);
+  }
 
   const config = gscConfig();
   if (!config) return json({ ok: true, configured: false });

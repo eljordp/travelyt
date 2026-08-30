@@ -12,6 +12,7 @@ import {
 const original = {
   apiKey: process.env.RESEND_API_KEY,
   from: process.env.LEAD_FROM_EMAIL,
+  webhookSecret: process.env.RESEND_WEBHOOK_SECRET,
   fetch: globalThis.fetch,
 };
 const checks = [];
@@ -29,10 +30,13 @@ async function check(name, run) {
 await check("missing provider configuration is reported honestly", async () => {
   delete process.env.RESEND_API_KEY;
   delete process.env.LEAD_FROM_EMAIL;
+  delete process.env.RESEND_WEBHOOK_SECRET;
   assert.deepEqual(emailDeliveryReadiness(), {
     provider: "resend",
     apiKeyConfigured: false,
     fromAddressConfigured: false,
+    webhookSecretConfigured: false,
+    providerConfigHash: null,
   });
   assert.deepEqual(await sendTransactionalEmail({
     to: "test@example.com",
@@ -54,6 +58,7 @@ await check("implicit sender fallback is rejected", async () => {
 await check("configured provider sends through one bounded adapter", async () => {
   process.env.RESEND_API_KEY = "re_test_placeholder";
   process.env.LEAD_FROM_EMAIL = "Travelyt <info@travelyt.us>";
+  process.env.RESEND_WEBHOOK_SECRET = `whsec_${Buffer.alloc(32, 7).toString("base64")}`;
   let request;
   globalThis.fetch = async (url, init) => {
     request = { url, init };
@@ -69,13 +74,27 @@ await check("configured provider sends through one bounded adapter", async () =>
     replyTo: "reply@example.com",
     idempotencyKey: "booking-created:TVT-123",
   });
-  assert.deepEqual(result, { status: "sent", providerMessageId: "email_test_123" });
+  assert.deepEqual(result, { status: "accepted", providerMessageId: "email_test_123" });
   assert.equal(request.url, "https://api.resend.com/emails");
   assert.equal(request.init.headers["Idempotency-Key"], "booking-created:TVT-123");
   const body = JSON.parse(request.init.body);
   assert.deepEqual(body.to, ["first@example.com", "second@example.com"]);
   assert.equal(body.from, "Travelyt <info@travelyt.us>");
   assert.equal(body.reply_to, "reply@example.com");
+});
+
+await check("a provider 2xx without a message ID is not durable acceptance", async () => {
+  process.env.RESEND_API_KEY = "re_test_placeholder";
+  process.env.LEAD_FROM_EMAIL = "Travelyt <info@travelyt.us>";
+  globalThis.fetch = async () => new Response("{}", {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+  assert.deepEqual(await sendTransactionalEmail({
+    to: "test@example.com",
+    subject: "Test",
+    text: "Test",
+  }), { status: "failed", providerStatus: 200 });
 });
 
 await check("provider rejection remains a failed delivery", async () => {
@@ -95,9 +114,12 @@ await check("admin communications readiness requires durable current receipts", 
     "utf8"
   );
   assert.match(source, /from\("booking_payment_receipts"\)/);
-  assert.match(source, /eq\("status", "sent"\)/);
-  assert.match(source, /deliveryTested: Boolean\(latestPaymentEmailSentAt\)/);
-  assert.match(source, /latestDeliveryTestedAt: latestPaymentEmailSentAt/);
+  assert.match(source, /eq\("status", "delivered"\)/);
+  assert.match(source, /provider_config_hash/);
+  assert.match(source, /EMAIL_DELIVERY_PROOF_MAX_AGE_MS/);
+  assert.match(source, /deliveryTested: Boolean\(latestPaymentEmailDeliveredAt\)/);
+  assert.match(source, /latestDeliveryTestedAt: latestPaymentEmailDeliveredAt/);
+  assert.doesNotMatch(source, /eq\("status", "accepted"\)/);
   assert.match(source, /from\("phone_verification_receipts"\)/);
   assert.match(source, /phoneOtpProviderConfiguration\(/);
   assert.match(source, /\.eq\(\s*"provider_config_hash"/);
@@ -113,6 +135,8 @@ if (original.apiKey === undefined) delete process.env.RESEND_API_KEY;
 else process.env.RESEND_API_KEY = original.apiKey;
 if (original.from === undefined) delete process.env.LEAD_FROM_EMAIL;
 else process.env.LEAD_FROM_EMAIL = original.from;
+if (original.webhookSecret === undefined) delete process.env.RESEND_WEBHOOK_SECRET;
+else process.env.RESEND_WEBHOOK_SECRET = original.webhookSecret;
 globalThis.fetch = original.fetch;
 
 const failed = checks.filter((item) => !item.pass);

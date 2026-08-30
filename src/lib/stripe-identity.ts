@@ -3,10 +3,43 @@ import { getSiteUrl, getStripe } from "@/lib/stripe-server";
 
 export const STRIPE_IDENTITY_PROVIDER = "stripe_identity";
 
-export function verifiedDob(session: Stripe.Identity.VerificationSession) {
+export function verifiedIdentityProfile(session: Stripe.Identity.VerificationSession) {
   const dob = session.verified_outputs?.dob;
-  if (!dob?.year || !dob.month || !dob.day) return undefined;
-  return [dob.year, String(dob.month).padStart(2, "0"), String(dob.day).padStart(2, "0")].join("-");
+  const dateOfBirth = dob?.year && dob.month && dob.day
+    ? [dob.year, String(dob.month).padStart(2, "0"), String(dob.day).padStart(2, "0")].join("-")
+    : undefined;
+  return {
+    firstName: session.verified_outputs?.first_name?.trim() || undefined,
+    lastName: session.verified_outputs?.last_name?.trim() || undefined,
+    dateOfBirth,
+  };
+}
+
+export function verifiedDob(session: Stripe.Identity.VerificationSession) {
+  return verifiedIdentityProfile(session).dateOfBirth;
+}
+
+function normalizedIdentityName(value: string | undefined) {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+export function accountHolderNameMatchesVerifiedIdentity(input: {
+  accountHolderName: string;
+  verifiedFirstName?: string;
+  verifiedLastName?: string;
+}) {
+  const candidate = normalizedIdentityName(input.accountHolderName);
+  const first = normalizedIdentityName(input.verifiedFirstName);
+  const last = normalizedIdentityName(input.verifiedLastName);
+  if (!candidate || !first || !last) return false;
+  return candidate === `${first} ${last}` ||
+    (candidate.startsWith(`${first} `) && candidate.endsWith(` ${last}`));
 }
 
 export async function createStripeIdentitySession(input: {

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import {
+  getVerifiedAdminSession,
+  isVerifiedFullAdminSession,
+} from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
@@ -205,7 +208,7 @@ function cleanUrl(value: unknown, label: string) {
 export async function GET(request: Request) {
   const limited = rateLimit(request, "admin-seo:get", 60);
   if (limited) return limited;
-  if (!getAdminSession(request)) return bad("Admin access is required.", 401);
+  if (!(await getVerifiedAdminSession(request))) return bad("Admin access is required.", 401);
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("SEO backend is not configured.", 503);
@@ -239,7 +242,9 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const limited = rateLimit(request, "admin-seo:patch", 40);
   if (limited) return limited;
-  if (!isFullAdminSession(request)) return bad("Full admin access is required.", 403);
+  if (!(await isVerifiedFullAdminSession(request))) {
+    return bad("Full admin access is required.", 403);
+  }
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("SEO backend is not configured.", 503);

@@ -21,6 +21,13 @@ export type ArchiveOutcome = {
   retentionUntil: string;
 };
 
+export function identityArchiveComplete(outcome: ArchiveOutcome | null | undefined) {
+  if (!outcome) return false;
+  const hasDocument = outcome.paths.some((item) => item.kind === "document");
+  const hasSelfie = outcome.paths.some((item) => item.kind === "selfie");
+  return hasDocument && hasSelfie;
+}
+
 async function downloadStripeFile(fileId: string) {
   const restrictedKey = process.env.STRIPE_IDENTITY_RESTRICTED_KEY;
   if (!restrictedKey) {

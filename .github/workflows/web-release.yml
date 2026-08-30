@@ -1,0 +1,35 @@
+name: Web release verification
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "supabase/**"
+      - "simulations/**"
+      - "scripts/verify-release.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-release.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "supabase/**"
+      - "simulations/**"
+      - "scripts/verify-release.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-release.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:release

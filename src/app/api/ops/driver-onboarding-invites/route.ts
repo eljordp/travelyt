@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   AGENT_ONBOARDING_TTL_HOURS,
   generateOnboardingToken,
@@ -16,8 +16,8 @@ function bad(error: string, status = 400) {
 export async function GET(request: Request) {
   const limited = rateLimit(request, "ops:driver-onboarding-evidence", 40);
   if (limited) return limited;
-  const session = getAdminSession(request);
-  if (!session || !isFullAdminSession(request)) return bad("Full admin access is required.", 403);
+  const session = await getVerifiedAdminSession(request);
+  if (session?.role !== "admin") return bad("Full admin access is required.", 403);
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Driver onboarding is not configured.", 503);
   const driverAccessId = new URL(request.url).searchParams.get("driverAccessId")?.trim() ?? "";
@@ -71,11 +71,79 @@ export async function GET(request: Request) {
   });
 }
 
+export async function PATCH(request: Request) {
+  const limited = rateLimit(request, "ops:driver-onboarding-review", 40);
+  if (limited) return limited;
+  const session = await getVerifiedAdminSession(request);
+  if (session?.role !== "admin") return bad("Full admin access is required.", 403);
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return bad("Driver onboarding is not configured.", 503);
+
+  const body = (await request.json().catch(() => ({}))) as {
+    driverAccessId?: string;
+    itemType?: "evidence" | "training";
+    evidenceId?: string;
+    trainingVersion?: string;
+    decision?: "accepted" | "rejected";
+    note?: string;
+  };
+  const driverAccessId = body.driverAccessId?.trim() ?? "";
+  const note = body.note?.trim().slice(0, 500) ?? "";
+  if (!/^[0-9a-f-]{36}$/i.test(driverAccessId)) return bad("Select a valid driver account.");
+  if (body.decision !== "accepted" && body.decision !== "rejected") return bad("Select an evidence decision.");
+  if (body.decision === "rejected" && !note) return bad("A rejection note is required.");
+  const reviewedAt = new Date().toISOString();
+
+  if (body.itemType === "evidence") {
+    const evidenceId = body.evidenceId?.trim() ?? "";
+    if (!/^[0-9a-f-]{36}$/i.test(evidenceId)) return bad("Select a valid evidence item.");
+    const { data, error } = await supabase
+      .from("agent_evidence_uploads")
+      .update({
+        review_status: body.decision,
+        reviewed_at: reviewedAt,
+        reviewed_by: session.email,
+        review_note: note || null,
+      })
+      .eq("id", evidenceId)
+      .eq("driver_access_id", driverAccessId)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+    if (error) return bad("Could not save the evidence review.", 500);
+    if (!data) return bad("Evidence item was not found for this driver.", 404);
+    return NextResponse.json({ ok: true, itemType: "evidence", decision: body.decision });
+  }
+
+  if (body.itemType === "training") {
+    const trainingVersion = body.trainingVersion?.trim() ?? "";
+    if (!/^[A-Za-z0-9._-]{3,80}$/.test(trainingVersion)) return bad("Select a valid training record.");
+    const { data, error } = await supabase
+      .from("agent_training_completions")
+      .update({
+        review_status: body.decision,
+        reviewed_at: reviewedAt,
+        reviewed_by: session.email,
+        review_note: note || null,
+        updated_at: reviewedAt,
+      })
+      .eq("driver_access_id", driverAccessId)
+      .eq("training_version", trainingVersion)
+      .eq("passed", true)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+    if (error) return bad("Could not save the training review.", 500);
+    if (!data) return bad("Passed training record was not found for this driver.", 404);
+    return NextResponse.json({ ok: true, itemType: "training", decision: body.decision });
+  }
+
+  return bad("Select evidence or training to review.");
+}
+
 export async function POST(request: Request) {
   const limited = rateLimit(request, "ops:driver-onboarding-invites", 20);
   if (limited) return limited;
-  const session = getAdminSession(request);
-  if (!session || !isFullAdminSession(request)) return bad("Full admin access is required.", 403);
+  const session = await getVerifiedAdminSession(request);
+  if (session?.role !== "admin") return bad("Full admin access is required.", 403);
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Driver onboarding is not configured.", 503);
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const limited = rateLimit(request, "identity:review", 40);
   if (limited) return limited;
 
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session || session.role !== "admin") {
     return bad("Full admin access is required.", 403);
   }
@@ -25,25 +25,20 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     bookingId?: string;
     passengerId?: string;
-    action?: "verify" | "reject";
+    action?: "reject";
     reason?: string;
-    evidenceReference?: string;
   };
   const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";
   const passengerId = typeof body.passengerId === "string" ? body.passengerId.trim() : "";
   const action = body.action;
   const reason = typeof body.reason === "string" ? body.reason.trim().slice(0, 500) : "";
-  const evidenceReference = typeof body.evidenceReference === "string"
-    ? body.evidenceReference.trim().slice(0, 200)
-    : "";
 
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(bookingId)) return bad("Booking ID is invalid.");
   if (!/^[0-9a-f-]{36}$/i.test(passengerId)) return bad("Traveler ID is invalid.");
-  if (action !== "verify" && action !== "reject") return bad("Review action is invalid.");
-  if (action === "reject" && !reason) return bad("A rejection reason is required.");
-  if (action === "verify" && evidenceReference.length < 6) {
-    return bad("Record the document or approved-provider reference used for this review.");
+  if (action !== "reject") {
+    return bad("Only a provider-signed identity result can mark a traveler verified.", 403);
   }
+  if (!reason) return bad("A rejection reason is required.");
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
@@ -81,19 +76,17 @@ export async function POST(request: Request) {
   }
 
   const reviewedAt = new Date().toISOString();
-  const status = action === "verify" ? "verified" : "rejected";
   const { error: reviewError } = await supabase
     .from("identity_verifications")
     .update({
-      status,
-      verified_at: action === "verify" ? reviewedAt : null,
-      liveness_status: action === "verify" ? "passed" : "failed",
+      status: "rejected",
+      verified_at: null,
+      liveness_status: "failed",
       metadata: {
         ...(verification.metadata ?? {}),
         reviewed_by: session.email,
         reviewed_at: reviewedAt,
-        review_reason: reason || undefined,
-        review_evidence_reference: evidenceReference || undefined,
+        review_reason: reason,
         claimed_date_of_birth: passenger.dateOfBirth,
         claimed_relationship: passenger.relationship,
         raw_document_stored_by_travelyt: false,
@@ -107,8 +100,8 @@ export async function POST(request: Request) {
     item.id === passengerId
       ? {
           ...item,
-          verificationStatus: status,
-          identityVerifiedAt: action === "verify" ? reviewedAt : undefined,
+          verificationStatus: "rejected" as const,
+          identityVerifiedAt: undefined,
         }
       : item
   );
@@ -125,8 +118,8 @@ export async function POST(request: Request) {
     passenger: {
       id: passenger.id,
       name: passengerDisplayName(passenger),
-      verificationStatus: status,
-      identityVerifiedAt: action === "verify" ? reviewedAt : undefined,
+      verificationStatus: "rejected",
+      identityVerifiedAt: undefined,
     },
   });
 }

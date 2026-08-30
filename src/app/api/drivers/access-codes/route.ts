@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   createDriverAccessCode,
   listDriverAccessCodes,
@@ -12,8 +12,8 @@ function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
-function requireAdmin(request: Request) {
-  const session = getAdminSession(request);
+async function requireAdmin(request: Request) {
+  const session = await getVerifiedAdminSession(request);
   if (!session) return { session: null, response: bad("Admin access is required.", 401) };
   return { session, response: null };
 }
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const limited = rateLimit(request, "drivers:access-codes:get", 60);
   if (limited) return limited;
 
-  const { response } = requireAdmin(request);
+  const { response } = await requireAdmin(request);
   if (response) return response;
 
   const { rows, error } = await listDriverAccessCodes();
@@ -34,9 +34,9 @@ export async function POST(request: Request) {
   const limited = rateLimit(request, "drivers:access-codes:post", 12);
   if (limited) return limited;
 
-  const { session, response } = requireAdmin(request);
+  const { session, response } = await requireAdmin(request);
   if (response) return response;
-  if (!isFullAdminSession(request)) {
+  if (session?.role !== "admin") {
     return bad("Only admin can create driver access codes.", 403);
   }
 
@@ -76,9 +76,9 @@ export async function PATCH(request: Request) {
   const limited = rateLimit(request, "drivers:access-codes:patch", 20);
   if (limited) return limited;
 
-  const { session, response } = requireAdmin(request);
+  const { session, response } = await requireAdmin(request);
   if (response) return response;
-  if (!isFullAdminSession(request)) {
+  if (session?.role !== "admin") {
     return bad("Only admin can revoke driver access codes.", 403);
   }
 

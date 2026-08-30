@@ -15,6 +15,7 @@ export type DriverAuthorization = {
   driverPhone?: string;
   driverRole?: string;
   driverAccessId?: string;
+  driverSessionVersion?: number;
   perDriverCode: boolean;
   source?: "session" | "database" | "env";
 };
@@ -275,6 +276,7 @@ export async function verifyDriverCredentials(
       driverPhone: row.driver_phone ?? undefined,
       driverRole: row.role,
       driverAccessId: row.id,
+      driverSessionVersion: row.code_rotation_count ?? 0,
       perDriverCode: true,
       source: "database",
     };
@@ -313,6 +315,7 @@ export function createDriverSession(driver: DriverAuthorization) {
       driverPhone: driver.driverPhone,
       driverRole: driver.driverRole,
       driverAccessId: driver.driverAccessId,
+      driverSessionVersion: driver.driverSessionVersion,
       exp: Math.floor(Date.now() / 1000) + DRIVER_SESSION_TTL_SECONDS,
     })
   ).toString("base64url");
@@ -358,6 +361,7 @@ export function getDriverSession(request: Request): DriverAuthorization {
       driverPhone?: string;
       driverRole?: string;
       driverAccessId?: string;
+      driverSessionVersion?: number;
       exp?: number;
     };
     if (!decoded.driverName || !decoded.exp) {
@@ -373,6 +377,7 @@ export function getDriverSession(request: Request): DriverAuthorization {
       driverPhone: decoded.driverPhone,
       driverRole: decoded.driverRole,
       driverAccessId: decoded.driverAccessId,
+      driverSessionVersion: decoded.driverSessionVersion,
       perDriverCode: true,
       source: "session",
     };
@@ -385,7 +390,41 @@ export async function authorizeDriverRequest(
   request: Request
 ): Promise<DriverAuthorization> {
   const session = getDriverSession(request);
-  if (session.ok) return session;
+  if (session.ok && session.driverAccessId) {
+    const supabase = getSupabaseAdmin();
+    if (supabase) {
+      const { data: current, error } = await supabase
+        .from("driver_access_codes")
+        .select("id, driver_name, driver_email, driver_phone, role, status, expires_at, code_rotation_count")
+        .eq("id", session.driverAccessId)
+        .maybeSingle<Pick<DriverAccessCodeRow,
+          "id" | "driver_name" | "driver_email" | "driver_phone" | "role" | "status" | "expires_at" | "code_rotation_count"
+        >>();
+      const currentActive = Boolean(
+        !error &&
+        current &&
+        current.status === "active" &&
+        (!current.expires_at || Date.parse(current.expires_at) > Date.now()) &&
+        canonicalDriverName(current.driver_name) === canonicalDriverName(session.driverName ?? "") &&
+        current.code_rotation_count === session.driverSessionVersion
+      );
+      if (currentActive && current) {
+        return {
+          ok: true,
+          driverName: current.driver_name,
+          driverEmail: current.driver_email ?? undefined,
+          driverPhone: current.driver_phone ?? undefined,
+          driverRole: current.role,
+          driverAccessId: current.id,
+          driverSessionVersion: current.code_rotation_count,
+          perDriverCode: true,
+          source: "session",
+        };
+      }
+    }
+  } else if (session.ok && process.env.TRAVELYT_ALLOW_LEGACY_DRIVER_CODE === "true") {
+    return session;
+  }
 
   const driverCode = request.headers.get("x-travelyt-driver-code")?.trim() ?? "";
   const driverName = request.headers.get("x-travelyt-driver-name")?.trim() ?? "";

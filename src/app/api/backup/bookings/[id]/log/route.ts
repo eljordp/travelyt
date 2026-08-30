@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import {
   appendBackupLog,
   type BackupLogInput,
@@ -31,7 +31,7 @@ export async function POST(
   const limited = rateLimit(request, "backup:log", 60);
   if (limited) return limited;
 
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) return bad("Backup ops access is required.", 401);
 
   try {

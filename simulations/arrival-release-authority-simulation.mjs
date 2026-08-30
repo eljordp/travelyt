@@ -19,7 +19,7 @@ const tests = [];
 const test = (name, run) => tests.push({ name, run });
 
 test("only a full admin can mutate release authority", () => {
-  assert.match(route, /isFullAdminSession\(request\)/);
+  assert.match(route, /await getVerifiedAdminSession\(request\)/);
   assert.match(route, /Full admin access is required/);
 });
 

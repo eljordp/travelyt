@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 function bad(error: string, status = 400) { return NextResponse.json({ ok: false, error }, { status }); }
 export async function POST(request: Request) {
-  const session = getAdminSession(request); if (!session || session.role !== "admin") return bad("Full admin access is required.", 403);
+  const session = await getVerifiedAdminSession(request); if (!session || session.role !== "admin") return bad("Full admin access is required.", 403);
   const supabase = getSupabaseAdmin(); const stripe = getStripe(); if (!supabase || !stripe) return bad("Refund service is not configured.", 503);
   const body = await request.json().catch(() => ({})) as { bookingId?: string; paymentIntentId?: string; amountCents?: number; reason?: string; idempotencyKey?: string };
   const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : ""; const paymentIntentId = typeof body.paymentIntentId === "string" ? body.paymentIntentId.trim() : "";

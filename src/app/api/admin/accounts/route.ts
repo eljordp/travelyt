@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isFullAdminSession } from "@/lib/admin-auth";
+import { isVerifiedFullAdminSession } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
@@ -32,7 +32,7 @@ function accountStatus(input: {
 export async function GET(request: Request) {
   const limited = rateLimit(request, "admin:accounts", 30);
   if (limited) return limited;
-  if (!isFullAdminSession(request)) {
+  if (!(await isVerifiedFullAdminSession(request))) {
     return NextResponse.json({ ok: false, error: "Full admin access required." }, { status: 403 });
   }
 

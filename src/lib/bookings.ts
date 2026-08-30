@@ -476,9 +476,10 @@ export async function createBooking(
     promoCode?: string;
     expressPickup?: boolean;
     flightTime?: string;
+    coverageAccepted?: boolean;
   }
 ): Promise<Booking> {
-  const { expressPickup, flightTime, ...bookingData } = data;
+  const { expressPickup, flightTime, coverageAccepted, ...bookingData } = data;
   const priceBreakdown = calcPriceBreakdown(
     data.bags,
     data.service,
@@ -490,18 +491,7 @@ export async function createBooking(
     priceBreakdown.promoEligibleCents,
     promoCode
   );
-  const notes = [
-    expressPickup ? "Express pickup requested." : "",
-    typeof data.distanceMiles === "number"
-      ? `Estimated airport distance: ${data.distanceMiles} miles.`
-      : "",
-    priceBreakdown.distanceSurchargeCents > 0
-      ? `Distance surcharge: ${formatPrice(priceBreakdown.distanceSurchargeCents)} for ${priceBreakdown.extraDistanceMiles} miles beyond ${priceBreakdown.includedDistanceMiles} at ${formatPrice(priceBreakdown.distanceRateCents)}/mi.`
-      : "",
-    bookingData.notes,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const notes = bookingData.notes?.trim();
   const normalizedPassengers = normalizeBookingPassengers(data.passengers, {
     accountHolderName: data.name,
     accountHolderEmail: data.email,
@@ -531,6 +521,7 @@ export async function createBooking(
       ...booking,
       expressPickup,
       flightTime,
+      coverageAccepted,
       accessToken: getStoredAccessToken(booking.id),
       source: "quote-form",
     }),

@@ -7,6 +7,7 @@ import {
   verifyDriverCredentials,
 } from "@/lib/driver-access-server";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
@@ -34,6 +35,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "drivers:session", 12);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "drivers:session", 12, 60_000);
+  if (durableLimited) return durableLimited;
 
   try {
     const body = (await request.json()) as {

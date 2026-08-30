@@ -5,17 +5,19 @@ import {
   type PaymentConfirmationBooking,
 } from "@/lib/payment-confirmation-copy";
 import {
+  emailProviderConfigHash,
   sendTransactionalEmail,
   type TransactionalEmailResult,
 } from "@/lib/transactional-email";
 
 function deliveryPatch(result: TransactionalEmailResult, now = new Date()) {
-  if (result.status === "sent") {
+  if (result.status === "accepted") {
     return {
-      status: "sent",
-      sent_at: now.toISOString(),
+      status: "accepted",
+      accepted_at: now.toISOString(),
+      sent_at: null,
       next_attempt_at: null,
-      provider_message_id: result.providerMessageId ?? null,
+      provider_message_id: result.providerMessageId,
       provider_status: null,
       last_error: null,
     };
@@ -23,6 +25,7 @@ function deliveryPatch(result: TransactionalEmailResult, now = new Date()) {
   if (result.status === "not_configured") {
     return {
       status: "not_configured",
+      accepted_at: null,
       sent_at: null,
       next_attempt_at: new Date(now.getTime() + 60 * 60_000).toISOString(),
       provider_message_id: null,
@@ -32,6 +35,7 @@ function deliveryPatch(result: TransactionalEmailResult, now = new Date()) {
   }
   return {
     status: "failed",
+    accepted_at: null,
     sent_at: null,
     next_attempt_at: new Date(now.getTime() + 5 * 60_000).toISOString(),
     provider_message_id: null,
@@ -87,10 +91,12 @@ export async function sendBookingPaymentConfirmation(input: {
     idempotencyKey: `payment-confirmation:${input.booking.id}`,
   });
   const patch = deliveryPatch(result);
+  const providerConfigHash = emailProviderConfigHash();
   const { error: updateError } = await supabase
     .from("booking_payment_receipts")
     .update({
       ...patch,
+      provider_config_hash: providerConfigHash,
       claim_token: null,
       claimed_at: null,
     })

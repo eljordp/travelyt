@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
-import { getAdminSession, isFullAdminSession } from "@/lib/admin-auth";
+import { getVerifiedAdminSession } from "@/lib/admin-auth";
 import { createDriverAccessCode } from "@/lib/driver-access-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
 
@@ -83,6 +84,8 @@ function required(value: unknown, label: string): string | null {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "driver-applications:post", 5);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "driver-applications:post", 5, 60_000);
+  if (durableLimited) return durableLimited;
 
   try {
     const body = (await request.json()) as ApplicationBody;
@@ -207,7 +210,7 @@ export async function GET(request: Request) {
   const limited = rateLimit(request, "driver-applications:get", 60);
   if (limited) return limited;
 
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) {
     return NextResponse.json(
       { ok: false, error: "Admin access is required." },
@@ -243,14 +246,14 @@ export async function PATCH(request: Request) {
   const limited = rateLimit(request, "driver-applications:patch", 20);
   if (limited) return limited;
 
-  const session = getAdminSession(request);
+  const session = await getVerifiedAdminSession(request);
   if (!session) {
     return NextResponse.json(
       { ok: false, error: "Admin access is required." },
       { status: 401 }
     );
   }
-  if (!isFullAdminSession(request)) {
+  if (session.role !== "admin") {
     return NextResponse.json(
       { ok: false, error: "Only admin can review driver applications." },
       { status: 403 }

@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { durableRateLimit } from "@/lib/durable-rate-limit";
 import { getRequestUser, getSupabaseAdmin } from "@/lib/supabase-server";
 import { isBookingPassengerArray, passengerDisplayName } from "@/lib/passengers";
 import { trustedUserRole } from "@/lib/auth-policy";
@@ -10,16 +11,20 @@ import {
   validConsentSignature,
 } from "@/lib/identity-consent";
 import {
+  accountHolderNameMatchesVerifiedIdentity,
   createStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
-  verifiedDob,
+  verifiedIdentityProfile,
 } from "@/lib/stripe-identity";
 import {
   providerIdentityVerdict,
   requireVerifiedIdentityGate,
   type StripeIdentityEventType,
 } from "@/lib/identity-verdict";
-import { archiveIdentityOriginals } from "@/lib/identity-originals";
+import {
+  archiveIdentityOriginals,
+  identityArchiveComplete,
+} from "@/lib/identity-originals";
 import { getStripe } from "@/lib/stripe-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
 
@@ -64,7 +69,7 @@ async function sendAdultTravelerInvite(data: {
     idempotencyKey: `traveler-invite:${data.bookingId}:${hash(data.token).slice(0, 24)}`,
   });
   if (result.status === "failed") console.error("Adult traveler invite delivery failed", result);
-  return result.status === "sent";
+  return result.status === "accepted";
 }
 
 async function reconcileExistingProfileIdentity(input: {
@@ -73,6 +78,7 @@ async function reconcileExistingProfileIdentity(input: {
   verificationId: string;
   providerSessionId: string;
   userId: string;
+  email?: string;
   metadata: Record<string, unknown> | null;
 }) {
   const session = await input.stripe.identity.verificationSessions.retrieve(
@@ -108,8 +114,9 @@ async function reconcileExistingProfileIdentity(input: {
       console.error("Identity original archive failed during return reconciliation", error);
     }
   }
-  const archived = Boolean(archive && archive.stored > 0);
+  const archived = identityArchiveComplete(archive);
   verdict = requireVerifiedIdentityGate(verdict, archived);
+  const verifiedProfile = verifiedIdentityProfile(session);
 
   const { error: updateError } = await input.supabase
     .from("identity_verifications")
@@ -130,7 +137,9 @@ async function reconcileExistingProfileIdentity(input: {
         ...(input.metadata ?? {}),
         stripe_status: session.status,
         stripe_livemode: session.livemode,
-        verified_dob: verifiedDob(session),
+        verified_dob: verifiedProfile.dateOfBirth,
+        verified_first_name: verifiedProfile.firstName,
+        verified_last_name: verifiedProfile.lastName,
         provider_error_code: session.last_error?.code ?? null,
         raw_document_stored_by_travelyt: archived,
         archive_required_before_custody: true,
@@ -145,16 +154,33 @@ async function reconcileExistingProfileIdentity(input: {
   if (verdict.status === "verified") {
     const { data: bookings, error: bookingsError } = await input.supabase
       .from("bookings")
-      .select("id, passenger_manifest")
+      .select("id, customer_name, email, passenger_manifest")
       .eq("customer_user_id", input.userId)
       .is("customer_identity_verified_at", null)
-      .returns<Array<{ id: string; passenger_manifest: unknown }>>();
+      .returns<Array<{ id: string; customer_name: string; email: string; passenger_manifest: unknown }>>();
     if (bookingsError) throw bookingsError;
     for (const booking of bookings ?? []) {
+      const emailMatches = Boolean(
+        input.email && booking.email.trim().toLowerCase() === input.email.trim().toLowerCase()
+      );
+      const nameMatches = accountHolderNameMatchesVerifiedIdentity({
+        accountHolderName: booking.customer_name,
+        verifiedFirstName: verifiedProfile.firstName,
+        verifiedLastName: verifiedProfile.lastName,
+      });
+      if (!emailMatches || !nameMatches || !verifiedProfile.dateOfBirth) continue;
       const passengerManifest = isBookingPassengerArray(booking.passenger_manifest)
         ? booking.passenger_manifest.map((passenger) =>
             passenger.category === "account_holder"
-              ? { ...passenger, identityVerifiedAt: now, verificationStatus: "verified" as const }
+              ? {
+                  ...passenger,
+                  firstName: verifiedProfile.firstName || passenger.firstName,
+                  lastName: verifiedProfile.lastName || passenger.lastName,
+                  email: input.email || passenger.email,
+                  dateOfBirth: verifiedProfile.dateOfBirth,
+                  identityVerifiedAt: now,
+                  verificationStatus: "verified" as const,
+                }
               : passenger
           )
         : booking.passenger_manifest;
@@ -172,6 +198,8 @@ async function reconcileExistingProfileIdentity(input: {
 export async function POST(request: Request) {
   const limited = rateLimit(request, "identity:request", 10);
   if (limited) return limited;
+  const durableLimited = await durableRateLimit(request, "identity:request", 10, 60_000);
+  if (durableLimited) return durableLimited;
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return bad("Identity backend is not configured.", 503);
@@ -365,6 +393,7 @@ export async function POST(request: Request) {
           verificationId: existing.id,
           providerSessionId: existing.provider_session_id,
           userId: user.id,
+          email: user.email ?? undefined,
           metadata: existing.metadata,
         });
         return NextResponse.json({ ok: true, ...reconciled, existing: true });

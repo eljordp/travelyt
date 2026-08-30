@@ -11,9 +11,9 @@ function check(name, pass, detail) {
 }
 
 const migration = await readFile(path.join(ROOT, "supabase/migrations/030_agent_assignment_acceptance.sql"), "utf8");
+const transitionMigration = await readFile(path.join(ROOT, "supabase/migrations/045_atomic_agent_assignment_transitions.sql"), "utf8");
 const personMigration = await readFile(path.join(ROOT, "supabase/migrations/031_identity_consent_retention_and_distinct_agents.sql"), "utf8");
 const policy = await readFile(path.join(ROOT, "src/lib/agent-assignment.ts"), "utf8");
-const opsRoute = await readFile(path.join(ROOT, "src/app/api/ops/agent-assignments/route.ts"), "utf8");
 const driverRoute = await readFile(path.join(ROOT, "src/app/api/drivers/assignments/route.ts"), "utf8");
 const bookingRoute = await readFile(path.join(ROOT, "src/app/api/bookings/route.ts"), "utf8");
 const adminPage = await readFile(path.join(ROOT, "src/app/admin/page.tsx"), "utf8");
@@ -39,13 +39,13 @@ check("one active assignment", migration.includes("booking_agent_assignments_one
 check("acceptance evidence constraint", migration.includes("availabilityConfirmed") && migration.includes("sealKitReady") && migration.includes("vehicleReady"), "Database acceptance requires all four confirmations.");
 check("paid booking gate", policy.includes("Booking must be paid and confirmed before assignment"), "Unpaid bookings are blocked.");
 check("traveler readiness gate", policy.includes("passengerManifestCustodyBlockers"), "Every traveler is checked before assignment.");
-check("schedule conflict gate", opsRoute.includes("already has an active primary or backup assignment"), "Primary and backup schedules are checked before assignment.");
-check("person-bound route gate", opsRoute.includes("differentAgentPersonBlockers") && opsRoute.includes("person_key_hash"), "The assignment route rejects duplicate-person credentials before assignment.");
+check("schedule conflict gate", transitionMigration.includes("already has an active primary or backup assignment") && transitionMigration.includes("for update"), "Primary and backup schedules are checked under database row locks.");
+check("person-bound route gate", transitionMigration.includes("person_key_hash") && transitionMigration.includes("different verified people"), "The atomic assignment transition rejects duplicate-person credentials.");
 check("current evidence gate", policy.includes("Agent training evidence is missing or expired") && policy.includes("Agent insurance coverage evidence is missing or expired"), "Expired training or insurance blocks assignment.");
 check("provider identity gate", readinessRoute.includes("STRIPE_IDENTITY_PROVIDER") && readinessRoute.includes("required before activation"), "Admin text cannot replace provider-backed agent identity.");
 check("individual account gate", driverRoute.includes("individual database-backed agent session is required"), "Shared or environment-only driver access cannot accept.");
-check("primary-only acceptance", driverRoute.includes("Only the assigned primary agent can respond"), "Backup cannot silently self-promote.");
-check("decline reason", driverRoute.includes("Record a reason before declining"), "Declines are auditable.");
+check("primary-only acceptance", transitionMigration.includes("Only the assigned primary driver can respond"), "Backup cannot silently self-promote.");
+check("decline reason", transitionMigration.includes("Record a reason before declining"), "Declines are auditable.");
 check("deadline fail closed", driverRoute.includes("acceptance deadline passed"), "Expired assignment requires dispatch action.");
 check("legacy assignment blocked", bookingRoute.includes("reservedAgentAssignmentStatus"), "Generic booking patches cannot bypass the checkpoint.");
 check("dispatcher selects two agents", adminPage.includes("Primary agent") && adminPage.includes("Backup agent"), "Admin UI requires both roles.");

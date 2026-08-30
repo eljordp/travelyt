@@ -14,7 +14,7 @@ const [route, activityRoute, loginPage, adminLoginRoute, adminPage, migration] =
 ]);
 
 test("account inventory is restricted to full admins", () => {
-  assert.match(route, /isFullAdminSession\(request\)/);
+  assert.match(route, /await isVerifiedFullAdminSession\(request\)/);
   assert.match(route, /Full admin access required/);
 });
 
