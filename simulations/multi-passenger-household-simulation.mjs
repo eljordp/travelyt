@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
+  passengerReviewContactLabel,
 } from "../src/lib/passengers.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,6 +44,7 @@ const mother = {
   bags: 1,
   householdAttestedAt: now,
 };
+
 const adultSon = {
   id: ids.adultSon,
   firstName: "Tariq",
@@ -124,6 +126,35 @@ const tests = [];
 function test(name, run) {
   tests.push({ name, run });
 }
+
+test("Review copy distinguishes a household spouse, minor, and independent adult without email", () => {
+  assert.equal(
+    passengerReviewContactLabel({ ...mother, email: undefined }, travelDate),
+    "Household-authorized spouse — no separate email",
+  );
+  assert.equal(
+    passengerReviewContactLabel({ ...minorChildren[0], email: undefined }, travelDate),
+    "Guardian-managed minor — no separate email",
+  );
+  assert.equal(
+    passengerReviewContactLabel({ ...adultSon, email: undefined }, travelDate),
+    "Separate email required before submission",
+  );
+  assert.equal(
+    passengerReviewContactLabel({
+      relationship: "spouse",
+      dateOfBirth: "2010-08-15",
+    }, travelDate),
+    "Guardian-managed minor — no separate email",
+  );
+  assert.equal(
+    passengerReviewContactLabel({
+      relationship: "child",
+      dateOfBirth: "2008-08-15",
+    }, travelDate),
+    "Separate email required before submission",
+  );
+});
 
 test("Mo household normalizes to six travelers and seven assigned bags", () => {
   const passengers = expectPassengers(normalize());

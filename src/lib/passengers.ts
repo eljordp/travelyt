@@ -155,6 +155,24 @@ export function ageOnDate(dateOfBirth: string, travelDate: string) {
   return age;
 }
 
+export function passengerReviewContactLabel(
+  passenger: Pick<BookingPassengerInput, "email" | "relationship" | "dateOfBirth">,
+  travelDate: string
+) {
+  const email = passenger.email?.trim();
+  if (email) return email;
+  const age = passenger.dateOfBirth
+    ? ageOnDate(passenger.dateOfBirth, travelDate)
+    : undefined;
+  if (age !== undefined && age < 18) {
+    return "Guardian-managed minor — no separate email";
+  }
+  if (passenger.relationship === "spouse") {
+    return "Household-authorized spouse — no separate email";
+  }
+  return "Separate email required before submission";
+}
+
 export function passengerVerificationMethod(input: { category: PassengerCategory; relationship: PassengerRelationship }): PassengerVerificationMethod {
   if (input.category === "account_holder") return "primary_account";
   if (input.category === "minor") return "guardian";

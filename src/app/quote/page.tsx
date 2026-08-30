@@ -40,6 +40,7 @@ import {
 import {
   MAX_BOOKING_BAGS,
   normalizeBookingPassengers,
+  passengerReviewContactLabel,
 } from "@/lib/passengers";
 import AppChrome from "@/components/AppChrome";
 
@@ -1129,7 +1130,7 @@ export default function QuotePage() {
                                   {traveler.relationship} · DOB {traveler.dateOfBirth}
                                 </p>
                                 <p className="mt-0.5 break-all text-xs text-navy/60">
-                                  {traveler.email || "Guardian-managed minor — no separate email"}
+                                  {passengerReviewContactLabel(traveler, form.date)}
                                 </p>
                               </div>
                               <span className="shrink-0 text-xs font-semibold text-navy/70">
