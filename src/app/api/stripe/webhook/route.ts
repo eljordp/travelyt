@@ -9,6 +9,7 @@ import {
   expectedDobMatch,
   providerIdentityVerdict,
   requireVerifiedIdentityGate,
+  verifiedIdentityProfileComplete,
   type StripeIdentityEventType,
 } from "@/lib/identity-verdict";
 import {
@@ -94,6 +95,7 @@ async function reconcileIdentity(
 
   const now = new Date().toISOString();
   const verifiedProfile = verifiedIdentityProfile(session);
+  const profileComplete = verifiedIdentityProfileComplete(verifiedProfile);
   const dob = verifiedProfile.dateOfBirth;
   const currentProviderEvent: StripeIdentityEventType | null =
     session.status === "verified"
@@ -133,8 +135,6 @@ async function reconcileIdentity(
         verifiedLastName: verifiedProfile.lastName,
       })
     : true;
-  verdict = requireVerifiedIdentityGate(verdict, dobMatches !== false && nameMatches);
-
   // Keep Travelyt's own copies of the capture originals once verified —
   // Stripe alone holding the images is not acceptable for chain of custody.
   let archive: ArchiveOutcome | null = null;
@@ -153,7 +153,10 @@ async function reconcileIdentity(
     }
   }
   const archived = identityArchiveComplete(archive);
-  verdict = requireVerifiedIdentityGate(verdict, archived);
+  verdict = requireVerifiedIdentityGate(
+    verdict,
+    profileComplete && dobMatches !== false && nameMatches && archived,
+  );
 
   // The freshly retrieved provider session is authoritative. Never let a late
   // requires-input/canceled event regress an identity Travelyt already sealed
@@ -182,6 +185,7 @@ async function reconcileIdentity(
         verified_dob: dob,
         verified_first_name: verifiedProfile.firstName,
         verified_last_name: verifiedProfile.lastName,
+        verified_profile_complete: profileComplete,
         expected_dob_match: dobMatches,
         expected_name_match: nameMatches,
         provider_error_code: session.last_error?.code ?? null,

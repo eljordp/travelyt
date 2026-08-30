@@ -19,6 +19,7 @@ import {
 import {
   providerIdentityVerdict,
   requireVerifiedIdentityGate,
+  verifiedIdentityProfileComplete,
   type StripeIdentityEventType,
 } from "@/lib/identity-verdict";
 import {
@@ -94,7 +95,12 @@ async function reconcileExistingProfileIdentity(input: {
           ? "identity.verification_session.canceled"
           : null;
   if (!eventType) {
-    return { status: "pending", url: session.url };
+    return {
+      status: "pending",
+      url: session.url,
+      freshAttemptRequired: false,
+      freshAttemptReason: null,
+    };
   }
 
   const now = new Date().toISOString();
@@ -115,8 +121,9 @@ async function reconcileExistingProfileIdentity(input: {
     }
   }
   const archived = identityArchiveComplete(archive);
-  verdict = requireVerifiedIdentityGate(verdict, archived);
   const verifiedProfile = verifiedIdentityProfile(session);
+  const profileComplete = verifiedIdentityProfileComplete(verifiedProfile);
+  verdict = requireVerifiedIdentityGate(verdict, archived && profileComplete);
 
   const { error: updateError } = await input.supabase
     .from("identity_verifications")
@@ -140,6 +147,7 @@ async function reconcileExistingProfileIdentity(input: {
         verified_dob: verifiedProfile.dateOfBirth,
         verified_first_name: verifiedProfile.firstName,
         verified_last_name: verifiedProfile.lastName,
+        verified_profile_complete: profileComplete,
         provider_error_code: session.last_error?.code ?? null,
         raw_document_stored_by_travelyt: archived,
         archive_required_before_custody: true,
@@ -192,7 +200,24 @@ async function reconcileExistingProfileIdentity(input: {
     }
   }
 
-  return { status: verdict.status, url: null };
+  const freshAttemptRequired =
+    session.status === "canceled" ||
+    (session.status === "verified" && !profileComplete) ||
+    (session.status === "requires_input" && !session.url);
+
+  return {
+    status: verdict.status,
+    url: session.status === "requires_input" ? session.url : null,
+    freshAttemptRequired,
+    freshAttemptReason:
+      session.status === "verified" && !profileComplete
+        ? "provider_verified_profile_incomplete"
+        : session.status === "canceled"
+          ? "provider_session_canceled"
+          : session.status === "requires_input" && !session.url
+            ? "provider_session_not_resumable"
+            : null,
+  };
 }
 
 export async function POST(request: Request) {
@@ -378,6 +403,8 @@ export async function POST(request: Request) {
       console.error("Stripe Identity lookup failed", existingError);
       return bad("Could not check verification status.", 500);
     }
+    let retryOfVerificationId: string | null = null;
+    let retryReason: string | null = null;
     if (existing?.provider_session_id) {
       const { error: consentUpdateError } = await supabase
         .from("identity_verifications")
@@ -396,7 +423,11 @@ export async function POST(request: Request) {
           email: user.email ?? undefined,
           metadata: existing.metadata,
         });
-        return NextResponse.json({ ok: true, ...reconciled, existing: true });
+        if (!reconciled.freshAttemptRequired) {
+          return NextResponse.json({ ok: true, ...reconciled, existing: true });
+        }
+        retryOfVerificationId = existing.id;
+        retryReason = reconciled.freshAttemptReason;
       } catch (error) {
         console.error("Stripe Identity session retrieval failed", error);
         return bad("Could not reopen the secure identity session.", 502);
@@ -420,6 +451,12 @@ export async function POST(request: Request) {
           source: "profile",
           requested_by: user.id,
           raw_document_stored_by_travelyt: false,
+          ...(retryOfVerificationId
+            ? {
+                retry_of_verification_id: retryOfVerificationId,
+                retry_reason: retryReason,
+              }
+            : {}),
         },
       })
       .select("id, status")
@@ -449,6 +486,12 @@ export async function POST(request: Request) {
             requested_by: user.id,
             stripe_livemode: session.livemode,
             raw_document_stored_by_travelyt: false,
+            ...(retryOfVerificationId
+              ? {
+                  retry_of_verification_id: retryOfVerificationId,
+                  retry_reason: retryReason,
+                }
+              : {}),
           },
         })
         .eq("id", data.id);

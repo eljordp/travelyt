@@ -12,6 +12,7 @@ function check(name, pass, detail) {
 
 const migration = await readFile(path.join(ROOT, "supabase/migrations/031_identity_consent_retention_and_distinct_agents.sql"), "utf8");
 const retentionBackfill = await readFile(path.join(ROOT, "supabase/migrations/032_backfill_identity_retention_queue.sql"), "utf8");
+const profileCompletenessMigration = await readFile(path.join(ROOT, "supabase/migrations/047_verified_identity_profile_completeness.sql"), "utf8");
 const consent = await readFile(path.join(ROOT, "src/lib/identity-consent.ts"), "utf8");
 const profile = await readFile(path.join(ROOT, "src/app/profile/page.tsx"), "utf8");
 const traveler = await readFile(path.join(ROOT, "src/app/verify-traveler/page.tsx"), "utf8");
@@ -30,7 +31,9 @@ check("adult electronic signature", traveler.includes("Legal name - electronic s
 check("server consent gate", verificationRequest.includes("validConsentSignature") && verificationRequest.includes("consent_ip_hash"), "Client text cannot bypass the server-side signed-consent requirement.");
 check("adult server consent gate", travelerRoute.includes("validConsentSignature") && travelerRoute.includes("consent_user_agent_hash"), "Adult consent keeps versioned request evidence.");
 check("bounded disclosure", consent.includes("approved identity-verification provider") && consent.includes("only when required and authorized"), "Disclosure language does not claim blanket carrier sharing.");
-check("archive fail closed", webhook.includes("requireVerifiedIdentityGate(verdict, archived)") && webhook.includes("archive_required_before_custody") && identityVerdict.includes('status: "manual_review"'), "Provider verification cannot clear custody when required originals were not archived.");
+check("profile and archive fail closed", webhook.includes("profileComplete && dobMatches !== false && nameMatches && archived") && verificationRequest.includes("archived && profileComplete") && identityVerdict.includes("verifiedIdentityProfileComplete") && webhook.includes("archive_required_before_custody") && identityVerdict.includes('status: "manual_review"'), "Provider verification cannot clear custody without complete verified claims and required originals.");
+check("database verified-profile guard", profileCompletenessMigration.includes("identity_verifications_verified_profile_complete_check") && profileCompletenessMigration.includes("verified_record_missing_required_profile_or_archive") && profileCompletenessMigration.includes("jsonb_path_exists"), "The database rejects Stripe verified status without name, DOB, document, and selfie evidence.");
+check("incomplete provider result can restart safely", verificationRequest.includes("freshAttemptRequired") && verificationRequest.includes("provider_verified_profile_incomplete") && verificationRequest.includes("retry_of_verification_id") && verificationRequest.includes("if (!reconciled.freshAttemptRequired)"), "A completed provider session with incomplete verified claims creates a new consented attempt while preserving the old review record.");
 check("destruction state", migration.includes("raw_deletion_status") && migration.includes("raw_destruction_receipt") && migration.includes("raw_legal_hold_at"), "Retention, destruction proof and legal holds are explicit fields.");
 check("existing originals scheduled", retentionBackfill.includes("jsonb_array_length(raw_document_paths) > 0") && retentionBackfill.includes("raw_deletion_status = 'scheduled'"), "Previously stored originals enter the deletion queue without changing their retention dates.");
 check("private object deletion", retention.includes("IDENTITY_ORIGINALS_BUCKET") && retention.includes(".remove(paths)"), "Deletion removes private storage objects, not only database references.");

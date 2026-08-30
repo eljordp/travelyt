@@ -5,6 +5,7 @@ import {
   expectedDobMatch,
   providerIdentityVerdict,
   requireVerifiedIdentityGate,
+  verifiedIdentityProfileComplete,
 } from "../src/lib/identity-verdict.ts";
 
 const checks = [];
@@ -74,6 +75,37 @@ check("missing original archive downgrades a provider verification", () => {
 check("a passing gate preserves provider verification", () => {
   const provider = providerIdentityVerdict("identity.verification_session.verified");
   assert.deepEqual(requireVerifiedIdentityGate(provider, true), provider);
+});
+
+check("a complete provider identity profile passes", () => {
+  assert.equal(verifiedIdentityProfileComplete({
+    firstName: "Jordan",
+    lastName: "Williams",
+    dateOfBirth: "2001-04-09",
+  }), true);
+});
+
+check("missing provider name or DOB cannot become verified", () => {
+  assert.equal(verifiedIdentityProfileComplete({
+    firstName: "Jordan",
+    lastName: "Williams",
+  }), false);
+  assert.equal(verifiedIdentityProfileComplete({
+    dateOfBirth: "2001-04-09",
+  }), false);
+});
+
+check("invalid or future provider DOB cannot become verified", () => {
+  assert.equal(verifiedIdentityProfileComplete({
+    firstName: "Jordan",
+    lastName: "Williams",
+    dateOfBirth: "2001-02-29",
+  }), false);
+  assert.equal(verifiedIdentityProfileComplete({
+    firstName: "Jordan",
+    lastName: "Williams",
+    dateOfBirth: "2999-01-01",
+  }), false);
 });
 
 const failed = checks.filter((item) => !item.pass);

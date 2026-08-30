@@ -47,3 +47,20 @@ export function requireVerifiedIdentityGate(
   if (verdict.status !== "verified" || gatePassed) return verdict;
   return { status: "manual_review", livenessStatus: "manual_review" };
 }
+
+export function verifiedIdentityProfileComplete(profile: {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+}) {
+  const firstName = profile.firstName?.trim();
+  const lastName = profile.lastName?.trim();
+  const dateOfBirth = profile.dateOfBirth?.trim();
+  if (!firstName || !lastName || !dateOfBirth || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+    return false;
+  }
+  const parsed = new Date(`${dateOfBirth}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === dateOfBirth &&
+    dateOfBirth <= new Date().toISOString().slice(0, 10);
+}
