@@ -181,6 +181,68 @@ export default function ProfilePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (authState !== "ready" || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("identity") !== "return") return;
+
+    let cancelled = false;
+
+    async function loadReturnedIdentityStatus() {
+      await Promise.resolve();
+      if (cancelled) return;
+      setTab("settings");
+      setIdentitySubmitting(true);
+      setError("");
+      setNotice("Checking your secure verification result...");
+
+      const supabase = getSupabaseBrowser();
+      const session = supabase
+        ? (await supabase.auth.getSession()).data.session
+        : null;
+      if (!session?.access_token) {
+        if (!cancelled) {
+          setIdentitySubmitting(false);
+          setError("Sign in again to check your verification result.");
+        }
+        return;
+      }
+
+      const response = await fetch("/api/identity/verification-request", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        status?: string | null;
+      } | null;
+      if (cancelled) return;
+
+      setIdentitySubmitting(false);
+      if (!response.ok || !data?.ok) {
+        setError(data?.error || "Could not check your verification result.");
+        return;
+      }
+      setIdentityStatus(data.status ?? null);
+      setNotice(
+        data.status === "verified"
+          ? "Your identity is verified."
+          : data.status === "manual_review"
+            ? "Identity evidence requires manual review. Custody remains blocked."
+            : data.status === "expired"
+              ? "This verification attempt expired. Sign again below to start a new secure attempt."
+              : "Identity verification is processing. Custody remains blocked until it passes."
+      );
+      window.history.replaceState({}, "", "/profile");
+    }
+
+    void loadReturnedIdentityStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [authState]);
+
   const activeBookings = useMemo(
     () => bookings.filter((booking) => !TERMINAL_STATUSES.includes(booking.status)),
     [bookings]

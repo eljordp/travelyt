@@ -220,6 +220,51 @@ async function reconcileExistingProfileIdentity(input: {
   };
 }
 
+export async function GET(request: Request) {
+  const limited = rateLimit(request, "identity:status", 30);
+  if (limited) return limited;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return bad("Identity backend is not configured.", 503);
+
+  const user = await getRequestUser(request);
+  if (!user) return bad("Sign in before checking verification status.", 401);
+
+  const trustedRole = trustedUserRole(user);
+  const role =
+    trustedRole === "manager"
+      ? "admin"
+      : trustedRole === "dispatcher"
+        ? "employee"
+        : trustedRole;
+  const { data, error } = await supabase
+    .from("identity_verifications")
+    .select("status, liveness_status, verified_at, updated_at")
+    .eq("user_id", user.id)
+    .eq("role", role)
+    .eq("provider", STRIPE_IDENTITY_PROVIDER)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{
+      status: string;
+      liveness_status: string;
+      verified_at: string | null;
+      updated_at: string;
+    }>();
+  if (error) {
+    console.error("Identity status lookup failed", error);
+    return bad("Could not check verification status.", 500);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    status: data?.status ?? null,
+    livenessStatus: data?.liveness_status ?? null,
+    verifiedAt: data?.verified_at ?? null,
+    updatedAt: data?.updated_at ?? null,
+  });
+}
+
 export async function POST(request: Request) {
   const limited = rateLimit(request, "identity:request", 10);
   if (limited) return limited;
