@@ -89,7 +89,7 @@ await check("provider rejection remains a failed delivery", async () => {
   }), { status: "failed", providerStatus: 422 });
 });
 
-await check("admin email readiness requires a durable sent receipt", async () => {
+await check("admin communications readiness requires durable current receipts", async () => {
   const source = await readFile(
     path.join(root, "src/app/api/admin/communications-readiness/route.ts"),
     "utf8"
@@ -98,7 +98,15 @@ await check("admin email readiness requires a durable sent receipt", async () =>
   assert.match(source, /eq\("status", "sent"\)/);
   assert.match(source, /deliveryTested: Boolean\(latestPaymentEmailSentAt\)/);
   assert.match(source, /latestDeliveryTestedAt: latestPaymentEmailSentAt/);
-  assert.match(source, /sms:[\s\S]*deliveryTested: false/);
+  assert.match(source, /from\("phone_verification_receipts"\)/);
+  assert.match(source, /phoneOtpProviderConfiguration\(/);
+  assert.match(source, /\.eq\(\s*"provider_config_hash"/);
+  assert.match(source, /phoneOtpEnabled\s*&&[\s\S]*phoneProviderConfiguration\.ok\s*&&[\s\S]*isCurrentPhoneDeliveryReceipt/);
+  assert.match(source, /sms:[\s\S]*providerConfigurationBound:/);
+  assert.match(source, /sms:[\s\S]*deliveryTested: smsDeliveryTested/);
+  assert.match(source, /sms:[\s\S]*latestDeliveryTestedAt: latestPhoneVerifiedAt/);
+  assert.doesNotMatch(source, /deliveryTested:\s*phoneOtpEnabled/);
+  assert.doesNotMatch(source, /deliveryTested:\s*Boolean\(latestPhoneVerifiedAt\)/);
 });
 
 if (original.apiKey === undefined) delete process.env.RESEND_API_KEY;

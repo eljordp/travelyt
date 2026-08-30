@@ -8,6 +8,7 @@ import {
   Plane,
 } from "lucide-react";
 import {
+  bookingAccessTokenMatches,
   getBagByBadge,
   getCustodyChain,
   verifyChain,
@@ -15,6 +16,8 @@ import {
   VERIFIED_METHOD_LABELS,
   type BagStatus,
 } from "@/lib/custody";
+import { toPublicCustodyChain } from "@/lib/public-custody";
+import { getAdminSessionFromServerHeaders } from "@/lib/server-admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -38,17 +41,34 @@ function fmt(ts: string): string {
 
 export default async function BadgePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{
+    token?: string | string[];
+    accessToken?: string | string[];
+  }>;
 }) {
-  const { code } = await params;
+  const [{ code }, query, adminSession] = await Promise.all([
+    params,
+    searchParams,
+    getAdminSessionFromServerHeaders(),
+  ]);
   const bag = await getBagByBadge(code);
   if (!bag) notFound();
+
+  const rawToken = query.token ?? query.accessToken;
+  const customerToken = Array.isArray(rawToken) ? rawToken[0] : rawToken ?? "";
+  const customerHasAccess = adminSession
+    ? false
+    : await bookingAccessTokenMatches(bag.booking_id, customerToken);
+  const fullAccess = Boolean(adminSession || customerHasAccess);
 
   const [chain, verification] = await Promise.all([
     getCustodyChain(bag.id),
     verifyChain(bag.id),
   ]);
+  const publicChain = toPublicCustodyChain(chain);
 
   const intact = verification.ok;
 
@@ -108,50 +128,103 @@ export default async function BadgePage({
               </div>
             </div>
           </div>
+
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-white/60">
+            {fullAccess ? (
+              <>
+                <span className="font-semibold text-white/80">
+                  Authorized evidence view.
+                </span>{" "}
+                Customer/operations access is showing the complete custody
+                record.
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-white/80">
+                  Privacy-safe public view.
+                </span>{" "}
+                Names, exact locations, notes, proof media, and internal IDs are
+                restricted to the customer and authorized operations staff.
+              </>
+            )}
+          </div>
         </div>
 
-        <ol className="mt-6 space-y-3">
-          {chain.map((ev) => (
-            <li
-              key={ev.id}
-              className="relative rounded-xl bg-white/[0.03] border border-white/10 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-[#ff6868]" />
-                  {EVENT_LABELS[ev.event_type]}
+        {fullAccess ? (
+          <ol className="mt-6 space-y-3">
+            {chain.map((ev) => (
+              <li
+                key={ev.id}
+                className="relative rounded-xl bg-white/[0.03] border border-white/10 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-[#ff6868]" />
+                    {EVENT_LABELS[ev.event_type]}
+                  </div>
+                  <div className="text-xs text-white/50">
+                    {fmt(ev.created_at)}
+                  </div>
                 </div>
-                <div className="text-xs text-white/50">{fmt(ev.created_at)}</div>
-              </div>
 
-              <div className="mt-2 text-sm text-white/70">
-                {ev.actor_name ?? "Travelyt"}{" "}
-                <span className="text-white/40">({ev.actor_role})</span>
-                {" · "}
-                {VERIFIED_METHOD_LABELS[ev.verified_method]}
-              </div>
-
-              {ev.location_lat != null && ev.location_lng != null && (
-                <div className="mt-1 flex items-center gap-1 text-xs text-white/40">
-                  <MapPin className="w-3 h-3" />
-                  {ev.location_lat.toFixed(4)}, {ev.location_lng.toFixed(4)}
+                <div className="mt-2 text-sm text-white/70">
+                  {ev.actor_name ?? "Travelyt"}{" "}
+                  <span className="text-white/40">({ev.actor_role})</span>
+                  {" · "}
+                  {VERIFIED_METHOD_LABELS[ev.verified_method]}
                 </div>
-              )}
 
-              {ev.note && (
-                <div className="mt-1 text-xs text-white/50">{ev.note}</div>
-              )}
+                {ev.location_lat != null && ev.location_lng != null && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-white/40">
+                    <MapPin className="w-3 h-3" />
+                    {ev.location_lat.toFixed(4)}, {ev.location_lng.toFixed(4)}
+                  </div>
+                )}
 
-              <div className="mt-2 font-mono text-[10px] text-white/25 break-all">
-                #{ev.seq} · {ev.event_hash.slice(0, 24)}…
-              </div>
-            </li>
-          ))}
-        </ol>
+                {ev.note && (
+                  <div className="mt-1 text-xs text-white/50">{ev.note}</div>
+                )}
+
+                <div className="mt-2 font-mono text-[10px] text-white/25 break-all">
+                  #{ev.seq} · {ev.event_hash.slice(0, 24)}…
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <ol className="mt-6 space-y-3">
+            {publicChain.map((ev) => (
+              <li
+                key={`${ev.seq}-${ev.event_type}`}
+                className="relative rounded-xl bg-white/[0.03] border border-white/10 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-[#ff6868]" />
+                    {EVENT_LABELS[ev.event_type]}
+                  </div>
+                  <div className="text-xs text-white/50">
+                    {fmt(ev.created_at)}
+                  </div>
+                </div>
+
+                <div className="mt-2 text-sm text-white/70">
+                  Custody role: {ev.actor_role.replace(/_/g, " ")}
+                  {" · "}
+                  {VERIFIED_METHOD_LABELS[ev.verified_method]}
+                </div>
+
+                <div className="mt-2 font-mono text-[10px] text-white/25">
+                  Sealed event #{ev.seq}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
 
         <p className="mt-6 text-center text-xs text-white/30">
-          Every handoff is sealed into an append-only ledger. Scan verifies the
-          full history end to end.
+          Every handoff is sealed into an append-only ledger. Public scans show
+          status and continuity; complete evidence requires authorized access.
         </p>
       </div>
     </div>

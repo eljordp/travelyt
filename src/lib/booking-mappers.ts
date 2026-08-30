@@ -4,6 +4,7 @@ import type {
   BookingIssueType,
   BookingLocationEvent,
   BookingStatus,
+  ArrivalReleaseStatus,
   PilotEligibilitySnapshot,
   PilotEligibilityStatus,
   PhotoProof,
@@ -68,6 +69,11 @@ export const BOOKING_SELECT_COLUMNS = [
   "external_reference",
   "external_status",
   "external_synced_at",
+  "arrival_release_status",
+  "arrival_release_reference",
+  "arrival_release_location",
+  "arrival_release_authorized_at",
+  "arrival_release_authorized_by",
   "customer_access_token",
   "customer_user_id",
   "driver_user_id",
@@ -135,6 +141,11 @@ export interface BookingRow {
   external_reference?: string | null;
   external_status?: string | null;
   external_synced_at?: string | null;
+  arrival_release_status: ArrivalReleaseStatus;
+  arrival_release_reference: string | null;
+  arrival_release_location: string | null;
+  arrival_release_authorized_at: string | null;
+  arrival_release_authorized_by: string | null;
   customer_access_token: string | null;
   customer_user_id: string | null;
   driver_user_id: string | null;
@@ -201,6 +212,11 @@ export function rowToBooking(row: BookingRow): Booking {
     externalReference: row.external_reference ?? undefined,
     externalStatus: row.external_status ?? undefined,
     externalSyncedAt: row.external_synced_at ?? undefined,
+    arrivalReleaseStatus: row.arrival_release_status ?? "pending",
+    arrivalReleaseReference: row.arrival_release_reference ?? undefined,
+    arrivalReleaseLocation: row.arrival_release_location ?? undefined,
+    arrivalReleaseAuthorizedAt: row.arrival_release_authorized_at ?? undefined,
+    arrivalReleaseAuthorizedBy: row.arrival_release_authorized_by ?? undefined,
     customerAccessToken: row.customer_access_token ?? undefined,
     customerUserId: row.customer_user_id ?? undefined,
     driverUserId: row.driver_user_id ?? undefined,
@@ -265,6 +281,11 @@ export function bookingToInsert(
     external_reference: booking.externalReference ?? null,
     external_status: booking.externalStatus ?? null,
     external_synced_at: booking.externalSyncedAt ?? null,
+    arrival_release_status: booking.arrivalReleaseStatus ?? "pending",
+    arrival_release_reference: booking.arrivalReleaseReference ?? null,
+    arrival_release_location: booking.arrivalReleaseLocation ?? null,
+    arrival_release_authorized_at: booking.arrivalReleaseAuthorizedAt ?? null,
+    arrival_release_authorized_by: booking.arrivalReleaseAuthorizedBy ?? null,
     customer_access_token:
       booking.customerAccessToken ??
       crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().slice(0, 8),

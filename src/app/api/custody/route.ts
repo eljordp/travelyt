@@ -1,50 +1,37 @@
 import { NextResponse } from "next/server";
 import { authorizeDriverRequest } from "@/lib/driver-access-server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getSupabaseAdmin } from "@/lib/supabase-server";
 import {
-  appendCustodyEvent,
+  bookingAccessTokenMatches,
   getBagByBadge,
   getBagsForBooking,
   getCustodyChain,
   issueBags,
+  recordCustodyCheckpoint,
+  validateDriverCustodyWrite,
   verifyChain,
-  type ActorRole,
-  type CustodyEventType,
-  type VerifiedMethod,
+  type CustodySealEvidence,
+  type ModernCustodyEventType,
 } from "@/lib/custody";
+import {
+  toPublicBagCustodySummary,
+  toPublicCustodyChain,
+} from "@/lib/public-custody";
 
-const EVENT_TYPES: CustodyEventType[] = [
-  "bag_registered",
+const DRIVER_EVENT_TYPES = new Set<ModernCustodyEventType>([
   "custody_accepted",
-  "route_checkpoint",
   "traveler_return",
-  "recipient_confirmed",
+  "recipient_delivery",
   "carrier_transfer",
-  "exception_opened",
-  "badge_issued",
-  "picked_up",
-  "in_transit",
-  "security_handoff",
-  "delivered",
-  "exception",
-];
+]);
 
-const VERIFIED_METHODS: VerifiedMethod[] = [
-  "none",
-  "access_code",
-  "account_session",
-  "manual_record",
-  "employee_credential",
-  "provider_assertion",
-  "id_document",
-  "facial_liveness",
-  "confirmation_code",
-];
+const VALID_SEAL_METHODS = new Set(["zipper", "latch_label", "handle"]);
+const VALID_SEAL_STATUSES = new Set(["intact", "broken", "replaced"]);
+const VALID_SEAL_SERIAL = /^[A-Z0-9][A-Z0-9-]{2,63}$/;
 
 // GET /api/custody?badge=TVT-B-XXXXXX
-// Public read: returns the bag, its full custody chain, and a live integrity
-// check. This is the verifiable record a customer, airline, or TSA can pull.
+// Public reads return a privacy-safe status/continuity view. An operations
+// session or the owning booking's customer token unlocks the full evidence.
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
 
@@ -55,16 +42,7 @@ export async function GET(request: Request) {
   if (bookingId) {
     if (!getAdminSession(request)) {
       const token = params.get("token")?.trim() ?? "";
-      const supabase = getSupabaseAdmin();
-      if (!token || !supabase) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      const { data: bk } = await supabase
-        .from("bookings")
-        .select("customer_access_token")
-        .eq("id", bookingId)
-        .maybeSingle();
-      if (!bk || bk.customer_access_token !== token) {
+      if (!(await bookingAccessTokenMatches(bookingId, token))) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
@@ -87,18 +65,36 @@ export async function GET(request: Request) {
     verifyChain(bag.id),
   ]);
 
-  return NextResponse.json({ bag, chain, verification });
+  const adminSession = getAdminSession(request);
+  const customerToken = params.get("token")?.trim() ?? "";
+  const hasCustomerAccess = adminSession
+    ? false
+    : await bookingAccessTokenMatches(bag.booking_id, customerToken);
+
+  if (adminSession || hasCustomerAccess) {
+    return NextResponse.json(
+      { visibility: "full", bag, chain, verification },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      visibility: "public",
+      bag: toPublicBagCustodySummary(bag),
+      chain: toPublicCustodyChain(chain),
+      verification,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 // POST /api/custody
-// action "issue": mint N badges for a booking (driver/employee gated).
-// action "scan":  append a custody event for a scanned badge (driver gated).
+// action "issue": mint every bag badge in one admin-only transaction.
+// action "scan_booking": append one event per bag in one driver-gated transaction.
 export async function POST(request: Request) {
   const auth = await authorizeDriverRequest(request);
   const adminSession = getAdminSession(request);
-  if (!auth.ok && !adminSession) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   let body: Record<string, unknown>;
   try {
@@ -110,161 +106,180 @@ export async function POST(request: Request) {
   const action = String(body.action ?? "scan");
 
   if (action === "issue") {
+    if (!adminSession) {
+      return NextResponse.json(
+        { error: "Only an authenticated Travelyt administrator can issue bag badges." },
+        { status: 403 }
+      );
+    }
     const bookingId = String(body.bookingId ?? "").trim();
-    const count = Number(body.count ?? 1);
+    const count = Number(body.count);
     if (!bookingId) {
       return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
     }
-    const bags = await issueBags({
-      bookingId,
-      count: Number.isFinite(count) ? count : 1,
-      issuedBy: auth.driverName ?? adminSession?.email ?? "Travelyt ops",
-    });
-    if (!bags.length) {
+    if (!Number.isInteger(count) || count < 1 || count > 20) {
       return NextResponse.json(
-        { error: "Could not issue badges (check bookingId)" },
-        { status: 422 }
+        { error: "Expected bag count must be an integer between 1 and 20." },
+        { status: 400 }
       );
     }
-    return NextResponse.json({ bags }, { status: 201 });
+    const result = await issueBags({
+      bookingId,
+      count,
+      issuedBy: adminSession.email,
+    });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, code: result.code },
+        { status: result.code === "PGRST202" ? 503 : 409 }
+      );
+    }
+    return NextResponse.json(
+      { bags: result.bags, events: result.events, idempotent: result.idempotent },
+      { status: result.idempotent ? 200 : 201 }
+    );
   }
 
-  // Log one custody event across every bag of a booking in a single call, so
-  // the driver workflow can seal a handoff without scanning each badge.
   if (action === "scan_booking") {
+    if (
+      !auth.ok ||
+      !auth.driverAccessId ||
+      auth.source === "env" ||
+      !auth.driverName
+    ) {
+      return NextResponse.json(
+        { error: "An individual database-backed driver session is required." },
+        { status: 401 }
+      );
+    }
     const bid = String(body.bookingId ?? "").trim();
-    const eventType = String(body.eventType ?? "") as CustodyEventType;
+    const checkpointKey = String(body.checkpointKey ?? "").trim();
+    const expectedBagCount = Number(body.expectedBagCount);
+    const eventType = String(body.eventType ?? "") as ModernCustodyEventType;
     if (!bid) {
       return NextResponse.json({ error: "Missing bookingId" }, { status: 400 });
     }
-    if (!EVENT_TYPES.includes(eventType)) {
+    if (!checkpointKey) {
+      return NextResponse.json({ error: "Missing checkpointKey" }, { status: 400 });
+    }
+    if (!Number.isInteger(expectedBagCount) || expectedBagCount < 1 || expectedBagCount > 20) {
+      return NextResponse.json(
+        { error: "Expected bag count must be an integer between 1 and 20." },
+        { status: 400 }
+      );
+    }
+    if (!DRIVER_EVENT_TYPES.has(eventType)) {
       return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
     }
-
-    const bags = await getBagsForBooking(bid);
-    if (!bags.length) {
-      return NextResponse.json({ events: [], skipped: true });
+    const custodyGate = await validateDriverCustodyWrite({
+      bookingId: bid,
+      checkpointKey,
+      driverAccessId: auth.driverAccessId,
+      eventType,
+      expectedBagCount,
+    });
+    if (!custodyGate.ok) {
+      return NextResponse.json(
+        { error: custodyGate.error },
+        { status: custodyGate.status }
+      );
     }
 
-    const actorRole = ["agent", "operations", "carrier", "driver", "employee", "tsa", "airline"].includes(
-      String(body.actorRole)
-    )
-      ? (body.actorRole as ActorRole)
-      : "agent";
     const lat = body.lat != null ? Number(body.lat) : null;
     const lng = body.lng != null ? Number(body.lng) : null;
-    const submittedSeals = Array.isArray(body.seals)
-      ? body.seals.filter((seal): seal is Record<string, unknown> => Boolean(seal) && typeof seal === "object")
-      : [];
-    const validSealMethods = new Set(["zipper", "latch_label", "handle"]);
-    const validSealStatuses = new Set(["intact", "broken", "replaced"]);
-    if (eventType === "custody_accepted" && submittedSeals.length > 0) {
-      const completeSealIndexes = new Set(
-        submittedSeals
-          .filter(
-            (seal) =>
-              String(seal.sealId ?? "").trim() &&
-              validSealMethods.has(String(seal.sealMethod ?? "")) &&
-              String(seal.sealStatus ?? "") === "intact"
-          )
-          .map((seal) => Number(seal.bagIndex))
+    const normalPhysicalEvent = eventType !== "exception_opened";
+    if (
+      normalPhysicalEvent &&
+      (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat!) > 90 || Math.abs(lng!) > 180)
+    ) {
+      return NextResponse.json(
+        { error: "A valid GPS checkpoint is required for this custody event." },
+        { status: 409 }
       );
-      if (completeSealIndexes.size !== bags.length) {
+    }
+
+    const seals: CustodySealEvidence[] = Array.isArray(body.seals)
+      ? body.seals.flatMap((value) => {
+          if (!value || typeof value !== "object") return [];
+          const seal = value as Record<string, unknown>;
+          const bagIndex = Number(seal.bagIndex);
+          const sealId = String(seal.sealId ?? "").trim().toUpperCase();
+          const sealMethod = String(seal.sealMethod ?? "");
+          const sealStatus = String(seal.sealStatus ?? "");
+          const proofCheckpointKey = String(seal.proofCheckpointKey ?? "").trim();
+          const proofStoragePath = String(seal.proofStoragePath ?? "").trim();
+          if (
+            !Number.isInteger(bagIndex) ||
+            bagIndex < 1 ||
+            bagIndex > expectedBagCount ||
+            !VALID_SEAL_SERIAL.test(sealId) ||
+            !VALID_SEAL_METHODS.has(sealMethod) ||
+            !VALID_SEAL_STATUSES.has(sealStatus) ||
+            !/^[A-Za-z0-9][A-Za-z0-9:._-]{7,159}$/.test(proofCheckpointKey) ||
+            proofStoragePath.length < 3 ||
+            proofStoragePath.length > 1_000
+          ) return [];
+          return [{
+            bagIndex,
+            sealId,
+            sealMethod: sealMethod as CustodySealEvidence["sealMethod"],
+            sealStatus: sealStatus as CustodySealEvidence["sealStatus"],
+            proofCheckpointKey,
+            proofStoragePath,
+          }];
+        })
+      : [];
+    if (["custody_accepted", "traveler_return", "recipient_delivery", "carrier_transfer"].includes(eventType)) {
+      const indexes = new Set(seals.map((seal) => seal.bagIndex));
+      const serials = new Set(seals.map((seal) => seal.sealId));
+      if (
+        seals.length !== expectedBagCount ||
+        indexes.size !== expectedBagCount ||
+        serials.size !== expectedBagCount ||
+        seals.some((seal) => seal.sealStatus !== "intact")
+      ) {
         return NextResponse.json(
-          { error: "Every bag needs an intact seal serial and attachment method before custody starts." },
+          { error: "Every custody acceptance or transfer needs one distinct intact seal serial and attachment method per bag." },
           { status: 409 }
         );
       }
     }
 
-    const events = [];
-    for (const [index, bag] of bags.entries()) {
-      const submittedSeal = submittedSeals.find(
-        (seal) => Number(seal.bagIndex) === index + 1
-      );
-      const sealEvidence = submittedSeal
-        ? {
-            sealSerial: String(submittedSeal.sealId ?? "").trim().toUpperCase(),
-            sealMethod: validSealMethods.has(String(submittedSeal.sealMethod ?? ""))
-              ? String(submittedSeal.sealMethod)
-              : null,
-            sealStatus: validSealStatuses.has(String(submittedSeal.sealStatus ?? ""))
-              ? String(submittedSeal.sealStatus)
-              : null,
-            bagIndex: index + 1,
-            bagBadge: bag.badge_code,
-          }
-        : null;
-      const event = await appendCustodyEvent({
-        bagId: bag.id,
-        eventType,
-        actorRole,
-        actorName: auth.driverName ?? adminSession?.email ?? null,
-        verifiedMethod: "access_code",
-        lat: Number.isFinite(lat) ? lat : null,
-        lng: Number.isFinite(lng) ? lng : null,
-        note: JSON.stringify({
-          note: typeof body.note === "string" ? body.note : null,
-          seal: sealEvidence,
-        }),
-      });
-      if (event) events.push(event);
-    }
-    return NextResponse.json({ events }, { status: 201 });
-  }
-
-  if (action === "scan") {
-    const badge = String(body.badge ?? "").trim();
-    const eventType = String(body.eventType ?? "") as CustodyEventType;
-    if (!badge) {
-      return NextResponse.json({ error: "Missing badge code" }, { status: 400 });
-    }
-    if (!EVENT_TYPES.includes(eventType)) {
-      return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
-    }
-
-    const bag = await getBagByBadge(badge);
-    if (!bag) {
-      return NextResponse.json({ error: "Badge not found" }, { status: 404 });
-    }
-
-    const verifiedMethod = VERIFIED_METHODS.includes(
-      body.verifiedMethod as VerifiedMethod
-    )
-      ? (body.verifiedMethod as VerifiedMethod)
-      : "access_code";
-
-    const actorRole = ["traveler", "agent", "operations", "recipient", "carrier", "driver", "employee", "tsa", "airline"].includes(
-      String(body.actorRole)
-    )
-      ? (body.actorRole as ActorRole)
-      : "agent";
-
-    const lat = body.lat != null ? Number(body.lat) : null;
-    const lng = body.lng != null ? Number(body.lng) : null;
-
-    const event = await appendCustodyEvent({
-      bagId: bag.id,
+    const result = await recordCustodyCheckpoint({
+      bookingId: bid,
+      checkpointKey,
+      expectedBagCount,
       eventType,
-      actorRole,
-      actorName: auth.driverName ?? adminSession?.email ?? null,
-      identityVerificationId:
-        typeof body.identityVerificationId === "string"
-          ? body.identityVerificationId
-          : null,
-      verifiedMethod,
-      photoPath: typeof body.photoPath === "string" ? body.photoPath : null,
+      actorRole: "agent",
+      actorName: custodyGate.driverName,
+      driverAccessId: auth.driverAccessId,
+      verifiedMethod: auth.source === "session" ? "account_session" : "access_code",
       lat: Number.isFinite(lat) ? lat : null,
       lng: Number.isFinite(lng) ? lng : null,
       note: typeof body.note === "string" ? body.note : null,
+      seals,
     });
-
-    if (!event) {
-      return NextResponse.json({ error: "Could not log event" }, { status: 500 });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, code: result.code },
+        { status: result.code === "PGRST202" ? 503 : 409 }
+      );
     }
+    return NextResponse.json(
+      {
+        events: result.events,
+        idempotent: result.idempotent,
+        bookingStatus: result.bookingStatus,
+      },
+      { status: result.idempotent ? 200 : 201 }
+    );
+  }
 
-    const verification = await verifyChain(bag.id);
-    return NextResponse.json({ event, verification }, { status: 201 });
+  if (action === "scan") {
+    return NextResponse.json(
+      { error: "Single-bag custody writes are retired. Record one atomic booking checkpoint instead." },
+      { status: 410 }
+    );
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

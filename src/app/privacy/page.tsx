@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-const LAST_UPDATED = "July 15, 2026";
+const LAST_UPDATED = "August 29, 2026";
 const CONTACT_EMAIL = "info@travelyt.us";
 
 const sections: { title: string; body: string }[] = [
@@ -28,7 +28,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Who we share it with",
     body:
-      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, airport or airline contacts when needed for bag identification and authorized handoff, identity verification providers, background-check providers for drivers and staff, our communications providers (SMS and email delivery), payment processors, our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
+      "We share booking and contact details only with the people and providers required to operate the service: assigned drivers and handlers, airport or airline contacts when needed for bag identification and an authorized handoff, identity-verification or driver-readiness providers where configured, our communications providers (SMS and email delivery), payment processors, our hosting and analytics providers, our insurance and claims partners, and our legal and accounting advisors. We may disclose information to law enforcement or other authorities when required by law, subpoena, or court order, or when needed to protect Travelyt, our customers, or the public.",
   },
   {
     title: "Tracking and custody data",
@@ -38,7 +38,7 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Identity verification and biometrics",
     body:
-      "When identity verification is required, Travelyt may ask a customer, driver, employee, or handler to verify a driver's license, passport, employee credential, selfie, or liveness video. We use this only for account security, fraud prevention, background screening where applicable, custody handoff validation, and legal or claims support. Government ID images and biometric/liveness checks are processed by a specialized verification provider, and Travelyt also securely retains a copy of the ID document and selfie images captured during verification, together with verification status, provider reference IDs, and timestamps, as the evidentiary core of our chain of custody. These images are stored in access-restricted systems, are never sold or used for advertising, and are retained for up to 3 years from capture or until the verification purpose ends, whichever comes first, after which they are permanently deleted.",
+      "When identity verification is required, Travelyt may ask a customer, driver, employee, or handler to verify a driver's license, passport, employee credential, selfie, or liveness video. We use this only for account security, fraud prevention, readiness review where applicable, custody handoff validation, and legal or claims support. Government ID images and biometric/liveness checks are processed by a specialized verification provider, and Travelyt also securely retains a copy of the ID document and selfie images captured during verification, together with verification status, provider reference IDs, and timestamps, as the evidentiary core of our chain of custody. These images are stored in access-restricted systems, are never sold or used for advertising, and are retained for up to 3 years from capture or until the verification purpose ends, whichever comes first, after which they are permanently deleted.",
   },
   {
     title: "Push notifications",
@@ -58,12 +58,12 @@ const sections: { title: string; body: string }[] = [
   {
     title: "Security",
     body:
-      "We protect personal information using HTTPS in transit, encrypted databases at rest, access controls on internal systems, role-based permissions, audit logs, and vetted handlers with background checks. No system is perfectly secure; if a breach affects you, we will notify you and the relevant authorities as required by law.",
+      "We protect personal information using HTTPS in transit, encrypted databases at rest, access controls on internal systems, role-based permissions, and audit logs. Travelyt agents must complete identity verification, required evidence review, and scored custody training before activation. Any carrier-sponsored Security Threat Assessment or other external screening required for an authorized airline workflow remains a separate activation gate. No system is perfectly secure; if a breach affects you, we will notify you and the relevant authorities as required by law.",
   },
   {
     title: "Automated processing and AI",
     body:
-      "Travelyt uses automated systems and in-house AI to process booking and operational data. This includes chain-of-custody reporting, anomaly detection on bag photos and tamper-evident seal scans, dispatch and route optimization, and aggregate service analytics. These systems run on booking and operational data only and are restricted to authorized Travelyt staff. We do not use your trip, location, account, or chain-of-custody data to train third-party AI models, and we do not sell or share AI-derived insights about you. If we offer an AI-assisted customer support experience, it runs on a separate, scoped system that can only see the minimum context needed to help with your request. That assistant does not have access to full account history, payment records, or other customers' data. Automated outputs such as estimated windows, status summaries, and routing suggestions may contain errors; binding service details come from confirmed booking records and Travelyt staff. You can request information about, or human review of, any automated decision that materially affects your booking by contacting " +
+      "Travelyt uses automated workflow rules to process booking and operational data. Current rules support chain-of-custody reporting, timing and exception alerts, duplicate checks, routing suggestions, and aggregate service analytics. Travelyt does not currently use AI to approve identity, inspect baggage, decide airline acceptance, or replace required human review. If we later offer an AI-assisted customer support or operational feature, it will use only the minimum authorized context, will not receive full payment credentials or other customers' data, and will remain subject to human review for any material booking decision. We do not use your trip, location, account, or chain-of-custody data to train public or third-party AI models, and we do not sell or share AI-derived insights about you. Automated outputs such as estimated windows, status summaries, and routing suggestions may contain errors; binding service details come from confirmed booking records and Travelyt staff. You can request information about, or human review of, any automated decision that materially affects your booking by contacting " +
       CONTACT_EMAIL +
       ".",
   },

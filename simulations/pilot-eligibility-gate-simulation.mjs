@@ -63,12 +63,13 @@ test("approval window is bounded at 24 hours", () => {
   assert.equal(PILOT_APPROVAL_WINDOW_MINUTES, 1440);
 });
 
-const [checkoutSource, decisionSource, bookingSource, payPage, bookingPage, migration] = await Promise.all([
+const [checkoutSource, decisionSource, bookingSource, payPage, bookingPage, adminPage, migration] = await Promise.all([
   readFile(path.join(root, "src/app/api/stripe/checkout/route.ts"), "utf8"),
   readFile(path.join(root, "src/app/api/ops/pilot-eligibility/route.ts"), "utf8"),
   readFile(path.join(root, "src/app/api/bookings/route.ts"), "utf8"),
   readFile(path.join(root, "src/app/booking/[id]/pay/page.tsx"), "utf8"),
   readFile(path.join(root, "src/app/booking/[id]/page.tsx"), "utf8"),
+  readFile(path.join(root, "src/app/admin/page.tsx"), "utf8"),
   readFile(path.join(root, "supabase/migrations/037_pilot_eligibility_gate.sql"), "utf8"),
 ]);
 
@@ -87,6 +88,15 @@ test("near-expiry approvals are blocked before Stripe", () => {
 });
 test("only a full admin may decide eligibility", () => {
   assert.match(decisionSource, /session\.role !== "admin"/);
+});
+test("admin approval requires five explicit human confirmations", () => {
+  assert.match(adminPage, /REQUIRED_PILOT_CHECKS\.map/);
+  assert.match(adminPage, /eligibilityChecks\[checkKey\] !== true/);
+  assert.match(adminPage, /snapshot:[\s\S]*eligibilityChecks/);
+  assert.doesNotMatch(
+    adminPage,
+    /eligibleFlight: true,[\s\S]*eligibleTraveler: true,[\s\S]*capacityConfirmed: true/
+  );
 });
 test("eligibility decisions are final while the booking stays pending", () => {
   assert.match(decisionSource, /already has a final eligibility decision/);

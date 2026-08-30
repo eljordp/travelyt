@@ -31,7 +31,7 @@ import {
 import { SITE_URL } from "@/lib/site";
 import type { Booking, ServiceType } from "@/lib/bookings";
 import { carrierHandoffAuthorized } from "@/lib/handoff-policy";
-import { appendCustodyEvent, getBagsForBooking } from "@/lib/custody";
+import { recordCustodyCheckpoint } from "@/lib/custody";
 import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
@@ -70,6 +70,22 @@ const adminOnlyStatuses: Booking["status"][] = [
   "cancelled",
   "issue",
 ];
+const atomicCustodyStatuses = new Set<Booking["status"]>([
+  "picked_up",
+  "in_transit",
+  "delivery_pending",
+  "delivered",
+]);
+const genericPatchFields = new Set<keyof Booking>([
+  "status",
+  "customerSignatureName",
+  "customerIdentityVerifiedAt",
+  "driverIdentityVerifiedAt",
+  "issueType",
+  "issueNotes",
+  "issueResolution",
+  "archivedAt",
+]);
 const ISSUE_TYPE_LABELS = {
   airport_hold: "Airport hold",
   customer_no_show: "Customer no-show",
@@ -297,13 +313,17 @@ async function storeProofImage(
   bookingId: string,
   proof: Booking["proofs"][number]
 ) {
-  if (!proof.dataUrl.startsWith("data:")) return proof;
+  if (!proof.dataUrl.startsWith("data:")) {
+    throw new Error("Proof image must be a newly captured image upload.");
+  }
 
   const parsed = parseProofDataUrl(proof.dataUrl);
-  if (!parsed) return proof;
+  if (!parsed) {
+    throw new Error("Proof image is invalid or exceeds the 10 MB limit.");
+  }
 
   const supabase = getSupabaseAdmin();
-  if (!supabase) return proof;
+  if (!supabase) throw new Error("Proof storage is not configured.");
 
   const fileName = `${Date.now()}-${proof.kind}-${crypto.randomUUID()}.${parsed.extension}`;
   const storagePath = `${bookingId}/${fileName}`;
@@ -319,16 +339,23 @@ async function storeProofImage(
 
   if (error) {
     console.error("Supabase proof upload failed", error);
-    return proof;
+    throw new Error("Proof image could not be stored. Nothing was recorded.");
   }
 
-  const { data: signed } = await supabase.storage
+  const { data: signed, error: signedUrlError } = await supabase.storage
     .from(proofBucket)
     .createSignedUrl(storagePath, 60 * 60 * 24);
 
+  if (signedUrlError || !signed?.signedUrl) {
+    console.error("Supabase proof signed URL creation failed", signedUrlError);
+    throw new Error(
+      "Proof image could not be secured. Nothing was recorded.",
+    );
+  }
+
   return {
     ...proof,
-    dataUrl: signed?.signedUrl ?? proof.dataUrl,
+    dataUrl: signed.signedUrl,
     storagePath,
     contentType: parsed.contentType,
   };
@@ -366,9 +393,17 @@ function hasApprovedSeal(row: BookingRow) {
   return sealProofs.slice(-required).every((proof) => Boolean(proof.approvedAt));
 }
 
+function latestRequiredSealProofs(row: BookingRow) {
+  const required = Math.max(1, Number(row.bags ?? 1));
+  const sealProofs = (row.proofs ?? []).filter((proof) => proof.kind === "seal");
+  return sealProofs.length < required ? [] : sealProofs.slice(-required);
+}
+
 function hasAllRequiredSealProofs(row: BookingRow) {
   const required = Math.max(1, Number(row.bags ?? 1));
-  const sealProofs = (row.proofs ?? []).filter(
+  const latest = latestRequiredSealProofs(row);
+  if (latest.length !== required) return false;
+  const valid = latest.every(
     (proof) =>
       proof.kind === "seal" &&
       Boolean(proof.dataUrl) &&
@@ -377,14 +412,23 @@ function hasAllRequiredSealProofs(row: BookingRow) {
       proof.sealStatus === "intact" &&
       ["zipper", "latch_label", "handle"].includes(proof.sealMethod ?? "")
   );
-  if (sealProofs.length < required) return false;
-  const latest = sealProofs.slice(-required);
   const bagIndexes = latest.map((proof) => Number(proof.bagIndex));
   const sealIds = latest.map((proof) => proof.sealId?.trim().toUpperCase());
   return (
+    valid &&
     bagIndexes.every((index) => Number.isInteger(index) && index >= 1 && index <= required) &&
     new Set(bagIndexes).size === required &&
     new Set(sealIds).size === required
+  );
+}
+
+function hasAllArrivalReleaseProofs(row: BookingRow) {
+  if (!hasAllRequiredSealProofs(row)) return false;
+  return latestRequiredSealProofs(row).every(
+    (proof) =>
+      Boolean(proof.handoff?.recipientName?.trim()) &&
+      Boolean(proof.handoff?.organization?.trim()) &&
+      Boolean(proof.handoff?.badgeOrReference?.trim())
   );
 }
 
@@ -483,6 +527,9 @@ function validateGpsLocation(location?: ProofLocation) {
 
 function validateProofShape(proof: Booking["proofs"][number]) {
   if (!proof.dataUrl) return "Photo proof is required.";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(proof.custodyCheckpointKey ?? "")) {
+    return "A durable custody checkpoint key is required for proof evidence.";
+  }
   const locationError = validateGpsLocation(proof.location);
   if (locationError) return locationError;
   if (proof.kind === "seal" && !proof.sealId?.trim()) {
@@ -840,6 +887,9 @@ export async function POST(request: Request) {
     validated.customerUserId = user?.id;
     validated.status = "pending";
     validated.createdAt = new Date().toISOString();
+    // The request carries the customer's affirmative checkbox; the server owns
+    // the attestation time so a client cannot backdate the declaration.
+    validated.restrictedItemsAttestedAt = new Date().toISOString();
     validated.paidAt = undefined;
     validated.assignedAt = undefined;
     validated.acceptedAt = undefined;
@@ -948,6 +998,15 @@ export async function PATCH(request: Request) {
 
     const patch = body.patch ?? {};
     const reason = body.reason?.trim() || undefined;
+    const unsupportedPatchFields = Object.keys(patch).filter(
+      (field) => !genericPatchFields.has(field as keyof Booking)
+    );
+    if (unsupportedPatchFields.length) {
+      return bad(
+        `Server-owned booking fields cannot be changed through the generic update route: ${unsupportedPatchFields.join(", ")}.`,
+        403
+      );
+    }
     if (
       patch.pilotEligibilityStatus !== undefined ||
       patch.pilotEligibilityDecidedAt !== undefined ||
@@ -957,6 +1016,18 @@ export async function PATCH(request: Request) {
       patch.pilotEligibilitySnapshot !== undefined
     ) {
       return bad("Pilot eligibility decisions require the dedicated full-admin review action.", 403);
+    }
+    if (
+      patch.arrivalReleaseStatus !== undefined ||
+      patch.arrivalReleaseReference !== undefined ||
+      patch.arrivalReleaseLocation !== undefined ||
+      patch.arrivalReleaseAuthorizedAt !== undefined ||
+      patch.arrivalReleaseAuthorizedBy !== undefined
+    ) {
+      return bad(
+        "Airport-release authority requires the dedicated full-admin evidence action.",
+        403,
+      );
     }
     if (existing.service === "both") {
       const allowedLegacyKeys = new Set([
@@ -992,6 +1063,12 @@ export async function PATCH(request: Request) {
     }
     const reservedStatusError = reservedAgentAssignmentStatus(patch.status);
     if (reservedStatusError) return bad(reservedStatusError, 409);
+    if (patch.status && atomicCustodyStatuses.has(patch.status)) {
+      return bad(
+        "Pickup, transfer, and delivery statuses are written only by the atomic custody checkpoint.",
+        409
+      );
+    }
     if (patch.locationEvents !== undefined) {
       return bad("Location trail is append-only. Submit a GPS checkpoint or proof instead.", 409);
     }
@@ -1009,6 +1086,18 @@ export async function PATCH(request: Request) {
     if (body.locationEvent?.kind === "driver_arrived" && patch.status !== "arrived") {
       return bad("Arrival GPS must be attached to marking arrival.", 409);
     }
+    if (
+      patch.status === "en_route" &&
+      body.locationEvent?.kind !== "driver_en_route"
+    ) {
+      return bad("Route-start GPS from the assigned driver is required before starting route.", 409);
+    }
+    if (
+      patch.status === "arrived" &&
+      body.locationEvent?.kind !== "driver_arrived"
+    ) {
+      return bad("Arrival GPS from the assigned driver is required before marking arrival.", 409);
+    }
     const statusChanged = Boolean(
       patch.status && patch.status !== existing.status
     );
@@ -1018,8 +1107,12 @@ export async function PATCH(request: Request) {
     );
     const manualReviewPatch = Boolean(
       patch.customerIdentityVerifiedAt !== undefined ||
-        patch.driverIdentityVerifiedAt !== undefined ||
-        patch.restrictedItemsAttestedAt !== undefined
+        patch.driverIdentityVerifiedAt !== undefined
+    );
+    const issueRecordPatch = Boolean(
+      patch.issueType !== undefined ||
+        patch.issueNotes !== undefined ||
+        patch.issueResolution !== undefined
     );
     const requiresOpsStatus = Boolean(
       archiveChanged ||
@@ -1040,16 +1133,42 @@ export async function PATCH(request: Request) {
     const ownsOrToken =
       userOwns(existing, user?.id) || tokenMatches(existing, body.accessToken);
     const customerClosing = statusChanged && patch.status === "closed";
+    const opsOverrideClosing = customerClosing && opsAuthorized(request);
+    const travelerClosing = customerClosing && !opsOverrideClosing;
+
+    if (
+      patch.customerConfirmedAt !== undefined ||
+      patch.closedAt !== undefined ||
+      (!customerClosing && patch.customerSignatureName !== undefined)
+    ) {
+      return bad(
+        "Traveler-confirmation and close timestamps are server-recorded by the atomic custody close action.",
+        403
+      );
+    }
+
+    if (customerClosing && (body.proof || body.locationEvent)) {
+      return bad(
+        "Close the booking from its existing handoff evidence; do not attach a new proof or GPS event to the close request.",
+        409
+      );
+    }
 
     if (requiresOpsStatus && !opsAuthorized(request)) {
       return bad("Operations access is required to set this booking status.", 403);
     }
 
     if (manualReviewPatch && !opsAuthorized(request)) {
-      return bad("Operations access is required to update identity and customer declaration review.", 403);
+      return bad("Operations access is required to update manual identity review.", 403);
+    }
+    if (manualReviewPatch && (!reason || reason.length < 12)) {
+      return bad("Record a specific audit reason before applying a manual identity review.", 409);
+    }
+    if (issueRecordPatch && !opsAuthorized(request)) {
+      return bad("Operations access is required to update the issue record.", 403);
     }
 
-    if (customerClosing && !opsAuthorized(request)) {
+    if (travelerClosing) {
       if (!ownsOrToken) {
         return bad("Customer access is required to confirm delivery.", 403);
       }
@@ -1060,11 +1179,18 @@ export async function PATCH(request: Request) {
         return bad("Enter the receiving customer name before confirming delivery.", 409);
       }
       if (
-        existing.delivery_confirmation_code &&
+        !existing.delivery_confirmation_code ||
         body.confirmationCode?.trim() !== existing.delivery_confirmation_code
       ) {
         return bad("Confirmation code does not match this booking.", 409);
       }
+    }
+
+    if (opsOverrideClosing && !reason) {
+      return bad(
+        "Operations must record an override reason before closing without traveler confirmation.",
+        409
+      );
     }
 
     if (
@@ -1076,10 +1202,16 @@ export async function PATCH(request: Request) {
     }
 
     if (requiresDriver) {
+      if ((body.proof || body.locationEvent) && !driverAuth.ok) {
+        return bad(
+          "Physical proof and GPS evidence require the assigned driver's authenticated session.",
+          403
+        );
+      }
       if (!opsAuthorized(request) && !driverAuth.ok) {
         return bad("Driver access is required for this update.", 403);
       }
-      if (!opsAuthorized(request)) {
+      if (!opsAuthorized(request) || body.proof || body.locationEvent) {
         if (driverAuth.perDriverCode && patch.driverName && driverAuth.driverName) {
           if (canonicalDriverName(patch.driverName) !== canonicalDriverName(driverAuth.driverName)) {
             await recordOpsException(
@@ -1166,6 +1298,18 @@ export async function PATCH(request: Request) {
       if (body.proof.kind === "customer_handoff" && (existing.service !== "departure" || airlineAuthorized)) {
         return bad("Passenger terminal handoff proof is only valid for a carrier-neutral departure booking.", 409);
       }
+      if (
+        existing.service === "arrival" &&
+        body.proof.kind === "seal" &&
+        (!body.proof.handoff?.recipientName?.trim() ||
+          !body.proof.handoff.organization?.trim() ||
+          !body.proof.handoff.badgeOrReference?.trim())
+      ) {
+        return bad(
+          "Every airport-release bag requires the releasing party name, organization, and badge/reference.",
+          409
+        );
+      }
       const proofError = validateProofShape(body.proof);
       if (proofError) {
         await recordOpsException(
@@ -1178,7 +1322,16 @@ export async function PATCH(request: Request) {
         );
         return bad(proofError, 409);
       }
-      storedProof = await storeProofImage(id, body.proof);
+      try {
+        storedProof = await storeProofImage(id, body.proof);
+      } catch (proofError) {
+        return bad(
+          proofError instanceof Error
+            ? proofError.message
+            : "Proof image could not be stored. Nothing was recorded.",
+          503
+        );
+      }
     }
 
     if (requiresDriver && !opsAuthorized(request)) {
@@ -1269,8 +1422,11 @@ export async function PATCH(request: Request) {
 
       if (nextStatus === "in_transit") {
         if (existing.service === "arrival") {
-          if (existing.status !== "arrived" || !hasRequiredProof(existing, "pickup")) {
-            return bad("Airport release proof and receiving-party details are required.", 409);
+          if (existing.status !== "arrived" || !hasAllArrivalReleaseProofs(existing)) {
+            return bad(
+              "Every bag requires a separate intact airport-release seal photo, GPS point, seal ID, method, and releasing-party details.",
+              409
+            );
           }
         } else {
           if (existing.status !== "picked_up" || !hasApprovedSeal(existing)) {
@@ -1328,8 +1484,109 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const actor = auditActor(request, user, driverAuth);
+
+    // Seal the booking-wide close checkpoint before changing the booking row.
+    // The RPC is atomic across every expected bag and idempotent, so a failed
+    // booking-row update can be retried without duplicating custody events.
+    if (customerClosing) {
+      const checkpoint = await recordCustodyCheckpoint({
+        bookingId: id,
+        checkpointKey: travelerClosing
+          ? `booking:${id}:recipient-confirmed`
+          : `booking:${id}:operations-close-override`,
+        expectedBagCount: Number(existing.bags),
+        eventType: travelerClosing
+          ? "recipient_confirmed"
+          : "operations_close_override",
+        actorRole: travelerClosing ? "traveler" : "operations",
+        actorName: travelerClosing
+          ? patch.customerSignatureName?.trim() || null
+          : actor.actorName || "Operations override",
+        verifiedMethod: travelerClosing ? "confirmation_code" : "manual_record",
+        note: travelerClosing
+          ? "Traveler confirmed physical receipt through the booking account and delivery confirmation code."
+          : `Operations closure override; no traveler confirmation code was claimed. Reason: ${reason}`,
+      });
+
+      if (!checkpoint.ok) {
+        await recordOpsException(
+          supabase,
+          id,
+          travelerClosing
+            ? "RECIPIENT_CONFIRMATION_LEDGER_FAILED"
+            : "OPERATIONS_CLOSE_OVERRIDE_LEDGER_FAILED",
+          travelerClosing
+            ? "Booking close was blocked because recipient confirmation was not durably recorded for every bag."
+            : "Booking close was blocked because the operations override was not durably recorded for every bag.",
+          "critical",
+          {
+            custodyError: checkpoint.error,
+            custodyCode: checkpoint.code,
+            expectedBagCount: Number(existing.bags),
+            closeMode: travelerClosing ? "traveler_confirmation" : "operations_override",
+          }
+        );
+        return bad(
+          "Could not seal the close checkpoint in the custody ledger. Booking remains open.",
+          500
+        );
+      }
+
+      if (checkpoint.bookingStatus !== "closed") {
+        await recordOpsException(
+          supabase,
+          id,
+          "BOOKING_CLOSE_STATUS_MISMATCH",
+          "The atomic custody checkpoint completed without returning the required closed booking state.",
+          "critical",
+          {
+            returnedStatus: checkpoint.bookingStatus,
+            closeMode: travelerClosing
+              ? "traveler_confirmation"
+              : "operations_override",
+          }
+        );
+        return bad("The custody checkpoint did not close the booking.", 500);
+      }
+
+      const { data: closedRow, error: closedRowError } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", id)
+        .eq("status", "closed")
+        .maybeSingle<BookingRow>();
+      if (closedRowError || !closedRow) {
+        console.error("Could not reload atomically closed booking", closedRowError);
+        return bad(
+          "The custody checkpoint closed, but the updated booking could not be reloaded. Refresh before retrying.",
+          503
+        );
+      }
+
+      await queueBookingNotification(closedRow, "status");
+      const includeAccessToken =
+        opsAuthorized(request) ||
+        userOwns(closedRow, user?.id) ||
+        tokenMatches(closedRow, body.accessToken);
+      return NextResponse.json({
+        ok: true,
+        booking: await responseBooking(closedRow, includeAccessToken),
+      });
+    }
+
     const rowPatch = bookingPatchToRowPatch(body.patch ?? {});
     const now = new Date().toISOString();
+    if (patch.customerIdentityVerifiedAt !== undefined) {
+      rowPatch.customer_identity_verified_at = patch.customerIdentityVerifiedAt
+        ? existing.customer_identity_verified_at ?? now
+        : null;
+    }
+    if (patch.driverIdentityVerifiedAt !== undefined) {
+      rowPatch.driver_identity_verified_at = patch.driverIdentityVerifiedAt
+        ? existing.driver_identity_verified_at ?? now
+        : null;
+    }
     if (patch.status === "accepted" && !patch.acceptedAt) {
       rowPatch.accepted_at = now;
     }
@@ -1341,12 +1598,6 @@ export async function PATCH(request: Request) {
     }
     if (patch.status === "delivery_pending" && !patch.deliveryPendingAt) {
       rowPatch.delivery_pending_at = now;
-    }
-    if (patch.status === "closed" && !patch.closedAt) {
-      rowPatch.closed_at = now;
-    }
-    if (patch.status === "closed" && !patch.customerConfirmedAt) {
-      rowPatch.customer_confirmed_at = now;
     }
     if (patch.status === "issue" && !patch.issueOpenedAt) {
       rowPatch.issue_opened_at = existing.issue_opened_at ?? now;
@@ -1363,7 +1614,6 @@ export async function PATCH(request: Request) {
       rowPatch.issue_resolved_at = now;
       if (!patch.issueResolution && reason) rowPatch.issue_resolution = reason;
     }
-    const actor = auditActor(request, user, driverAuth);
     const history = Array.isArray(existing.status_history)
       ? [...existing.status_history]
       : [];
@@ -1380,7 +1630,9 @@ export async function PATCH(request: Request) {
           fromStatus: existing.status,
           toStatus: patch.status,
           ...actor,
-          reason,
+          reason: opsOverrideClosing
+            ? `Operations closure override (not traveler confirmation): ${reason}`
+            : reason,
         })
       );
     } else if (archiveChanged) {
@@ -1476,6 +1728,7 @@ export async function PATCH(request: Request) {
       .from("bookings")
       .update(rowPatch)
       .eq("id", id)
+      .eq("status", existing.status)
       .select("*")
       .single<BookingRow>();
 
@@ -1486,26 +1739,6 @@ export async function PATCH(request: Request) {
 
     if (statusChanged || storedProof) {
       await queueBookingNotification(data, storedProof ? "proof" : "status");
-    }
-
-    if (customerClosing) {
-      try {
-        const bags = await getBagsForBooking(id);
-        await Promise.all(
-          bags.map((bag) =>
-            appendCustodyEvent({
-              bagId: bag.id,
-              eventType: "recipient_confirmed",
-              actorRole: "traveler",
-              actorName: patch.customerSignatureName?.trim() || null,
-              verifiedMethod: "confirmation_code",
-              note: "Traveler confirmed physical receipt through the booking account.",
-            })
-          )
-        );
-      } catch (custodyError) {
-        console.error("Customer receipt custody event failed", custodyError);
-      }
     }
 
     const includeAccessToken =

@@ -39,11 +39,24 @@ import {
   TERMINAL_STATUSES,
   type BookingIssueType,
   type Booking,
+  type ArrivalReleaseStatus,
+  type PilotEligibilitySnapshot,
   type PilotEligibilityStatus,
 } from "@/lib/bookings";
 import { getSlaAlerts, latestLocationEvent } from "@/lib/ops-rules";
 import { passengerManifestCustodyBlockers } from "@/lib/passengers";
-import { PILOT_ELIGIBILITY_LABELS } from "@/lib/pilot-eligibility";
+import {
+  PILOT_ELIGIBILITY_LABELS,
+  REQUIRED_PILOT_CHECKS,
+} from "@/lib/pilot-eligibility";
+
+const PILOT_CHECK_LABELS: Record<(typeof REQUIRED_PILOT_CHECKS)[number], string> = {
+  eligibleFlight: "Flight and baggage acceptance window reviewed",
+  eligibleTraveler: "Traveler and required adult verifications reviewed",
+  routeWithinPilotArea: "Pickup or delivery route is within the approved pilot area",
+  noticeSatisfied: "Minimum booking notice and route buffer are satisfied",
+  capacityConfirmed: "Agent, vehicle, seal kit, and booking capacity are confirmed",
+};
 
 type DataView = "production" | "demo" | "all";
 
@@ -372,7 +385,7 @@ function custodyBlockers(booking: Booking) {
     blockers.push("Driver ID review is not complete.");
   }
   if (!booking.restrictedItemsAttestedAt) {
-    blockers.push("Identity and customer declaration review is not complete.");
+    blockers.push("Customer prohibited-item declaration is not complete.");
   }
   blockers.push(
     ...passengerManifestCustodyBlockers(
@@ -430,28 +443,10 @@ function workflowBlockers(booking: Booking) {
 }
 
 function adminStatusPatch(
-  booking: Booking,
+  _booking: Booking,
   nextStatus: Booking["status"]
 ): Partial<Booking> {
-  const now = new Date().toISOString();
-  const patch: Partial<Booking> = { status: nextStatus };
-
-  if (nextStatus === "paid") patch.paidAt = booking.paidAt ?? now;
-  if (nextStatus === "assigned") patch.assignedAt = booking.assignedAt ?? now;
-  if (nextStatus === "accepted") patch.acceptedAt = booking.acceptedAt ?? now;
-  if (nextStatus === "en_route") patch.enRouteAt = booking.enRouteAt ?? now;
-  if (nextStatus === "arrived") patch.arrivedAt = booking.arrivedAt ?? now;
-  if (nextStatus === "picked_up") patch.pickedUpAt = booking.pickedUpAt ?? now;
-  if (nextStatus === "delivery_pending") {
-    patch.deliveryPendingAt = booking.deliveryPendingAt ?? now;
-  }
-  if (nextStatus === "delivered") patch.deliveredAt = booking.deliveredAt ?? now;
-  if (nextStatus === "closed") {
-    patch.closedAt = booking.closedAt ?? now;
-    patch.customerConfirmedAt = booking.customerConfirmedAt ?? now;
-  }
-
-  return patch;
+  return { status: nextStatus };
 }
 
 function formatAuditTime(value: string) {
@@ -481,6 +476,9 @@ const ACCOUNT_STATUS_STYLES: Record<AuthAccountStatus, string> = {
 
 function auditTitle(entry: NonNullable<Booking["statusHistory"]>[number]) {
   const actor = entry.actorName || entry.actorRole;
+  if (entry.action === "arrival_release_authority") {
+    return `${actor} recorded airport-release authority as ${entry.arrivalReleaseStatus ?? "pending"}`;
+  }
   if (entry.action === "manual_review_override") {
     return `${actor} completed manual ID/bag review`;
   }
@@ -813,6 +811,7 @@ export default function AdminPage() {
     bookingId: string;
     decision: Exclude<PilotEligibilityStatus, "pending" | "expired">;
     reason: string;
+    snapshot?: PilotEligibilitySnapshot;
   }) {
     setUpdatingId(input.bookingId);
     setError("");
@@ -823,15 +822,7 @@ export default function AdminPage() {
         credentials: "same-origin",
         body: JSON.stringify({
           ...input,
-          snapshot: input.decision === "approved"
-            ? {
-                eligibleFlight: true,
-                eligibleTraveler: true,
-                routeWithinPilotArea: true,
-                noticeSatisfied: true,
-                capacityConfirmed: true,
-              }
-            : {},
+          snapshot: input.decision === "approved" ? input.snapshot : {},
         }),
       });
       const data = (await response.json()) as {
@@ -847,6 +838,47 @@ export default function AdminPage() {
       ));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save pilot eligibility.");
+      throw err;
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
+  async function recordArrivalRelease(input: {
+    bookingId: string;
+    status: ArrivalReleaseStatus;
+    reference?: string;
+    location?: string;
+    authorizedAt?: string;
+    authorizedBy?: string;
+    reason: string;
+  }) {
+    setUpdatingId(input.bookingId);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/arrival-release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(input),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        booking?: Booking;
+      };
+      if (!response.ok || !data.booking) {
+        throw new Error(data.error || "Could not record airport-release authority.");
+      }
+      setBookings((rows) => rows.map((row) =>
+        row.id === data.booking!.id ? data.booking! : row
+      ));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not record airport-release authority.",
+      );
       throw err;
     } finally {
       setUpdatingId("");
@@ -2779,6 +2811,8 @@ export default function AdminPage() {
                   assignment={assignment}
                   onAssign={assignAgents}
                   onEligibilityDecision={decidePilotEligibility}
+                  canManageArrivalRelease={adminRole === "admin"}
+                  onArrivalRelease={recordArrivalRelease}
                 />
               );
             })
@@ -2799,6 +2833,14 @@ function dateInputValue(value?: string) {
   if (!value) return "";
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+}
+
+function dateTimeLocalValue(value?: string) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const localTime = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
+  return localTime.toISOString().slice(0, 16);
 }
 
 function agentReadinessForm(profile?: AgentReadinessProfile): Record<string, string> {
@@ -2962,6 +3004,8 @@ function BookingCard({
   assignment,
   onAssign,
   onEligibilityDecision,
+  canManageArrivalRelease,
+  onArrivalRelease,
 }: {
   booking: Booking;
   disabled: boolean;
@@ -2977,6 +3021,17 @@ function BookingCard({
   onEligibilityDecision: (input: {
     bookingId: string;
     decision: Exclude<PilotEligibilityStatus, "pending" | "expired">;
+    reason: string;
+    snapshot?: PilotEligibilitySnapshot;
+  }) => void | Promise<void>;
+  canManageArrivalRelease: boolean;
+  onArrivalRelease: (input: {
+    bookingId: string;
+    status: ArrivalReleaseStatus;
+    reference?: string;
+    location?: string;
+    authorizedAt?: string;
+    authorizedBy?: string;
     reason: string;
   }) => void | Promise<void>;
 }) {
@@ -3000,6 +3055,41 @@ function BookingCard({
   const [reviewReason, setReviewReason] = useState("");
   const [eligibilityReason, setEligibilityReason] = useState("");
   const [eligibilityBusy, setEligibilityBusy] = useState(false);
+  const [eligibilityChecks, setEligibilityChecks] = useState<
+    Partial<Record<(typeof REQUIRED_PILOT_CHECKS)[number], boolean>>
+  >({});
+  const [arrivalReleaseReference, setArrivalReleaseReference] = useState(
+    booking.arrivalReleaseReference ?? "",
+  );
+  const [arrivalReleaseLocation, setArrivalReleaseLocation] = useState(
+    booking.arrivalReleaseLocation ?? "",
+  );
+  const [arrivalReleaseAuthorizedAt, setArrivalReleaseAuthorizedAt] = useState(
+    dateTimeLocalValue(booking.arrivalReleaseAuthorizedAt),
+  );
+  const [arrivalReleaseAuthorizedBy, setArrivalReleaseAuthorizedBy] = useState(
+    booking.arrivalReleaseAuthorizedBy ?? "",
+  );
+  const [arrivalReleaseReason, setArrivalReleaseReason] = useState("");
+  const [arrivalReleaseBusy, setArrivalReleaseBusy] = useState(false);
+  const [arrivalReleaseError, setArrivalReleaseError] = useState("");
+
+  useEffect(() => {
+    setArrivalReleaseReference(booking.arrivalReleaseReference ?? "");
+    setArrivalReleaseLocation(booking.arrivalReleaseLocation ?? "");
+    setArrivalReleaseAuthorizedAt(
+      booking.arrivalReleaseStatus === "revoked"
+        ? ""
+        : dateTimeLocalValue(booking.arrivalReleaseAuthorizedAt),
+    );
+    setArrivalReleaseAuthorizedBy(booking.arrivalReleaseAuthorizedBy ?? "");
+  }, [
+    booking.arrivalReleaseAuthorizedAt,
+    booking.arrivalReleaseAuthorizedBy,
+    booking.arrivalReleaseLocation,
+    booking.arrivalReleaseReference,
+    booking.arrivalReleaseStatus,
+  ]);
 
   async function reviewPassenger(passengerId: string, action: "verify" | "reject") {
     setReviewBusyPassengerId(passengerId);
@@ -3103,6 +3193,49 @@ function BookingCard({
   const archived = Boolean(booking.archivedAt);
   const slaAlerts = archived ? [] : getSlaAlerts(booking);
   const lastLocation = latestLocationEvent(booking);
+  const arrivalReleaseStatus = booking.arrivalReleaseStatus ?? "pending";
+  const arrivalReleaseStatusStyle =
+    arrivalReleaseStatus === "authorized"
+      ? "bg-green-100 text-green-800"
+      : arrivalReleaseStatus === "revoked"
+        ? "bg-red-100 text-red-700"
+        : "bg-amber-100 text-amber-800";
+  const arrivalReleaseAuthorizationComplete = Boolean(
+    arrivalReleaseReference.trim().length >= 3 &&
+      arrivalReleaseLocation.trim().length >= 5 &&
+      arrivalReleaseAuthorizedAt &&
+      arrivalReleaseAuthorizedBy.trim().length >= 2 &&
+      arrivalReleaseReason.trim().length >= 12,
+  );
+
+  async function saveArrivalRelease(status: ArrivalReleaseStatus) {
+    setArrivalReleaseBusy(true);
+    setArrivalReleaseError("");
+    try {
+      await onArrivalRelease({
+        bookingId: booking.id,
+        status,
+        reference: status === "authorized" ? arrivalReleaseReference.trim() : undefined,
+        location: status === "authorized" ? arrivalReleaseLocation.trim() : undefined,
+        authorizedAt:
+          status === "authorized"
+            ? new Date(arrivalReleaseAuthorizedAt).toISOString()
+            : undefined,
+        authorizedBy:
+          status === "authorized" ? arrivalReleaseAuthorizedBy.trim() : undefined,
+        reason: arrivalReleaseReason.trim(),
+      });
+      setArrivalReleaseReason("");
+    } catch (err) {
+      setArrivalReleaseError(
+        err instanceof Error
+          ? err.message
+          : "Could not record airport-release authority.",
+      );
+    } finally {
+      setArrivalReleaseBusy(false);
+    }
+  }
 
   return (
     <article
@@ -3211,11 +3344,28 @@ function BookingCard({
           {booking.pilotEligibilityStatus === "pending" || !booking.pilotEligibilityStatus ? (
             <>
               <p className="mt-1 text-xs leading-relaxed text-navy/70">
-                Approve only after confirming eligible flight, eligible traveler,
-                route within the pilot area, minimum notice, and available capacity.
-                Approval unlocks Stripe for 24 hours. Waitlisted and declined
-                requests are never sent to checkout.
+                Check each item from actual booking evidence. Approval unlocks
+                Stripe for 24 hours. Waitlisted and declined requests are never
+                sent to checkout.
               </p>
+              <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-white p-3">
+                {REQUIRED_PILOT_CHECKS.map((checkKey) => (
+                  <label key={checkKey} className="flex items-start gap-2 text-xs leading-relaxed text-navy/75">
+                    <input
+                      type="checkbox"
+                      checked={eligibilityChecks[checkKey] === true}
+                      onChange={(event) =>
+                        setEligibilityChecks((current) => ({
+                          ...current,
+                          [checkKey]: event.target.checked,
+                        }))
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-amber-300 accent-green-700"
+                    />
+                    <span>{PILOT_CHECK_LABELS[checkKey]}</span>
+                  </label>
+                ))}
+              </div>
               <textarea
                 value={eligibilityReason}
                 onChange={(event) => setEligibilityReason(event.target.value)}
@@ -3231,13 +3381,23 @@ function BookingCard({
                   <button
                     key={decision}
                     type="button"
-                    disabled={disabled || eligibilityBusy || eligibilityReason.trim().length < 8}
+                    disabled={
+                      disabled ||
+                      eligibilityBusy ||
+                      eligibilityReason.trim().length < 8 ||
+                      (decision === "approved" &&
+                        REQUIRED_PILOT_CHECKS.some(
+                          (checkKey) => eligibilityChecks[checkKey] !== true
+                        ))
+                    }
                     onClick={() => {
                       setEligibilityBusy(true);
                       void Promise.resolve(onEligibilityDecision({
                         bookingId: booking.id,
                         decision,
                         reason: eligibilityReason.trim(),
+                        snapshot:
+                          decision === "approved" ? eligibilityChecks : undefined,
                       })).finally(() => setEligibilityBusy(false));
                     }}
                     className={`rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40 ${className}`}
@@ -3297,6 +3457,140 @@ function BookingCard({
           />
         )}
       </div>
+
+      {booking.service === "arrival" && (
+        <div className="mt-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-navy">Airport-release authority evidence</p>
+              <p className="mt-1 max-w-3xl text-xs leading-relaxed text-navy/65">
+                Record only verifiable, per-booking release authority. This entry does not
+                create airline, airport, or security approval. Pending or revoked status
+                blocks arrival custody.
+              </p>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${arrivalReleaseStatusStyle}`}>
+              {arrivalReleaseStatus === "authorized"
+                ? "Authorized evidence recorded"
+                : arrivalReleaseStatus === "revoked"
+                  ? "Revoked · custody blocked"
+                  : "Pending · custody blocked"}
+            </span>
+          </div>
+
+          {(booking.arrivalReleaseReference ||
+            booking.arrivalReleaseLocation ||
+            booking.arrivalReleaseAuthorizedAt ||
+            booking.arrivalReleaseAuthorizedBy) && (
+            <div className="mt-3 grid gap-3 rounded-xl border border-navy/10 bg-white p-3 text-xs sm:grid-cols-2">
+              <Info label="Authority reference" value={booking.arrivalReleaseReference || "Not recorded"} />
+              <Info label="Release location" value={booking.arrivalReleaseLocation || "Not recorded"} />
+              <Info
+                label="Authorization time"
+                value={
+                  booking.arrivalReleaseAuthorizedAt
+                    ? formatAuditTime(booking.arrivalReleaseAuthorizedAt)
+                    : "Not recorded"
+                }
+              />
+              <Info label="Authorizing party" value={booking.arrivalReleaseAuthorizedBy || "Not recorded"} />
+            </div>
+          )}
+
+          {canManageArrivalRelease ? (
+            <div className="mt-3 space-y-3">
+              {arrivalReleaseStatus !== "authorized" && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    value={arrivalReleaseReference}
+                    onChange={(event) => setArrivalReleaseReference(event.target.value)}
+                    placeholder="Authority reference / case / email ID"
+                    maxLength={200}
+                    className="rounded-xl border border-navy/15 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
+                  />
+                  <input
+                    value={arrivalReleaseLocation}
+                    onChange={(event) => setArrivalReleaseLocation(event.target.value)}
+                    placeholder="Exact public release location"
+                    maxLength={300}
+                    className="rounded-xl border border-navy/15 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
+                  />
+                  <label className="text-xs font-semibold text-navy/65">
+                    Authorization date and time
+                    <input
+                      type="datetime-local"
+                      value={arrivalReleaseAuthorizedAt}
+                      onChange={(event) => setArrivalReleaseAuthorizedAt(event.target.value)}
+                      className="mt-1 w-full rounded-xl border border-navy/15 bg-white px-3 py-2 text-sm font-normal text-navy outline-none focus:border-[#ff6868]"
+                    />
+                  </label>
+                  <input
+                    value={arrivalReleaseAuthorizedBy}
+                    onChange={(event) => setArrivalReleaseAuthorizedBy(event.target.value)}
+                    placeholder="Authorizing person or organization"
+                    maxLength={160}
+                    className="self-end rounded-xl border border-navy/15 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
+                  />
+                </div>
+              )}
+              <textarea
+                value={arrivalReleaseReason}
+                onChange={(event) => setArrivalReleaseReason(event.target.value)}
+                placeholder="Required audit reason (minimum 12 characters)"
+                maxLength={600}
+                className="min-h-20 w-full rounded-xl border border-navy/15 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
+              />
+              {arrivalReleaseError && (
+                <p className="text-xs font-semibold text-red-600">{arrivalReleaseError}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {arrivalReleaseStatus !== "authorized" && (
+                  <button
+                    type="button"
+                    disabled={disabled || arrivalReleaseBusy || !arrivalReleaseAuthorizationComplete}
+                    onClick={() => void saveArrivalRelease("authorized")}
+                    className="rounded-xl bg-green-700 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    Record authority evidence
+                  </button>
+                )}
+                {arrivalReleaseStatus === "authorized" && (
+                  <button
+                    type="button"
+                    disabled={
+                      disabled ||
+                      arrivalReleaseBusy ||
+                      arrivalReleaseReason.trim().length < 12
+                    }
+                    onClick={() => void saveArrivalRelease("revoked")}
+                    className="rounded-xl bg-red-100 px-4 py-2.5 text-xs font-bold text-red-700 disabled:opacity-40"
+                  >
+                    Revoke authority
+                  </button>
+                )}
+                {arrivalReleaseStatus === "revoked" && (
+                  <button
+                    type="button"
+                    disabled={
+                      disabled ||
+                      arrivalReleaseBusy ||
+                      arrivalReleaseReason.trim().length < 12
+                    }
+                    onClick={() => void saveArrivalRelease("pending")}
+                    className="rounded-xl bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-900 disabled:opacity-40"
+                  >
+                    Return to pending
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs font-semibold text-navy/55">
+              Full admin access is required to change airport-release authority evidence.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 rounded-2xl border border-navy/10 bg-white p-4 shadow-sm shadow-navy/5">
         <div className="mb-2 flex items-center gap-2">
@@ -3453,7 +3747,7 @@ function BookingCard({
         {blockers.length ? (
           <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs leading-relaxed text-red-800">
             <p className="font-bold">
-              Driver cannot start because manual ID/bag review is not complete.
+              Driver cannot start until every listed custody gate is complete.
             </p>
             <ul className="mt-2 space-y-1">
               {blockers.map((blocker) => (
@@ -3467,26 +3761,30 @@ function BookingCard({
           </p>
         )}
         <button
-          disabled={disabled || custodyReady}
+          disabled={disabled || identityReady}
           onClick={() => {
             const now = new Date().toISOString();
             const reason =
               auditReason.trim() ||
-              "Admin marked manual ID/bag review complete.";
+              "Admin marked manual customer and driver ID review complete.";
             void onPatch({
               customerIdentityVerifiedAt:
                 booking.customerIdentityVerifiedAt ?? now,
               driverIdentityVerifiedAt:
                 booking.driverIdentityVerifiedAt ?? now,
-              restrictedItemsAttestedAt:
-                booking.restrictedItemsAttestedAt ?? now,
             }, reason);
             setAuditReason("");
           }}
           className="rounded-xl bg-navy px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {custodyReady ? "Custody ready" : "Admin override: mark review complete"}
+          {identityReady ? "IDs verified" : "Admin override: mark ID review complete"}
         </button>
+        {!restrictedReady && (
+          <p className="mt-2 text-xs font-semibold text-yellow-800">
+            The customer declaration cannot be supplied by an admin override;
+            it must be captured from the customer request.
+          </p>
+        )}
       </div>
 
       <div className="mt-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
@@ -3609,14 +3907,12 @@ function BookingCard({
             disabled={disabled || !issueType}
             onClick={() => {
               if (!issueType) return;
-              const now = new Date().toISOString();
               const cleanNotes = issueNotes.trim();
               void onPatch(
                 {
                   status: "issue",
                   issueType,
                   issueNotes: cleanNotes || undefined,
-                  issueOpenedAt: booking.issueOpenedAt ?? now,
                 },
                 cleanNotes ||
                   `Operations marked issue: ${ISSUE_TYPE_LABELS[issueType]}.`
@@ -3637,12 +3933,11 @@ function BookingCard({
               <button
                 disabled={disabled || !issueResolution.trim()}
                 onClick={() => {
-                  const nextStatus = booking.driverName ? "assigned" : "paid";
+                  const nextStatus: Booking["status"] = "paid";
                   const resolution = issueResolution.trim();
                   void onPatch(
                     {
                       status: nextStatus,
-                      issueResolvedAt: new Date().toISOString(),
                       issueResolution: resolution,
                     },
                     resolution
@@ -3697,7 +3992,17 @@ function BookingCard({
               <option
                 key={option}
                 value={option}
-                disabled={option === "assigned" || option === "accepted"}
+                disabled={
+                  option === "assigned" ||
+                  option === "accepted" ||
+                  option === "en_route" ||
+                  option === "arrived" ||
+                  option === "picked_up" ||
+                  option === "in_transit" ||
+                  option === "delivery_pending" ||
+                  option === "delivered" ||
+                  option === "closed"
+                }
               >
                 {STATUS_LABELS[option]}
               </option>
@@ -3756,11 +4061,27 @@ function BookingCard({
             No agent has complete, current identity, training, insurance, and vehicle evidence.
           </p>
         )}
+        {(booking.status === "delivery_pending" ||
+          booking.status === "delivered") && (
+          <button
+            type="button"
+            disabled={disabled || !auditReason.trim()}
+            onClick={() => {
+              const reason = auditReason.trim();
+              if (!reason) return;
+              void onPatch({ status: "closed" }, reason);
+              setAuditReason("");
+            }}
+            className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-800 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Close with operations override
+          </button>
+        )}
       </div>
       <p className="mt-2 text-[11px] leading-relaxed text-navy/50">
-        Admin status override is allowed for operations cleanup. Driver custody
-        actions still require proof unless this portal marks the manual review
-        complete.
+        Custody, route, and traveler-confirmation states cannot be selected as
+        admin shortcuts. They are written only by driver GPS/proof checkpoints
+        or the separately labeled operations-close override above.
       </p>
       {booking.statusHistory?.length ? (
         <details className="mt-4 rounded-2xl border border-navy/10 bg-navy/[0.02] p-4">
@@ -3780,6 +4101,18 @@ function BookingCard({
                     Reason: {entry.reason}
                   </div>
                 )}
+                {entry.action === "arrival_release_authority" &&
+                  entry.arrivalReleaseReference && (
+                    <div className="mt-1 leading-relaxed text-navy/60">
+                      Evidence: {entry.arrivalReleaseReference}
+                      {entry.arrivalReleaseLocation
+                        ? ` · ${entry.arrivalReleaseLocation}`
+                        : ""}
+                      {entry.arrivalReleaseAuthorizedBy
+                        ? ` · authorized by ${entry.arrivalReleaseAuthorizedBy}`
+                        : ""}
+                    </div>
+                  )}
               </div>
             ))}
           </div>

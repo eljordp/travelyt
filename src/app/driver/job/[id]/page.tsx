@@ -38,6 +38,10 @@ const DRIVER_KEY = "travelyt:driver";
 type ProofLocation = NonNullable<Booking["proofs"][number]["location"]>;
 type SealMethod = "zipper" | "latch_label" | "handle";
 type SealStatus = "intact" | "broken" | "replaced";
+type CustodyLogResult = {
+  bookingStatus: Booking["status"];
+  idempotent: boolean;
+};
 type BarcodeDetectorResult = { rawValue: string };
 type BarcodeDetectorLike = {
   detect(source: ImageBitmap): Promise<BarcodeDetectorResult[]>;
@@ -86,6 +90,120 @@ function isStructuredBagSealProof(proof: Booking["proofs"][number]) {
   );
 }
 
+function latestStoredProof(
+  booking: Booking,
+  kind: Booking["proofs"][number]["kind"]
+) {
+  return [...booking.proofs]
+    .reverse()
+    .find(
+      (proof) =>
+        proof.kind === kind &&
+        Boolean(proof.storagePath) &&
+        Boolean(proof.custodyCheckpointKey) &&
+        Boolean(proof.location)
+    );
+}
+
+function latestStoredSealSet(booking: Booking) {
+  const seals = booking.proofs.filter(
+    (proof) =>
+      isStructuredBagSealProof(proof) &&
+      Boolean(proof.storagePath) &&
+      Boolean(proof.custodyCheckpointKey) &&
+      Boolean(proof.location)
+  );
+  if (seals.length < booking.bags) return [];
+  const latest = seals.slice(-booking.bags);
+  const expected = new Set(
+    Array.from({ length: booking.bags }, (_, index) => index + 1)
+  );
+  const actual = new Set(latest.map((proof) => proof.bagIndex));
+  return actual.size === expected.size && [...expected].every((bag) => actual.has(bag))
+    ? latest
+    : [];
+}
+
+function resumableSealCaptureCheckpointKey(booking: Booking) {
+  if (booking.status !== "arrived") return "";
+  const seals = booking.proofs.filter(
+    (proof) =>
+      isStructuredBagSealProof(proof) &&
+      Boolean(proof.storagePath) &&
+      Boolean(proof.custodyCheckpointKey) &&
+      Boolean(proof.location)
+  );
+  if (!seals.length) return "";
+  const latestKey = seals.at(-1)?.custodyCheckpointKey;
+  if (!latestKey) return "";
+  const currentSeries = seals.filter(
+    (proof) => proof.custodyCheckpointKey === latestKey
+  );
+  if (!currentSeries.length || currentSeries.length >= booking.bags) return "";
+  const indexes = new Set(currentSeries.map((proof) => proof.bagIndex));
+  return Array.from(
+    { length: currentSeries.length },
+    (_, index) => index + 1
+  ).every((bagIndex) => indexes.has(bagIndex))
+    ? latestKey
+    : "";
+}
+
+function resumableCustodyCheckpoint(booking: Booking): {
+  eventType: CustodyEventType;
+  checkpointKey: string;
+  location: ProofLocation;
+  label: string;
+} | null {
+  if (booking.status === "arrived") {
+    const seals = latestStoredSealSet(booking);
+    const finalSeal = seals.at(-1);
+    if (finalSeal?.custodyCheckpointKey && finalSeal.location) {
+      return {
+        eventType: "custody_accepted",
+        checkpointKey: finalSeal.custodyCheckpointKey,
+        location: finalSeal.location,
+        label:
+          booking.service === "arrival"
+            ? "Resume recorded airport-release checkpoint"
+            : "Resume recorded sealed-pickup checkpoint",
+      };
+    }
+  }
+
+  if (booking.status === "picked_up" && booking.service === "departure") {
+    const carrierAuthorized = carrierHandoffAuthorized(booking);
+    const proof = latestStoredProof(
+      booking,
+      carrierAuthorized ? "airline_handoff" : "customer_handoff"
+    );
+    if (proof?.custodyCheckpointKey && proof.location) {
+      return {
+        eventType: carrierAuthorized ? "carrier_transfer" : "traveler_return",
+        checkpointKey: proof.custodyCheckpointKey,
+        location: proof.location,
+        label: carrierAuthorized
+          ? "Resume recorded airline handoff"
+          : "Resume recorded traveler handoff",
+      };
+    }
+  }
+
+  if (booking.status === "in_transit" && booking.service === "arrival") {
+    const proof = latestStoredProof(booking, "delivery");
+    if (proof?.custodyCheckpointKey && proof.location) {
+      return {
+        eventType: "recipient_delivery",
+        checkpointKey: proof.custodyCheckpointKey,
+        location: proof.location,
+        label: "Resume recorded delivery checkpoint",
+      };
+    }
+  }
+
+  return null;
+}
+
 function DriverJobChrome({
   children,
   title = "Driver job",
@@ -126,6 +244,9 @@ export default function DriverJobPage() {
   const [assignmentBusy, setAssignmentBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [custodyCheckpointKey, setCustodyCheckpointKey] = useState("");
+  const [custodyActionBusy, setCustodyActionBusy] = useState(false);
+  const custodyActionLock = useRef(false);
   const [photoNote, setPhotoNote] = useState("");
   const [sealId, setSealId] = useState("");
   const [sealMethod, setSealMethod] = useState<SealMethod>("zipper");
@@ -148,8 +269,17 @@ export default function DriverJobPage() {
   }, []);
 
   async function captureNative() {
+    if (custodyActionBusy) return;
     const dataUrl = await captureProofPhoto();
-    if (dataUrl) setPendingPhoto(dataUrl);
+    if (dataUrl) {
+      setPendingPhoto(dataUrl);
+      setCustodyCheckpointKey(
+        (current) =>
+          current ||
+          (booking ? resumableSealCaptureCheckpointKey(booking) : "") ||
+          crypto.randomUUID()
+      );
+    }
   }
 
   useEffect(() => {
@@ -249,26 +379,51 @@ export default function DriverJobPage() {
     reader.onload = () => {
       const result = reader.result;
       if (typeof result === "string") {
-        void compressProofPhoto(result).then(setPendingPhoto);
+        void compressProofPhoto(result).then((photo) => {
+          setPendingPhoto(photo);
+          setCustodyCheckpointKey(
+            (current) =>
+              current ||
+              (booking ? resumableSealCaptureCheckpointKey(booking) : "") ||
+              crypto.randomUUID()
+          );
+        });
       }
     };
     reader.readAsDataURL(file);
   }
 
-  function clearPhoto() {
+  function clearPhoto(
+    options: { preserveHandoff?: boolean; preserveCheckpoint?: boolean } = {}
+  ) {
     setPendingPhoto(null);
+    if (!options.preserveCheckpoint) setCustodyCheckpointKey("");
     setPhotoNote("");
     setSealId("");
     setSealMethod("zipper");
     setSealStatus("intact");
-    setHandoffRecipientName("");
-    setHandoffRecipientRole("");
-    setHandoffOrganization("");
-    setHandoffReference("");
-    setPassengerIdentityMatched(false);
+    if (!options.preserveHandoff) {
+      setHandoffRecipientName("");
+      setHandoffRecipientRole("");
+      setHandoffOrganization("");
+      setHandoffReference("");
+      setPassengerIdentityMatched(false);
+    }
     setError("");
     setLocationStatus("idle");
     if (fileInput.current) fileInput.current.value = "";
+  }
+
+  function beginCustodyAction() {
+    if (custodyActionLock.current) return false;
+    custodyActionLock.current = true;
+    setCustodyActionBusy(true);
+    return true;
+  }
+
+  function endCustodyAction() {
+    custodyActionLock.current = false;
+    setCustodyActionBusy(false);
   }
 
   async function captureLocation(): Promise<ProofLocation | undefined> {
@@ -299,15 +454,21 @@ export default function DriverJobPage() {
     return undefined;
   }
 
-  // Append a custody event to every bag's tamper-evident ledger. Non-blocking:
-  // ledger logging must never break the booking proof flow.
+  // Append a custody event to every bag's ledger before advancing the booking.
+  // A photo without a matching custody event is incomplete evidence, so the
+  // workflow fails closed and leaves the booking at its current status.
   async function logCustody(
     eventType: CustodyEventType,
-    location?: ProofLocation,
+    checkpointKey: string,
+    location: ProofLocation,
     sourceBooking?: Booking
-  ) {
+  ): Promise<CustodyLogResult | null> {
     const custodyBooking = sourceBooking ?? booking;
-    if (!custodyBooking) return;
+    if (!custodyBooking) return null;
+    if (!checkpointKey) {
+      setError("Save the required checkpoint photo before recording custody.");
+      return null;
+    }
     try {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -319,7 +480,7 @@ export default function DriverJobPage() {
       const observedSealStatus = [...custodyBooking.proofs]
         .reverse()
         .find((proof) => proof.kind !== "seal" && proof.sealStatus)?.sealStatus;
-      await fetch("/api/custody", {
+      const response = await fetch("/api/custody", {
         method: "POST",
         headers,
         credentials: "same-origin",
@@ -327,22 +488,76 @@ export default function DriverJobPage() {
           action: "scan_booking",
           bookingId: custodyBooking.id,
           eventType,
-          actorRole: "agent",
+          checkpointKey,
+          expectedBagCount: custodyBooking.bags,
           lat: location?.latitude ?? null,
           lng: location?.longitude ?? null,
-          seals: custodyBooking.proofs
-            .filter((proof) => proof.kind === "seal")
+          seals: latestStoredSealSet(custodyBooking)
             .map((proof) => ({
               bagIndex: proof.bagIndex,
               sealId: proof.sealId,
               sealMethod: proof.sealMethod,
               sealStatus: observedSealStatus ?? proof.sealStatus,
+              proofCheckpointKey: proof.custodyCheckpointKey,
+              proofStoragePath: proof.storagePath,
             })),
         }),
       });
-    } catch {
-      // Intentionally swallowed — see note above.
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        events?: unknown[];
+        skipped?: boolean;
+        idempotent?: boolean;
+        bookingStatus?: Booking["status"];
+      } | null;
+      if (
+        !response.ok ||
+        payload?.skipped === true ||
+        !Array.isArray(payload?.events) ||
+        payload.events.length !== custodyBooking.bags ||
+        !payload.bookingStatus
+      ) {
+        void recordClientOpsException(
+          custodyBooking.id,
+          "CUSTODY_LEDGER_WRITE_FAILED",
+          payload?.error || "Custody ledger did not record one event per bag.",
+          "critical",
+          { eventType, expectedBags: custodyBooking.bags }
+        );
+        setError(
+          payload?.error ||
+            "Custody ledger could not be completed. The booking was not advanced."
+        );
+        return null;
+      }
+      return {
+        bookingStatus: payload.bookingStatus,
+        idempotent: payload.idempotent === true,
+      };
+    } catch (custodyError) {
+      void recordClientOpsException(
+        custodyBooking.id,
+        "CUSTODY_LEDGER_WRITE_FAILED",
+        custodyError instanceof Error ? custodyError.message : "Custody ledger request failed.",
+        "critical",
+        { eventType, expectedBags: custodyBooking.bags }
+      );
+      setError("Custody ledger could not be completed. The booking was not advanced.");
+      return null;
     }
+  }
+
+  async function applyCustodyResult(
+    result: CustodyLogResult,
+    fallbackBooking: Booking
+  ) {
+    const refreshed = await getBooking(fallbackBooking.id);
+    const nextBooking = refreshed ?? {
+      ...fallbackBooking,
+      status: result.bookingStatus,
+    };
+    setBooking(nextBooking);
+    return nextBooking;
   }
 
   async function acceptJob() {
@@ -412,7 +627,6 @@ export default function DriverJobPage() {
     if (!location) return;
     const updated = await updateBooking(booking.id, {
       status: "en_route",
-      enRouteAt: new Date().toISOString(),
     }, `${driver} started route to the customer or airport. GPS ${location.latitude}, ${location.longitude}.`, {
       kind: "driver_en_route",
       location,
@@ -428,7 +642,6 @@ export default function DriverJobPage() {
     if (!location) return;
     const updated = await updateBooking(booking.id, {
       status: "arrived",
-      arrivedAt: new Date().toISOString(),
     }, `${driver} arrived at the custody location. GPS ${location.latitude}, ${location.longitude}.`, {
       kind: "driver_arrived",
       location,
@@ -439,67 +652,88 @@ export default function DriverJobPage() {
   }
 
   async function markPickedUp() {
-    if (!booking || !pendingPhoto) return;
-    const cleanSealId = sealId.trim().toUpperCase();
-    if (!cleanSealId) {
-      setError("Enter the seal ID before confirming pickup.");
-      return;
-    }
-    if (sealStatus !== "intact") {
-      setError("A broken or replaced seal cannot start custody. Stop and open a seal exception.");
-      return;
-    }
-    const existingSealProofs = booking.proofs.filter(
-      isStructuredBagSealProof
-    );
-    const bagIndex = existingSealProofs.length + 1;
-    if (bagIndex > booking.bags) {
-      setError("All booked bags already have seal proof. Refresh the job before continuing.");
-      return;
-    }
-    const location = await captureLocation();
-    if (!location) return;
-    const proofSaved = await addProof(booking.id, {
-      kind: "seal",
-      dataUrl: pendingPhoto,
-      timestamp: new Date().toISOString(),
-      location,
-      sealId: cleanSealId,
-      bagIndex,
-      bagLabel: `Bag ${bagIndex} of ${booking.bags}`,
-      sealMethod,
-      sealStatus,
-      driverName: driver ?? undefined,
-      note: photoNote || undefined,
-    });
-    if (!proofSaved) {
-      setError(latestApiError("Seal proof could not be saved."));
-      return;
-    }
-    const sealedCount = proofSaved.proofs.filter(
-      isStructuredBagSealProof
-    ).length;
-    if (sealedCount < booking.bags) {
-      setBooking(proofSaved);
+    if (!booking || !pendingPhoto || !beginCustodyAction()) return;
+    setError("");
+    try {
+      const cleanSealId = sealId.trim().toUpperCase();
+      if (!cleanSealId) {
+        setError("Enter the seal ID before confirming pickup.");
+        return;
+      }
+      if (sealStatus !== "intact") {
+        setError("A broken or replaced seal cannot start custody. Stop and open a seal exception.");
+        return;
+      }
+      const releasingTravelerName = handoffRecipientName.trim();
+      if (!releasingTravelerName || !passengerIdentityMatched) {
+        setError("Enter the releasing traveler name and confirm the approved identity match.");
+        return;
+      }
+      const existingSealProofs = booking.proofs.filter(
+        isStructuredBagSealProof
+      );
+      const bagIndex = existingSealProofs.length + 1;
+      if (bagIndex > booking.bags) {
+        setError("All booked bags already have seal proof. Resume the recorded checkpoint instead of adding another photo.");
+        return;
+      }
+      const location = await captureLocation();
+      if (!location) return;
+      const proofSaved = await addProof(booking.id, {
+        kind: "seal",
+        dataUrl: pendingPhoto,
+        timestamp: new Date().toISOString(),
+        custodyCheckpointKey,
+        location,
+        sealId: cleanSealId,
+        bagIndex,
+        bagLabel: `Bag ${bagIndex} of ${booking.bags}`,
+        sealMethod,
+        sealStatus,
+        driverName: driver ?? undefined,
+        handoff: {
+          recipientName: releasingTravelerName,
+          recipientRole: "Releasing traveler",
+          organization: "Passenger departure pickup",
+          badgeOrReference: "IDENTITY_MATCHED_NO_DOCUMENT_NUMBER_STORED",
+          verificationMethod: "manual",
+        },
+        note: photoNote || undefined,
+      });
+      if (!proofSaved) {
+        setError(latestApiError("Seal proof could not be saved."));
+        return;
+      }
+      const sealedCount = proofSaved.proofs.filter(
+        isStructuredBagSealProof
+      ).length;
+      if (sealedCount < booking.bags) {
+        setBooking(proofSaved);
+        clearPhoto({ preserveHandoff: true, preserveCheckpoint: true });
+        return;
+      }
+      const custodyResult = await logCustody(
+        "custody_accepted",
+        custodyCheckpointKey,
+        location,
+        proofSaved
+      );
+      if (!custodyResult) {
+        setBooking(proofSaved);
+        return;
+      }
+      await applyCustodyResult(custodyResult, proofSaved);
       clearPhoto();
-      return;
+    } finally {
+      endCustodyAction();
     }
-    const updated = await updateBooking(booking.id, {
-      status: "picked_up",
-      pickedUpAt: new Date().toISOString(),
-    }, `${driver} confirmed sealed pickup and started custody.`);
-    if (!updated) {
-      setError(latestApiError("Pickup could not be confirmed. Travelyt may still need identity verification or the customer's prohibited-item declaration."));
-      return;
-    }
-    setBooking(updated);
-    void logCustody("custody_accepted", location, updated);
-    clearPhoto();
   }
 
   async function markAirlineHandoff() {
-    if (!booking || !pendingPhoto) return;
-    if (sealStatus !== "intact") {
+    if (!booking || !pendingPhoto || !beginCustodyAction()) return;
+    setError("");
+    try {
+      if (sealStatus !== "intact") {
       void recordClientOpsException(
         booking.id,
         "SEAL_STATUS_STOP",
@@ -508,22 +742,23 @@ export default function DriverJobPage() {
         { sealStatus, workflow: "airline_handoff" }
       );
       setError("Stop the transfer. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
-      return;
-    }
-    const recipientName = handoffRecipientName.trim();
-    const organization = handoffOrganization.trim();
-    const badgeOrReference = handoffReference.trim();
-    if (!recipientName || !organization || !badgeOrReference) {
-      setError("Enter who accepted the bags, their airline/company, and badge or reference.");
-      return;
-    }
-    const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
-    const location = await captureLocation();
-    if (!location) return;
-    const proofSaved = await addProof(booking.id, {
+        return;
+      }
+      const recipientName = handoffRecipientName.trim();
+      const organization = handoffOrganization.trim();
+      const badgeOrReference = handoffReference.trim();
+      if (!recipientName || !organization || !badgeOrReference) {
+        setError("Enter who accepted the bags, their airline/company, and badge or reference.");
+        return;
+      }
+      const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
+      const location = await captureLocation();
+      if (!location) return;
+      const proofSaved = await addProof(booking.id, {
       kind: "airline_handoff",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      custodyCheckpointKey,
       location,
       sealId: latestSeal,
       sealStatus,
@@ -536,31 +771,36 @@ export default function DriverJobPage() {
         verificationMethod: "employee_badge",
       },
       note: photoNote || undefined,
-    });
-    if (!proofSaved) {
-      setError(latestApiError("Airline handoff proof could not be saved."));
-      return;
-    }
-    const updated = await updateBooking(booking.id, {
-      status: booking.service === "departure" ? "delivered" : "in_transit",
-      deliveredAt:
-        booking.service === "departure" ? new Date().toISOString() : undefined,
-    }, `${driver} confirmed airline handoff.`);
-    if (!updated) {
-      setError(latestApiError("Airline handoff could not be confirmed. Customer seal approval may still be pending."));
-      return;
-    }
-    setBooking(updated);
-    void logCustody("carrier_transfer", location, updated);
-    clearPhoto();
-    if (updated?.status === "delivered") {
-      setTimeout(() => router.push("/driver"), 800);
+      });
+      if (!proofSaved) {
+        setError(latestApiError("Airline handoff proof could not be saved."));
+        return;
+      }
+      const custodyResult = await logCustody(
+        "carrier_transfer",
+        custodyCheckpointKey,
+        location,
+        proofSaved
+      );
+      if (!custodyResult) {
+        setBooking(proofSaved);
+        return;
+      }
+      const updated = await applyCustodyResult(custodyResult, proofSaved);
+      clearPhoto();
+      if (updated.status === "delivered") {
+        setTimeout(() => router.push("/driver"), 800);
+      }
+    } finally {
+      endCustodyAction();
     }
   }
 
   async function markPassengerTerminalHandoff() {
-    if (!booking || !pendingPhoto) return;
-    if (sealStatus !== "intact") {
+    if (!booking || !pendingPhoto || !beginCustodyAction()) return;
+    setError("");
+    try {
+      if (sealStatus !== "intact") {
       void recordClientOpsException(
         booking.id,
         "SEAL_STATUS_STOP",
@@ -569,20 +809,21 @@ export default function DriverJobPage() {
         { sealStatus, workflow: "traveler_return" }
       );
       setError("Stop the transfer. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
-      return;
-    }
-    const recipientName = handoffRecipientName.trim();
-    if (!recipientName || !passengerIdentityMatched) {
-      setError("Enter the receiving traveler name and confirm the approved identity match.");
-      return;
-    }
-    const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
-    const location = await captureLocation();
-    if (!location) return;
-    const proofSaved = await addProof(booking.id, {
+        return;
+      }
+      const recipientName = handoffRecipientName.trim();
+      if (!recipientName || !passengerIdentityMatched) {
+        setError("Enter the receiving traveler name and confirm the approved identity match.");
+        return;
+      }
+      const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
+      const location = await captureLocation();
+      if (!location) return;
+      const proofSaved = await addProof(booking.id, {
       kind: "customer_handoff",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      custodyCheckpointKey,
       location,
       sealId: latestSeal,
       sealStatus,
@@ -595,40 +836,74 @@ export default function DriverJobPage() {
         verificationMethod: "manual",
       },
       note: photoNote || undefined,
-    });
-    if (!proofSaved) {
-      setError(latestApiError("Passenger terminal handoff proof could not be saved."));
-      return;
+      });
+      if (!proofSaved) {
+        setError(latestApiError("Passenger terminal handoff proof could not be saved."));
+        return;
+      }
+      const custodyResult = await logCustody(
+        "traveler_return",
+        custodyCheckpointKey,
+        location,
+        proofSaved
+      );
+      if (!custodyResult) {
+        setBooking(proofSaved);
+        return;
+      }
+      await applyCustodyResult(custodyResult, proofSaved);
+      clearPhoto();
+    } finally {
+      endCustodyAction();
     }
-    const updated = await updateBooking(booking.id, {
-      status: "delivery_pending",
-      deliveryPendingAt: new Date().toISOString(),
-    }, `${driver} returned the sealed bags to the verified ticketed traveler at the terminal.`);
-    if (!updated) {
-      setError(latestApiError("Passenger terminal handoff could not be confirmed. Customer seal approval may still be pending."));
-      return;
-    }
-    setBooking(updated);
-    void logCustody("traveler_return", location, updated);
-    clearPhoto();
   }
 
   async function markAirportRelease() {
-    if (!booking || !pendingPhoto) return;
-    const recipientName = handoffRecipientName.trim();
-    const organization = handoffOrganization.trim();
-    const badgeOrReference = handoffReference.trim();
-    if (!recipientName || !organization || !badgeOrReference) {
-      setError("Enter who released the bags, their airline/company, and badge or reference.");
-      return;
-    }
-    const location = await captureLocation();
-    if (!location) return;
-    const proofSaved = await addProof(booking.id, {
-      kind: "pickup",
+    if (!booking || !pendingPhoto || !beginCustodyAction()) return;
+    setError("");
+    try {
+      const cleanSealId = sealId.trim().toUpperCase();
+    if (!cleanSealId) {
+      setError("Enter the seal ID before accepting airport-release custody.");
+        return;
+      }
+      if (sealStatus !== "intact") {
+      void recordClientOpsException(
+        booking.id,
+        "SEAL_STATUS_STOP",
+        `Airport-release custody stopped because the proposed seal status was ${sealStatus}.`,
+        "critical",
+        { sealStatus, workflow: "airport_release" }
+      );
+      setError("Stop the pickup. Apply a new intact numbered seal or contact Travelyt operations.");
+        return;
+      }
+      const recipientName = handoffRecipientName.trim();
+      const organization = handoffOrganization.trim();
+      const badgeOrReference = handoffReference.trim();
+      if (!recipientName || !organization || !badgeOrReference) {
+        setError("Enter who released the bags, their airline/company, and badge or reference.");
+        return;
+      }
+      const existingSealProofs = booking.proofs.filter(isStructuredBagSealProof);
+      const bagIndex = existingSealProofs.length + 1;
+      if (bagIndex > booking.bags) {
+        setError("All booked bags already have seal proof. Resume the recorded checkpoint instead of adding another photo.");
+        return;
+      }
+      const location = await captureLocation();
+      if (!location) return;
+      const proofSaved = await addProof(booking.id, {
+      kind: "seal",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      custodyCheckpointKey,
       location,
+      sealId: cleanSealId,
+      bagIndex,
+      bagLabel: `Bag ${bagIndex} of ${booking.bags}`,
+      sealMethod,
+      sealStatus,
       driverName: driver ?? undefined,
       handoff: {
         recipientName,
@@ -638,27 +913,39 @@ export default function DriverJobPage() {
         verificationMethod: "employee_badge",
       },
       note: photoNote || undefined,
-    });
-    if (!proofSaved) {
-      setError(latestApiError("Airport release proof could not be saved."));
-      return;
+      });
+      if (!proofSaved) {
+        setError(latestApiError("Airport release and seal proof could not be saved."));
+        return;
+      }
+      const sealedCount = proofSaved.proofs.filter(isStructuredBagSealProof).length;
+      if (sealedCount < booking.bags) {
+        setBooking(proofSaved);
+        clearPhoto({ preserveHandoff: true, preserveCheckpoint: true });
+        return;
+      }
+      const custodyResult = await logCustody(
+        "custody_accepted",
+        custodyCheckpointKey,
+        location,
+        proofSaved
+      );
+      if (!custodyResult) {
+        setBooking(proofSaved);
+        return;
+      }
+      await applyCustodyResult(custodyResult, proofSaved);
+      clearPhoto();
+    } finally {
+      endCustodyAction();
     }
-    const updated = await updateBooking(booking.id, {
-      status: "in_transit",
-      pickedUpAt: new Date().toISOString(),
-    }, `${driver} confirmed airport release and started custody.`);
-    if (!updated) {
-      setError(latestApiError("Airport release could not be confirmed. Travelyt may still need ID verification."));
-      return;
-    }
-    setBooking(updated);
-    void logCustody("custody_accepted", location);
-    clearPhoto();
   }
 
   async function markDelivered() {
-    if (!booking || !pendingPhoto) return;
-    if (sealStatus !== "intact") {
+    if (!booking || !pendingPhoto || !beginCustodyAction()) return;
+    setError("");
+    try {
+      if (sealStatus !== "intact") {
       void recordClientOpsException(
         booking.id,
         "SEAL_STATUS_STOP",
@@ -667,40 +954,76 @@ export default function DriverJobPage() {
         { sealStatus, workflow: "delivery" }
       );
       setError("Stop delivery. Photograph the seal, keep control of the bags, and contact Travelyt operations.");
-      return;
-    }
-    const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
-    const location = await captureLocation();
-    if (!location) return;
-    const proofSaved = await addProof(booking.id, {
+        return;
+      }
+      const latestSeal = [...booking.proofs].reverse().find((p) => p.sealId)?.sealId;
+      const location = await captureLocation();
+      if (!location) return;
+      const proofSaved = await addProof(booking.id, {
       kind: "delivery",
       dataUrl: pendingPhoto,
       timestamp: new Date().toISOString(),
+      custodyCheckpointKey,
       location,
       sealStatus,
       sealId: latestSeal,
       driverName: driver ?? undefined,
       note: photoNote || undefined,
-    });
-    if (!proofSaved) {
-      setError(latestApiError("Delivery proof could not be saved."));
+      });
+      if (!proofSaved) {
+        setError(latestApiError("Delivery proof could not be saved."));
+        return;
+      }
+      const custodyResult = await logCustody(
+        "recipient_delivery",
+        custodyCheckpointKey,
+        location,
+        proofSaved
+      );
+      if (!custodyResult) {
+        setBooking(proofSaved);
+        return;
+      }
+      await applyCustodyResult(custodyResult, proofSaved);
+      clearPhoto();
+      setTimeout(() => router.push("/driver"), 800);
+    } finally {
+      endCustodyAction();
+    }
+  }
+
+  async function resumeRecordedCustody() {
+    if (!booking) return;
+    const resumable = resumableCustodyCheckpoint(booking);
+    if (!resumable) {
+      setError("No stored custody checkpoint is ready to resume.");
       return;
     }
-    const updated = await updateBooking(booking.id, {
-      status: "delivery_pending",
-      deliveryPendingAt: new Date().toISOString(),
-    }, `${driver} submitted final delivery proof and is waiting for customer confirmation.`);
-    if (!updated) {
-      setError(latestApiError("Delivery could not be confirmed. Make sure photo and GPS proof are captured."));
-      return;
+    if (!beginCustodyAction()) return;
+    setError("");
+    try {
+      const custodyResult = await logCustody(
+        resumable.eventType,
+        resumable.checkpointKey,
+        resumable.location,
+        booking
+      );
+      if (!custodyResult) return;
+      const updated = await applyCustodyResult(custodyResult, booking);
+      clearPhoto();
+      if (
+        updated.status === "delivered" ||
+        updated.status === "delivery_pending"
+      ) {
+        setTimeout(() => router.push("/driver"), 800);
+      }
+    } finally {
+      endCustodyAction();
     }
-    setBooking(updated);
-    void logCustody("recipient_confirmed", location, updated);
-    clearPhoto();
-    setTimeout(() => router.push("/driver"), 800);
   }
 
   const isMine = driverNameMatches(booking.driverName, driver);
+  const resumeCheckpoint = resumableCustodyCheckpoint(booking);
   const isPending = booking.status === "pending";
   const customerName = isPending ? "Customer hidden" : booking.name;
   const customerPhone = isPending ? "" : booking.phone;
@@ -754,7 +1077,7 @@ export default function DriverJobPage() {
   const proofActionTitle = needsPickupPhoto
     ? `Seal proof — bag ${nextSealBagNumber} of ${booking.bags}`
     : needsAirportRelease
-      ? "Airport release proof"
+      ? `Airport release + seal — bag ${nextSealBagNumber} of ${booking.bags}`
       : needsAirlineHandoff
         ? "Airline handoff proof"
         : needsPassengerHandoff
@@ -763,7 +1086,7 @@ export default function DriverJobPage() {
   const proofActionBody = needsPickupPhoto
     ? "Attach this bag's seal, scan or enter the printed seal code, choose the attachment method, then capture a clear photo with GPS. Repeat for every bag before custody starts."
     : needsAirportRelease
-      ? "Capture the bags at the airport release point and record who released them to Travelyt."
+      ? "Record who released this bag, apply its numbered tamper-evident seal, and capture the seal photo with GPS. Repeat for every bag before Travelyt moves them."
       : needsAirlineHandoff
         ? "At the carrier-approved public handoff point, capture the sealed bags and record the named airline or authorized handler who accepted them. Travelyt does not screen, tag, or move bags into a secure area."
         : needsPassengerHandoff
@@ -1069,10 +1392,10 @@ export default function DriverJobPage() {
                 timestamp, and accuracy with this proof.
               </span>
             </div>
-            {needsPickupPhoto && (
+            {(needsPickupPhoto || needsAirportRelease) && (
               <div className="mb-4 space-y-4">
                 <div className="rounded-xl border border-navy/10 bg-navy/[0.03] p-4 text-xs leading-relaxed text-navy/70">
-                  Recording <strong>bag {nextSealBagNumber} of {booking.bags}</strong>. Each bag needs its own serial, method, photo, timestamp, GPS point, and customer approval.
+                  Recording <strong>bag {nextSealBagNumber} of {booking.bags}</strong>. Each bag needs its own serial, method, photo, timestamp, and GPS point{needsPickupPhoto ? ", followed by customer approval" : " before airport-release custody starts"}.
                 </div>
                 <div>
                   <label
@@ -1115,7 +1438,35 @@ export default function DriverJobPage() {
                 </div>
               </div>
             )}
-            {(needsAirlineHandoff || needsPassengerHandoff || needsDeliveryPhoto) && (
+            {needsPickupPhoto && (
+              <div className="mb-4 space-y-4">
+                <div className="rounded-xl border border-[#ff6868]/15 bg-[#ff6868]/5 p-4 text-xs leading-relaxed text-navy/70">
+                  Record the traveler releasing the bags to Travelyt. Match the person to the approved identity record; do not record a document number or photograph the ID here.
+                </div>
+                <div>
+                  <label htmlFor="pickup-releasing-traveler" className="block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5">
+                    Releasing traveler name
+                  </label>
+                  <input
+                    id="pickup-releasing-traveler"
+                    value={handoffRecipientName}
+                    onChange={(event) => setHandoffRecipientName(event.target.value)}
+                    placeholder="Name matched to the approved traveler"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all"
+                  />
+                </div>
+                <label className="flex items-start gap-3 rounded-xl border border-navy/10 bg-white p-4 text-sm leading-relaxed text-navy/70">
+                  <input
+                    type="checkbox"
+                    checked={passengerIdentityMatched}
+                    onChange={(event) => setPassengerIdentityMatched(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                  />
+                  <span>I matched the releasing traveler to the approved identity record. No document number or ID photo was stored in this checkpoint.</span>
+                </label>
+              </div>
+            )}
+            {(needsAirportRelease || needsAirlineHandoff || needsPassengerHandoff || needsDeliveryPhoto) && (
               <div className="mb-4">
                 <label
                   htmlFor="seal-status"
@@ -1220,11 +1571,26 @@ export default function DriverJobPage() {
             )}
 
             {!pendingPhoto ? (
-              native ? (
+              resumeCheckpoint ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">
+                    A complete photo checkpoint is already stored. Resume it instead of adding duplicate evidence.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={resumeRecordedCustody}
+                    disabled={custodyActionBusy}
+                    className="mt-3 w-full rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {custodyActionBusy ? "Resuming securely..." : resumeCheckpoint.label}
+                  </button>
+                </div>
+              ) : native ? (
                 <button
                   type="button"
                   onClick={captureNative}
-                  className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-navy/20 py-12 text-center transition-all hover:border-[#ff6868] hover:bg-[#ff6868]/5"
+                  disabled={custodyActionBusy}
+                  className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-navy/20 py-12 text-center transition-all hover:border-[#ff6868] hover:bg-[#ff6868]/5 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Camera className="mb-3 h-8 w-8 text-[#ff6868]" strokeWidth={1.8} />
                   <span className="text-sm font-bold text-navy">Open camera</span>
@@ -1239,6 +1605,7 @@ export default function DriverJobPage() {
                     type="file"
                     accept="image/*"
                     capture="environment"
+                    disabled={custodyActionBusy}
                     onChange={onFile}
                     className="hidden"
                   />
@@ -1266,8 +1633,9 @@ export default function DriverJobPage() {
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={clearPhoto}
-                    className="flex-1 py-3 rounded-xl border border-gray-200 text-navy font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => clearPhoto()}
+                    disabled={custodyActionBusy}
+                    className="flex-1 py-3 rounded-xl border border-gray-200 text-navy font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60"
                   >
                     Retake
                   </button>
@@ -1283,17 +1651,21 @@ export default function DriverJobPage() {
                               ? markPassengerTerminalHandoff
                               : markDelivered
                     }
-                    disabled={locationStatus === "working"}
+                    disabled={locationStatus === "working" || custodyActionBusy}
                     className="flex-[2] rounded-xl bg-[#ff6868] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
-                    {locationStatus === "working"
+                    {custodyActionBusy
+                      ? "Recording custody..."
+                      : locationStatus === "working"
                       ? "Capturing location..."
                       : needsPickupPhoto
                         ? nextSealBagNumber < booking.bags
                           ? `Save bag ${nextSealBagNumber} seal`
                           : "Confirm final seal + pickup"
                         : needsAirportRelease
-                          ? "Confirm airport release"
+                          ? nextSealBagNumber < booking.bags
+                            ? `Save bag ${nextSealBagNumber} release + seal`
+                            : "Confirm final release + seal"
                           : needsAirlineHandoff
                             ? "Confirm authorized acceptance"
                             : needsPassengerHandoff

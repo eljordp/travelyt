@@ -4,10 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const [driverPage, bookingRoute, custodyRoute, bookingTypes] = await Promise.all([
+const [driverPage, bookingRoute, custodyRoute, custodyLib, custodyMigration, bookingTypes] = await Promise.all([
   readFile(path.join(ROOT, "src/app/driver/job/[id]/page.tsx"), "utf8"),
   readFile(path.join(ROOT, "src/app/api/bookings/route.ts"), "utf8"),
   readFile(path.join(ROOT, "src/app/api/custody/route.ts"), "utf8"),
+  readFile(path.join(ROOT, "src/lib/custody.ts"), "utf8"),
+  readFile(path.join(ROOT, "supabase/migrations/041_atomic_custody_checkpoints.sql"), "utf8"),
   readFile(path.join(ROOT, "src/lib/bookings.ts"), "utf8"),
 ]);
 
@@ -68,8 +70,47 @@ assert.ok(
   "driver proof must bind to a bag number"
 );
 assert.match(driverPage, /SEAL_STATUS_STOP/, "broken or replaced seal must open an exception");
+assert.match(
+  driverPage,
+  /CUSTODY_LEDGER_WRITE_FAILED/,
+  "ledger failure must create a critical operations exception"
+);
+assert.match(
+  driverPage,
+  /payload\.events\.length !== custodyBooking\.bags/,
+  "booking progression must require one custody event per bag"
+);
+assert.doesNotMatch(
+  driverPage,
+  /logCustody\("recipient_confirmed"/,
+  "driver delivery proof must not impersonate the customer's receipt confirmation"
+);
+assert.match(
+  driverPage,
+  /logCustody\(\s*"recipient_delivery"/,
+  "driver delivery proof should be recorded separately from customer confirmation"
+);
+assert.match(
+  bookingRoute,
+  /eventType:\s*travelerClosing[\s\S]*\?\s*"recipient_confirmed"[\s\S]*actorRole:\s*travelerClosing[\s\S]*\?\s*"traveler"/,
+  "customer close remains the only recipient-confirmed custody event"
+);
 assert.match(bookingRoute, /hasAllRequiredSealProofs/, "booking status gate must require every bag seal");
-assert.match(custodyRoute, /bagBadge: bag\.badge_code/, "custody event must bind seal evidence to the bag badge");
-assert.match(custodyRoute, /JSON\.stringify\(\{[\s\S]*seal: sealEvidence/, "seal evidence must enter the hash-chained event payload");
+assert.match(custodyRoute, /recordCustodyCheckpoint\(\{/, "custody route must use the atomic checkpoint helper");
+assert.match(custodyLib, /rpc\("record_custody_checkpoint"/, "custody helper must call the transactional RPC");
+assert.match(custodyMigration, /'bagBadge', v_bag\.badge_code/, "atomic RPC must bind seal evidence to the bag badge");
+assert.match(driverPage, /proofCheckpointKey:\s*proof\.custodyCheckpointKey/, "driver must submit the exact stored seal proof checkpoint key");
+assert.match(driverPage, /proofStoragePath:\s*proof\.storagePath/, "driver must submit the exact durable seal proof storage path");
+assert.match(custodyMigration, /proof->>'custodyCheckpointKey' = submitted->>'proofCheckpointKey'/, "RPC must match each submitted bag to the exact stored proof key");
+assert.match(custodyMigration, /proof->>'storagePath' = submitted->>'proofStoragePath'/, "RPC must match each submitted bag to the exact stored proof path");
+assert.match(custodyMigration, /v_note := jsonb_strip_nulls\(jsonb_build_object\([\s\S]*'seal'/, "seal evidence must enter the hash-chained event payload");
+assert.match(custodyMigration, /cardinality\(v_event_ids\) <> p_expected_bag_count/, "partial multi-bag checkpoints must roll back");
+assert.match(custodyMigration, /unique \(booking_id, checkpoint_key\)/, "checkpoint retries must be idempotent");
+assert.match(bookingTypes, /custodyCheckpointKey\?: string/, "stored proof must carry the retry-stable custody checkpoint key");
+assert.match(driverPage, /resumableCustodyCheckpoint/, "reload must be able to resume a stored but unadvanced custody checkpoint");
+assert.match(driverPage, /custodyActionLock\.current/, "double-submit must be blocked by a synchronous action lock");
+assert.match(custodyMigration, /order by bag_number for update/, "atomic bag mapping must use physical bag number");
+assert.match(custodyMigration, /'handoff', v_effective_proof->'handoff'/, "the hashed event must retain exact release or receiving-party evidence");
+assert.match(custodyMigration, /update public\.bookings[\s\S]*status = v_next_booking_status/, "bag events and booking progression must share one SQL transaction");
 
-console.log("Per-bag seal custody simulation: 13/13 controls passed");
+console.log("Per-bag seal custody simulation: 32/32 controls passed");

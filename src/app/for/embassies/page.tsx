@@ -40,7 +40,7 @@ const useCases = [
 const process = [
   "Share trip dates, airports, bag counts, and pickup sites.",
   "Travelyt confirms handling rules, windows, and point-of-contact details.",
-  "A vetted courier seals, photographs, and logs each bag at pickup.",
+  "An activation-gated Travelyt agent seals, photographs, and logs each bag at pickup.",
   "Your team follows status and proof updates through a secure tracking link.",
 ];
 

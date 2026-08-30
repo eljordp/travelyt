@@ -299,7 +299,7 @@ export default function SecurityPage() {
       return;
     }
     setBusy("phone-verify");
-    const { error: phoneError } = await supabase.auth.verifyOtp({
+    const { data: phoneData, error: phoneError } = await supabase.auth.verifyOtp({
       phone: normalizePhone(phone),
       token: phoneCode.trim(),
       type: "phone_change",
@@ -309,9 +309,36 @@ export default function SecurityPage() {
       setError(phoneError.message);
       return;
     }
+
+    const fallbackSession = phoneData.session
+      ? null
+      : await supabase.auth.getSession();
+    const accessToken =
+      phoneData.session?.access_token ??
+      fallbackSession?.data.session?.access_token;
+    let receiptResponse: Response | null = null;
+    if (accessToken) {
+      try {
+        receiptResponse = await fetch("/api/auth/phone-verification-receipt", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          credentials: "same-origin",
+        });
+      } catch {
+        // Supabase has already confirmed the number. Leave readiness false
+        // until the server can persist the corresponding audit receipt.
+      }
+    }
+
     setPhoneCode("");
     setPhonePending(false);
     await refreshSecurityState();
+    if (!receiptResponse?.ok) {
+      setError(
+        "Phone verified, but Travelyt could not record the audit proof. Contact support before relying on this verification.",
+      );
+      return;
+    }
     setNotice("Phone number verified.");
   }
 

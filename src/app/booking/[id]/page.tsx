@@ -468,11 +468,17 @@ export default function BookingPage() {
 
         {booking.status === "closed" && (
           <div className="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-sm leading-relaxed text-emerald-800">
-            <div className="font-bold">Delivery confirmed and closed</div>
+            <div className="font-bold">
+              {booking.customerConfirmedAt
+                ? "Delivery confirmed and closed"
+                : "Closed by Travelyt operations"}
+            </div>
             <p className="mt-1">
-              {booking.customerSignatureName
-                ? `${booking.customerSignatureName} confirmed delivery.`
-                : "The customer confirmed delivery."}
+              {booking.customerConfirmedAt
+                ? booking.customerSignatureName
+                  ? `${booking.customerSignatureName} confirmed delivery.`
+                  : "Traveler confirmation was recorded."
+                : "This booking was closed through an operations override; traveler confirmation was not recorded."}
             </p>
           </div>
         )}
@@ -539,7 +545,9 @@ export default function BookingPage() {
           ) : booking.status === "delivery_pending" ? (
             "Review the proof, enter the customer confirmation code, and close the booking once the bag is physically received."
           ) : booking.status === "closed" ? (
-            "This booking is closed with customer confirmation recorded."
+            booking.customerConfirmedAt
+              ? "This booking is closed with traveler confirmation recorded."
+              : "This booking is closed through a Travelyt operations override; traveler confirmation was not recorded."
           ) : (
             "Travelyt coordination, the assigned driver, and customer proof checks will keep this booking moving."
           )}

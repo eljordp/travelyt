@@ -1,8 +1,79 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const sourceRoot = process.env.TRAVELYT_SOURCE_ROOT || process.cwd();
 const outputDir = path.resolve(process.argv[2] || "/private/tmp/travelyt-enhanced-new-dimensions-audit");
+const liveEvidencePath = path.resolve(
+  process.env.TRAVELYT_LIVE_EVIDENCE ||
+    path.join(sourceRoot, "simulations/evidence/live-evidence-2026-08-29.json")
+);
+let liveEvidence = null;
+try {
+  liveEvidence = JSON.parse(await readFile(liveEvidencePath, "utf8"));
+} catch {
+  // The source-only audit still runs, but it must not infer live readiness.
+}
+
+let currentSourceCommit = null;
+let releaseSourceDirty = true;
+try {
+  currentSourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: sourceRoot,
+    encoding: "utf8",
+  }).trim();
+  const status = execFileSync(
+    "git",
+    ["status", "--porcelain", "--untracked-files=all"],
+    { cwd: sourceRoot, encoding: "utf8" },
+  );
+  const releaseSourcePrefixes = ["src/", "supabase/", "simulations/"];
+  releaseSourceDirty = status
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .filter((relative) => !relative.startsWith("simulations/evidence/"))
+    .some(
+      (relative) =>
+        releaseSourcePrefixes.some((prefix) => relative.startsWith(prefix)) ||
+        relative === "package.json" ||
+        relative === ".env.example",
+    );
+} catch {
+  // Without source revision evidence, production cannot be bound to this audit.
+}
+
+let deployedReleaseSourceMatches = false;
+if (liveEvidence?.production?.baselineCommit && currentSourceCommit) {
+  try {
+    execFileSync(
+      "git",
+      [
+        "diff",
+        "--quiet",
+        liveEvidence.production.baselineCommit,
+        currentSourceCommit,
+        "--",
+        "src",
+        "supabase",
+        "simulations",
+        "package.json",
+        ".env.example",
+        ":(exclude)simulations/evidence/**",
+      ],
+      { cwd: sourceRoot, stdio: "ignore" },
+    );
+    deployedReleaseSourceMatches = true;
+  } catch {
+    deployedReleaseSourceMatches = false;
+  }
+}
+
+const productionEvidenceMatchesSource = Boolean(
+  liveEvidence?.production?.deploymentVerifiedReady &&
+    deployedReleaseSourceMatches &&
+    !releaseSourceDirty,
+);
 
 const files = {
   bookings: "src/app/api/bookings/route.ts",
@@ -44,6 +115,12 @@ function has(key, pattern) {
 }
 
 // Identity fraud
+const liveIdentityVerified = Boolean(
+  productionEvidenceMatchesSource &&
+  liveEvidence?.identity?.productionAppVerificationCompleted &&
+  liveEvidence?.identity?.signedWebhookReturned200 &&
+  liveEvidence?.identity?.originalIdAndSelfieArchiveVerified
+);
 check(
   "IDENTITY-01",
   "Identity fraud",
@@ -52,10 +129,14 @@ check(
   has("stripeIdentity", /require_matching_selfie:\s*true/) &&
   has("stripeWebhook", /verifiedDob/) &&
   has("stripeWebhook", /expected_dob_match/)
-    ? "PARTIAL" : "MISSING",
+    ? liveIdentityVerified ? "PASS" : "PARTIAL" : "MISSING",
   "Fake traveler / forged-ID admission",
-  "Stripe Identity document, live-capture, selfie-match, webhook, and traveler-DOB reconciliation are implemented fail-closed. Production Identity activation, webhook subscription, and a completed test verification have not been evidenced yet.",
-  "Enable Stripe Identity, subscribe the signed Stripe webhook to Identity events, and complete one success plus one DOB-mismatch test before marking this control live."
+  liveIdentityVerified
+    ? `Stripe Identity document, live-capture, selfie-match, signed webhook, original-image archive, and traveler-DOB reconciliation are implemented fail-closed. Time-bound live evidence dated ${liveEvidence.asOf} records a successful production-app verification and webhook 200; negative controls remain simulation evidence.`
+    : "Stripe Identity document, live-capture, selfie-match, webhook, and traveler-DOB reconciliation are implemented fail-closed, but no time-bound successful live verification evidence was loaded.",
+  liveIdentityVerified
+    ? "Retain the success receipt and continue negative-control regression; this does not authorize physical custody."
+    : "Load a current evidence snapshot after one successful production-app verification, signed webhook, and original-image archive."
 );
 check(
   "IDENTITY-02",
@@ -178,7 +259,9 @@ const counts = Object.fromEntries(
 );
 const result = {
   generatedAt: new Date().toISOString(),
-  mode: "non-production current-source adversarial audit",
+  mode: liveEvidence
+    ? "current-source adversarial audit with time-bound production evidence"
+    : "non-production current-source adversarial audit",
   sourceRoot,
   scope: "Only the newly requested identity-fraud, operational-failure, and RJ/integration-seam dimensions.",
   verdict: counts.MISSING > 0 ? "NO-GO_CURRENT_SOURCE_MISSING_REQUIRED_WORKFLOWS" : counts.PARTIAL > 0 ? "CONDITIONAL_NO-GO" : "CODE_READY_EXTERNAL_GATES_REMAIN",
@@ -186,11 +269,19 @@ const result = {
   checks,
   readinessLayers: {
     sourceControls: counts.MISSING === 0 ? "PRESENT_IN_CURRENT_SOURCE" : "INCOMPLETE",
-    integratedTestEnvironment: "NOT_RUN",
-    productionDeployment: "NOT_VERIFIED_BY_THIS_AUDIT",
-    physicalRehearsal: "NOT_RUN",
+    integratedTestEnvironment: liveEvidence?.journeys?.sixPersonRealIndependentAdultEmailOtpPaymentRefundDriverCustodyClose
+      ? "VERIFIED_FULL_JOURNEY"
+      : liveEvidence ? "PARTIAL_TWO_PERSON_PAYMENT_EMAIL_AND_SOURCE_SIMULATIONS" : "NOT_RUN",
+    productionDeployment: productionEvidenceMatchesSource
+      ? `VERIFIED_READY_AS_OF_${liveEvidence.asOf}`
+      : "NOT_VERIFIED_FOR_CURRENT_SOURCE_REVISION",
+    physicalRehearsal: liveEvidence?.journeys?.physicalDriverCustodyRehearsal
+      ? "VERIFIED"
+      : "NOT_RUN",
     airlineAuthorization: "NOT_OBTAINED",
-    insuranceBinder: "NOT_PROVIDED",
+    insuranceBinder: liveEvidence?.externalGates?.boundInsuranceAndCoi
+      ? "PROVIDED"
+      : "NOT_PROVIDED",
   },
   nonActions: [
     "No production API call", "No airline request", "No Supabase read or write", "No payment or refund", "No email or SMS", "No deployment, migration, commit, or push"
@@ -202,6 +293,6 @@ await writeFile(path.join(outputDir, "travelyt-enhanced-new-dimensions-results.j
 const rows = checks.map((item) => `| ${item.result} | ${item.id} | ${item.title} |`).join("\n");
 const details = checks.map((item) => `### ${item.result} — ${item.id}: ${item.title}\n\n- **Evidence:** ${item.evidence}\n- **Path:** ${item.nextStep}`).join("\n\n");
 const readiness = Object.entries(result.readinessLayers).map(([key, value]) => `- **${key}:** ${value}`).join("\n");
-const report = `# Travelyt Enhanced New-Dimensions Audit\n\n**Verdict: ${result.verdict}**\n\nThis is a non-production current-source audit. It evaluates only the new dimensions requested on Aug 8. It does not claim airline authorization or a live pilot.\n\n## Result\n\n- ${counts.PASS} pass, ${counts.PARTIAL} partial, ${counts.MISSING} missing workflow, ${counts.EXTERNAL} external gate\n- The current canonical checkout contains the tested passenger, consent, refund, offline-custody, exception, timing, and RJ-adapter source paths. Deployment, integrated-environment testing, and external approvals are separate readiness layers and are not counted as passed by this source audit.\n\n| Result | ID | Scenario |\n|---|---|---|\n${rows}\n\n## Readiness Layers\n\n${readiness}\n\n## Findings\n\n${details}\n\n## Boundary\n\nA counter refusal, absent RJ staff, screening rejection, or airline API ambiguity can be modelled in software; it cannot be passed as a real-world proof without RJ's written procedure, API/sandbox behavior, bound insurance, and a timed ORD dummy-bag rehearsal.\n\n## Non-actions\n\n${result.nonActions.map((item) => `- ${item}`).join("\n")}\n`;
+const report = `# Travelyt Enhanced New-Dimensions Audit\n\n**Verdict: ${result.verdict}**\n\nThis audit evaluates the requested Aug 8 dimensions against current source${liveEvidence ? ` plus the time-bound live evidence snapshot dated ${liveEvidence.asOf}` : " only"}. It does not claim airline authorization or a live pilot.\n\n## Result\n\n- ${counts.PASS} pass, ${counts.PARTIAL} partial, ${counts.MISSING} missing workflow, ${counts.EXTERNAL} external gate\n- Source controls, production proof, integrated journeys, physical rehearsal, and external authority are reported as separate readiness layers. A source pass never substitutes for live evidence or third-party authorization.\n\n| Result | ID | Scenario |\n|---|---|---|\n${rows}\n\n## Readiness Layers\n\n${readiness}\n\n## Findings\n\n${details}\n\n## Boundary\n\nA counter refusal, absent RJ staff, screening rejection, or airline API ambiguity can be modelled in software; it cannot be passed as a real-world proof without the carrier's written procedure, API/sandbox behavior where applicable, bound insurance, and a timed physical rehearsal.\n\n## Non-actions\n\n${result.nonActions.map((item) => `- ${item}`).join("\n")}\n`;
 await writeFile(path.join(outputDir, "travelyt-enhanced-new-dimensions-report.md"), report);
 console.log(JSON.stringify({ verdict: result.verdict, counts: result.counts, outputDir }));

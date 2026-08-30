@@ -55,6 +55,7 @@ export interface PilotEligibilitySnapshot {
 export type ServiceType = "departure" | "arrival";
 export type LegacyServiceType = "both";
 export type StoredServiceType = ServiceType | LegacyServiceType;
+export type ArrivalReleaseStatus = "pending" | "authorized" | "revoked";
 
 export const ISSUE_TYPE_LABELS = {
   airport_hold: "Airport hold",
@@ -109,13 +110,19 @@ export interface BookingAuditEntry {
     | "archive_toggle"
     | "backup_note"
     | "backup_status"
-    | "backup_proof";
+    | "backup_proof"
+    | "arrival_release_authority";
   fromStatus?: BookingStatus;
   toStatus?: BookingStatus;
   actorRole: "admin" | "dispatcher" | "driver" | "customer" | "system";
   actorName?: string;
   reason?: string;
   timestamp: string;
+  arrivalReleaseStatus?: ArrivalReleaseStatus;
+  arrivalReleaseReference?: string;
+  arrivalReleaseLocation?: string;
+  arrivalReleaseAuthorizedAt?: string;
+  arrivalReleaseAuthorizedBy?: string;
 }
 
 export interface PhotoProof {
@@ -124,6 +131,7 @@ export interface PhotoProof {
   storagePath?: string;
   contentType?: string;
   timestamp: string;
+  custodyCheckpointKey?: string;
   location?: {
     latitude: number;
     longitude: number;
@@ -208,6 +216,11 @@ export interface Booking {
   externalReference?: string;
   externalStatus?: string;
   externalSyncedAt?: string;
+  arrivalReleaseStatus?: ArrivalReleaseStatus;
+  arrivalReleaseReference?: string;
+  arrivalReleaseLocation?: string;
+  arrivalReleaseAuthorizedAt?: string;
+  arrivalReleaseAuthorizedBy?: string;
   customerAccessToken?: string;
   customerUserId?: string;
   driverUserId?: string;
@@ -594,9 +607,7 @@ export async function confirmDelivery(
       confirmationCode,
       patch: {
         status: "closed",
-        customerConfirmedAt: new Date().toISOString(),
         customerSignatureName: signatureName.trim(),
-        closedAt: new Date().toISOString(),
       },
       reason: `${signatureName.trim()} confirmed delivery with customer code.`,
       accessToken: getStoredAccessToken(id),

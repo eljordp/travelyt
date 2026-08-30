@@ -281,7 +281,7 @@ function TrackPageInner() {
               </h2>
               <p className="mt-2 text-sm text-navy/60">
                 Each bag carries a tamper-evident badge. Open one to verify its
-                full custody history, sealed end to end.
+                privacy-safe custody history and ledger continuity.
               </p>
               <div className="mt-4 grid gap-2">
                 {bags.map((bag) => (

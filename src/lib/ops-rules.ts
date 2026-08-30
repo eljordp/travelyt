@@ -111,7 +111,7 @@ export function getSlaAlerts(booking: Booking, now = new Date()): SlaAlert[] {
       240,
       "IN_CUSTODY_TOO_LONG",
       "In custody too long",
-      "Booking has been in custody longer than the pilot SLA."
+      "Booking has crossed the internal four-hour custody-review threshold. This is an operations alert, not a published delivery SLA."
     );
   }
 

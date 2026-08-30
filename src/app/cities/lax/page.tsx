@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { CircleCheck } from "lucide-react";
 import {
   ARRIVAL_INCLUDED_BAGS,
   EXPRESS_DISTANCE_RATE_CENTS,
@@ -88,13 +87,13 @@ export default function LAXPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Airlines at LAX</span>
-              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">All major carriers</h2>
-              <p className="text-navy/70 mb-6">We handle baggage for flights on all major US airlines departing from LAX.</p>
+              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Carrier reference list</span>
+              <h2 className="text-3xl font-bold text-navy mt-2 mb-4">Availability is approval-dependent</h2>
+              <p className="text-navy/70 mb-6">These airlines operate at LAX; listing them does not mean Travelyt is approved by or available for that carrier. Service is confirmed per booking, and any passenger-absent checked-bag handoff requires written carrier and station authorization.</p>
               <div className="space-y-2">
                 {AIRLINES.map((a) => (
                   <div key={a} className="flex items-center gap-2 text-sm text-navy/70">
-                    <CircleCheck className="w-4 h-4 text-[#ff6868] flex-shrink-0" fill="currentColor" strokeWidth={1.5} />
+                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#ff6868]" />
                     {a}
                   </div>
                 ))}
