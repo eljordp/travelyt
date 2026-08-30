@@ -25,7 +25,29 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export function getTodayDateString(now = new Date()): string {
+function airportLocalParts(now: Date, airport?: string) {
+  const timeZone = airport ? AIRPORT_TIME_ZONES[airport.trim().toUpperCase()] : undefined;
+  if (!timeZone) return undefined;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now).map((part) => [part.type, part.value])
+  );
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}`,
+  };
+}
+
+export function getTodayDateString(now = new Date(), airport?: string): string {
+  const airportParts = airportLocalParts(now, airport);
+  if (airportParts) return airportParts.date;
   return [
     now.getFullYear(),
     pad2(now.getMonth() + 1),
@@ -33,7 +55,9 @@ export function getTodayDateString(now = new Date()): string {
   ].join("-");
 }
 
-export function getCurrentTimeString(now = new Date()): string {
+export function getCurrentTimeString(now = new Date(), airport?: string): string {
+  const airportParts = airportLocalParts(now, airport);
+  if (airportParts) return airportParts.time;
   return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 }
 
@@ -57,18 +81,19 @@ export function isValidTravelTime(time: string): boolean {
 export function validateTravelDateTime(
   date: string,
   time?: string,
-  now = new Date()
+  now = new Date(),
+  airport?: string,
 ): string | undefined {
   if (!date) return "Select a travel date";
   if (!isValidTravelDate(date)) return "Select a valid travel date";
 
-  const today = getTodayDateString(now);
+  const today = getTodayDateString(now, airport);
   if (date < today) return "Travel date cannot be in the past";
 
   const normalizedTime = time?.trim();
   if (!normalizedTime) return undefined;
   if (!isValidTravelTime(normalizedTime)) return "Select a valid travel time";
-  if (date === today && normalizedTime <= getCurrentTimeString(now)) {
+  if (date === today && normalizedTime <= getCurrentTimeString(now, airport)) {
     return "Select a time later than now";
   }
 
@@ -121,7 +146,7 @@ export function validateFlightCutoff(
       : "Select a departure time";
   }
 
-  const baseError = validateTravelDateTime(date, time, now);
+  const baseError = validateTravelDateTime(date, time, now, airport);
   if (baseError) return baseError;
 
   const flightAt = airportLocalTimeToInstant(date, time, airport);

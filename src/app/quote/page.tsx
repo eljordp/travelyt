@@ -190,11 +190,17 @@ export default function QuotePage() {
       const service = params.get("service");
       const promo = normalizePromoCode(params.get("promo"));
       const nextForm: Partial<FormData> = {};
+      const validAirport = airport && AIRPORTS.some((a) => a.code === airport)
+        ? airport
+        : undefined;
 
-      if (airport && AIRPORTS.some((a) => a.code === airport)) {
-        nextForm.airport = airport;
+      if (validAirport) {
+        nextForm.airport = validAirport;
       }
-      if (date && validateTravelDateTime(date) === undefined) {
+      if (
+        date &&
+        validateTravelDateTime(date, undefined, new Date(), validAirport) === undefined
+      ) {
         nextForm.date = date;
         const [year, month, day] = date.split("-");
         setDateParts({ month, day, year });
@@ -270,7 +276,12 @@ export default function QuotePage() {
         e.address = "Verify the address to calculate the server route before continuing";
       }
       if (!form.flight.trim()) e.flight = "Enter the flight number";
-      const dateError = validateTravelDateTime(form.date, form.flightTime);
+      const dateError = validateTravelDateTime(
+        form.date,
+        form.flightTime,
+        new Date(),
+        form.airport,
+      );
       if (dateError) e.date = dateError;
       if (!form.flightTime) e.flightTime = "Select the flight time";
       if (form.distanceMiles.trim()) {
@@ -635,9 +646,11 @@ export default function QuotePage() {
   const estimate = subtotalCents ? formatPrice(totalCents) : "";
   const labelClass = "block text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1.5";
   const dateSelectClass = `w-full px-3 py-3 rounded-xl border ${errors.date ? "border-red-400 bg-red-50" : "border-gray-200"} focus:border-[#ff6868] focus:ring-2 focus:ring-[#ff6868]/10 outline-none text-sm transition-all bg-white text-navy`;
-  const todayDate = getTodayDateString();
+  const todayDate = getTodayDateString(new Date(), form.airport);
   const selectedDateIsToday = form.date === todayDate;
-  const minFlightTime = selectedDateIsToday ? getCurrentTimeString() : undefined;
+  const minFlightTime = selectedDateIsToday
+    ? getCurrentTimeString(new Date(), form.airport)
+    : undefined;
 
   function monthDisabled(month: string): boolean {
     if (!dateParts.year) return false;

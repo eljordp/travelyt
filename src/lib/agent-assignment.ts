@@ -127,6 +127,7 @@ export function bookingAssignmentBlockers(booking: BookingRow, now = new Date())
     booking.travel_date,
     booking.flight_time ?? undefined,
     now,
+    booking.airport,
   );
   if (scheduleError) blockers.push(`${scheduleError}.`);
   if (!booking.restricted_items_attested_at) {

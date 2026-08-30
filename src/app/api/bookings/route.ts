@@ -674,7 +674,7 @@ function validateBooking(
   }
   if (!airport) return "Airport is required.";
   if (!address) return "Address is required.";
-  const dateError = validateTravelDateTime(date, body.flightTime);
+  const dateError = validateTravelDateTime(date, body.flightTime, new Date(), airport);
   if (dateError) return dateError;
   if (!flight) return "Flight number is required.";
   if (!flightTime) return "Select a flight time.";
