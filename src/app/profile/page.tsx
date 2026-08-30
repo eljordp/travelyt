@@ -126,6 +126,7 @@ export default function ProfilePage() {
   const [identitySubmitting, setIdentitySubmitting] = useState(false);
   const [identityConsent, setIdentityConsent] = useState(false);
   const [identitySignatureName, setIdentitySignatureName] = useState("");
+  const [identityStatus, setIdentityStatus] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -345,6 +346,7 @@ export default function ProfilePage() {
       ok?: boolean;
       error?: string;
       existing?: boolean;
+      status?: string;
       url?: string | null;
     } | null;
 
@@ -360,10 +362,13 @@ export default function ProfilePage() {
       return;
     }
 
+    setIdentityStatus(data.status ?? null);
     setNotice(
-      data.existing
+      data.status === "verified"
         ? "Your identity is already verified."
-        : "Identity verification is processing. Custody remains blocked until it passes."
+        : data.status === "manual_review"
+          ? "Identity evidence requires manual review. Custody remains blocked."
+          : "Identity verification is processing. Custody remains blocked until it passes."
     );
   }
 
@@ -604,16 +609,30 @@ export default function ProfilePage() {
                 />
                 <span>I have read this disclosure and sign electronically to authorize this identity verification.</span>
               </label>
-              <div className="mt-3 inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
-                Secure verification link pending
+              <div className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                identityStatus === "verified"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : identityStatus === "manual_review"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-yellow-100 text-yellow-800"
+              }`}>
+                {identityStatus === "verified"
+                  ? "Identity verified"
+                  : identityStatus === "manual_review"
+                    ? "Manual review required"
+                    : "Secure verification link pending"}
               </div>
               <button
                 type="button"
                 onClick={() => void requestIdentityVerification()}
-                disabled={identitySubmitting || !identityConsent || identitySignatureName.trim().length < 2}
+                disabled={identitySubmitting || identityStatus === "verified" || !identityConsent || identitySignatureName.trim().length < 2}
                 className="mt-3 block rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
               >
-                {identitySubmitting ? "Requesting..." : "Request verification link"}
+                {identitySubmitting
+                  ? "Requesting..."
+                  : identityStatus === "verified"
+                    ? "Identity verified"
+                    : "Request verification link"}
               </button>
             </div>
 
