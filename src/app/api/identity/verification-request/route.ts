@@ -12,7 +12,7 @@ import {
 } from "@/lib/identity-consent";
 import {
   accountHolderNameMatchesVerifiedIdentity,
-  createStripeIdentitySession,
+  createBoundStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
   verifiedIdentityProfile,
 } from "@/lib/stripe-identity";
@@ -24,10 +24,15 @@ import {
 } from "@/lib/identity-verdict";
 import {
   archiveIdentityOriginals,
+  discardIdentityOriginalArchive,
   identityArchiveComplete,
 } from "@/lib/identity-originals";
-import { getStripe } from "@/lib/stripe-server";
+import { getStripe, getStripeForLivemode } from "@/lib/stripe-server";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
+import {
+  configuredOperationalMode,
+  stripeLivemodeForOperationalMode,
+} from "@/lib/operational-mode";
 
 const documentTypes = ["driver_license", "passport", "employee_badge", "other"] as const;
 
@@ -82,10 +87,59 @@ async function reconcileExistingProfileIdentity(input: {
   email?: string;
   metadata: Record<string, unknown> | null;
 }) {
+  const { data: storedState, error: storedStateError } = await input.supabase
+    .from("identity_verifications")
+    .select("raw_purpose_ended_at, raw_destroyed_at, raw_deletion_status, metadata")
+    .eq("id", input.verificationId)
+    .maybeSingle<{
+      raw_purpose_ended_at: string | null;
+      raw_destroyed_at: string | null;
+      raw_deletion_status: string;
+      metadata: Record<string, unknown> | null;
+    }>();
+  if (storedStateError) throw storedStateError;
+  if (
+    storedState?.raw_purpose_ended_at ||
+    storedState?.raw_destroyed_at ||
+    storedState?.raw_deletion_status === "destroyed" ||
+    storedState?.metadata?.raw_destruction_started_at
+  ) {
+    return {
+      status: "manual_review",
+      url: null,
+      freshAttemptRequired: true,
+      freshAttemptReason: "evidence_destruction_started",
+    };
+  }
   const session = await input.stripe.identity.verificationSessions.retrieve(
     input.providerSessionId,
     { expand: ["last_verification_report"] }
   );
+  const operationalMode = configuredOperationalMode();
+  const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
+  if (session.livemode !== expectedLivemode) {
+    const { error: modeError } = await input.supabase
+      .from("identity_verifications")
+      .update({
+        status: "manual_review",
+        liveness_status: "manual_review",
+        verified_at: null,
+        metadata: {
+          ...(input.metadata ?? {}),
+          stripe_livemode: session.livemode,
+          operational_mode: operationalMode,
+          provider_mode_mismatch: true,
+        },
+      })
+      .eq("id", input.verificationId);
+    if (modeError) throw modeError;
+    return {
+      status: "manual_review",
+      url: null,
+      freshAttemptRequired: true,
+      freshAttemptReason: "provider_mode_mismatch",
+    };
+  }
   const eventType: StripeIdentityEventType | null =
     session.status === "verified"
       ? "identity.verification_session.verified"
@@ -125,7 +179,7 @@ async function reconcileExistingProfileIdentity(input: {
   const profileComplete = verifiedIdentityProfileComplete(verifiedProfile);
   verdict = requireVerifiedIdentityGate(verdict, archived && profileComplete);
 
-  const { error: updateError } = await input.supabase
+  const { data: updatedRecord, error: updateError } = await input.supabase
     .from("identity_verifications")
     .update({
       status: verdict.status,
@@ -138,6 +192,12 @@ async function reconcileExistingProfileIdentity(input: {
             raw_retention_until: archive.retentionUntil,
             raw_export_status: "pending_ash",
             raw_deletion_status: "scheduled",
+          }
+        : {}),
+      ...(archive
+        ? {
+            raw_archive_claim_token: null,
+            raw_archive_claimed_at: null,
           }
         : {}),
       metadata: {
@@ -156,8 +216,38 @@ async function reconcileExistingProfileIdentity(input: {
         reconciled_via: "profile_return",
       },
     })
-    .eq("id", input.verificationId);
-  if (updateError) throw updateError;
+    .eq("id", input.verificationId)
+    .is("raw_purpose_ended_at", null)
+    .is("raw_destroyed_at", null)
+    .neq("raw_deletion_status", "destroyed")
+    .match(archive ? { raw_archive_claim_token: archive.claimToken } : {})
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (updateError || !updatedRecord) {
+    if (archive) {
+      const discarded = await discardIdentityOriginalArchive({
+        supabase: input.supabase,
+        verificationId: input.verificationId,
+        claimToken: archive.claimToken,
+        paths: archive.paths,
+        reason:
+          updateError?.message ||
+          "Identity archive lost its final database compare-and-set.",
+      });
+      if (!discarded.ok) {
+        console.error("Orphaned identity archive cleanup failed", discarded.error);
+      }
+    } else if (updateError) {
+      throw updateError;
+    }
+    if (updateError) console.error("Identity archive finalization failed", updateError);
+    return {
+      status: "manual_review",
+      url: null,
+      freshAttemptRequired: true,
+      freshAttemptReason: "evidence_destruction_started",
+    };
+  }
 
   if (verdict.status === "verified") {
     const { data: bookings, error: bookingsError } = await input.supabase
@@ -202,7 +292,7 @@ async function reconcileExistingProfileIdentity(input: {
 
   const freshAttemptRequired =
     session.status === "canceled" ||
-    (session.status === "verified" && !profileComplete) ||
+    (session.status === "verified" && (!profileComplete || !archived)) ||
     (session.status === "requires_input" && !session.url);
 
   return {
@@ -212,6 +302,8 @@ async function reconcileExistingProfileIdentity(input: {
     freshAttemptReason:
       session.status === "verified" && !profileComplete
         ? "provider_verified_profile_incomplete"
+        : session.status === "verified" && !archived
+          ? "provider_verified_archive_incomplete"
         : session.status === "canceled"
           ? "provider_session_canceled"
           : session.status === "requires_input" && !session.url
@@ -237,15 +329,19 @@ export async function GET(request: Request) {
       : trustedRole === "dispatcher"
         ? "employee"
         : trustedRole;
+  const operationalMode = configuredOperationalMode();
+  const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
   const { data, error } = await supabase
     .from("identity_verifications")
-    .select("status, liveness_status, verified_at, updated_at")
+    .select("id, status, liveness_status, verified_at, updated_at")
     .eq("user_id", user.id)
     .eq("role", role)
     .eq("provider", STRIPE_IDENTITY_PROVIDER)
+    .contains("metadata", { stripe_livemode: expectedLivemode })
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<{
+      id: string;
       status: string;
       liveness_status: string;
       verified_at: string | null;
@@ -256,12 +352,35 @@ export async function GET(request: Request) {
     return bad("Could not check verification status.", 500);
   }
 
+  let currentStatus = data?.status ?? null;
+  let currentLivenessStatus = data?.liveness_status ?? null;
+  let currentVerifiedAt = data?.verified_at ?? null;
+  if (data?.status === "verified") {
+    const { data: currentComplete, error: currentCompleteError } = await supabase.rpc(
+      "identity_verification_is_current_complete_for_mode",
+      {
+        p_identity_id: data.id,
+        p_operational_mode: operationalMode,
+      },
+    );
+    if (currentCompleteError) {
+      console.error("Identity completeness lookup failed", currentCompleteError);
+      return bad("Could not check verification completeness.", 500);
+    }
+    if (currentComplete !== true) {
+      currentStatus = "manual_review";
+      currentLivenessStatus = "manual_review";
+      currentVerifiedAt = null;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
-    status: data?.status ?? null,
-    livenessStatus: data?.liveness_status ?? null,
-    verifiedAt: data?.verified_at ?? null,
+    status: currentStatus,
+    livenessStatus: currentLivenessStatus,
+    verifiedAt: currentVerifiedAt,
     updatedAt: data?.updated_at ?? null,
+    operationalMode,
   });
 }
 
@@ -276,6 +395,8 @@ export async function POST(request: Request) {
 
   const user = await getRequestUser(request);
   if (!user) return bad("Sign in before requesting verification.", 401);
+  const operationalMode = configuredOperationalMode();
+  const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
 
   try {
     const body = (await request.json().catch(() => ({}))) as {
@@ -292,12 +413,42 @@ export async function POST(request: Request) {
       if (!bookingId || !passengerId) return bad("Booking and traveler are required.");
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
-        .select("id, customer_user_id, passenger_manifest")
+        .select("id, customer_user_id, passenger_manifest, operational_mode")
         .eq("id", bookingId)
-        .maybeSingle<{ id: string; customer_user_id: string | null; passenger_manifest: unknown }>();
+        .maybeSingle<{
+          id: string;
+          customer_user_id: string | null;
+          passenger_manifest: unknown;
+          operational_mode: "rehearsal" | "live" | null;
+        }>();
       if (bookingError) return bad("Could not load traveler booking.", 500);
       if (!booking || booking.customer_user_id !== user.id) return bad("You do not have access to this traveler booking.", 403);
       if (!isBookingPassengerArray(booking.passenger_manifest)) return bad("Traveler manifest is unavailable.", 409);
+      let bookingMode = booking.operational_mode;
+      if (!bookingMode) {
+        const { data: classified, error: classificationError } = await supabase.rpc(
+          "classify_pending_booking_operational_mode",
+          {
+            p_booking_id: booking.id,
+            p_operational_mode: operationalMode,
+          },
+        );
+        if (classificationError || classified !== true) {
+          console.error("Legacy booking mode classification failed", classificationError);
+          return bad(
+            "This booking cannot be safely bound to an identity-provider mode. Operations review is required.",
+            409,
+          );
+        }
+        bookingMode = operationalMode;
+      }
+      if (bookingMode !== operationalMode) {
+        return bad(
+          "This booking is bound to another operating mode. Operations review is required before identity verification.",
+          409,
+        );
+      }
+      const bookingStripeLivemode = bookingMode === "live";
       const passenger = booking.passenger_manifest.find((candidate) => candidate.id === passengerId);
       if (!passenger || passenger.category !== "adult" || passenger.verificationMethod !== "self_service" || !passenger.email) {
         return bad("Only a grouped adult with a separate email can receive this verification invite.", 409);
@@ -329,21 +480,68 @@ export async function POST(request: Request) {
         metadata: {
           source: "booking-group",
           verification_method: passenger.verificationMethod,
+          operational_mode: bookingMode,
+          stripe_livemode: bookingStripeLivemode,
           raw_document_stored_by_travelyt: false,
         },
       };
       const { data: existingInvite, error: inviteLookupError } = await supabase
         .from("identity_verifications")
-        .select("id")
+        .select("id, provider, provider_session_id, provider_session_claim_token, provider_redaction_claim_token, consent_at, raw_purpose_ended_at, raw_destroyed_at, metadata")
         .eq("booking_id", booking.id)
         .eq("passenger_id", passenger.id)
         .in("status", ["pending", "manual_review"])
         .order("created_at", { ascending: false })
         .limit(1)
-        .maybeSingle<{ id: string }>();
+        .maybeSingle<{
+          id: string;
+          provider: string;
+          provider_session_id: string | null;
+          provider_session_claim_token: string | null;
+          provider_redaction_claim_token: string | null;
+          consent_at: string | null;
+          raw_purpose_ended_at: string | null;
+          raw_destroyed_at: string | null;
+          metadata: Record<string, unknown> | null;
+        }>();
       if (inviteLookupError) return bad("Could not prepare traveler verification invite.", 500);
+      if (existingInvite?.raw_purpose_ended_at || existingInvite?.raw_destroyed_at) {
+        return bad(
+          "The prior traveler identity attempt is closed. Privacy review must finish before a new invite is created.",
+          409,
+        );
+      }
+      const providerAttemptExists = Boolean(
+        existingInvite && (
+          existingInvite.provider !== "manual_prelaunch" ||
+          existingInvite.provider_session_id ||
+          existingInvite.provider_session_claim_token ||
+          existingInvite.provider_redaction_claim_token ||
+          existingInvite.consent_at
+        )
+      );
+      if (
+        providerAttemptExists &&
+        (
+          existingInvite?.metadata?.operational_mode !== bookingMode ||
+          existingInvite?.metadata?.stripe_livemode !== bookingStripeLivemode
+        )
+      ) {
+        return bad(
+          "The prior traveler identity attempt requires provider-mode reconciliation before another invite can be sent.",
+          409,
+        );
+      }
       const inviteWrite = existingInvite
-        ? await supabase.from("identity_verifications").update(values).eq("id", existingInvite.id)
+        ? await supabase.from("identity_verifications").update(
+            providerAttemptExists
+              ? {
+                  verification_invite_token_hash: values.verification_invite_token_hash,
+                  verification_invite_expires_at: values.verification_invite_expires_at,
+                  verification_invite_sent_at: values.verification_invite_sent_at,
+                }
+              : values,
+          ).eq("id", existingInvite.id)
         : await supabase.from("identity_verifications").insert(values);
       if (inviteWrite.error) {
         console.error("Adult invite creation failed", inviteWrite.error);
@@ -407,13 +605,16 @@ export async function POST(request: Request) {
       consent_user_agent_hash: consentEvidenceHash(userAgent),
     };
 
+    let forcedRetryIdentityId: string | null = null;
+    let forcedRetryReason: string | null = null;
     const { data: verified, error: verifiedError } = await supabase
       .from("identity_verifications")
-      .select("id, status")
+      .select("id, status, metadata")
       .eq("user_id", user.id)
       .eq("role", role)
       .eq("provider", STRIPE_IDENTITY_PROVIDER)
       .eq("status", "verified")
+      .contains("metadata", { stripe_livemode: expectedLivemode })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -422,41 +623,84 @@ export async function POST(request: Request) {
       return bad("Could not check verification status.", 500);
     }
     if (verified) {
-      return NextResponse.json({
-        ok: true,
-        status: "verified",
-        existing: true,
-      });
+      const { data: currentComplete, error: currentCompleteError } = await supabase.rpc(
+        "identity_verification_is_current_complete_for_mode",
+        {
+          p_identity_id: verified.id,
+          p_operational_mode: operationalMode,
+        },
+      );
+      if (currentCompleteError) {
+        console.error("Verified identity completeness lookup failed", currentCompleteError);
+        return bad("Could not check verification completeness.", 500);
+      }
+      if (currentComplete === true) {
+        return NextResponse.json({
+          ok: true,
+          status: "verified",
+          existing: true,
+          operationalMode,
+        });
+      }
+      const verifiedMetadata = verified.metadata && typeof verified.metadata === "object"
+        ? verified.metadata as Record<string, unknown>
+        : {};
+      const { error: staleVerifiedError } = await supabase
+        .from("identity_verifications")
+        .update({
+          status: "manual_review",
+          liveness_status: "manual_review",
+          verified_at: null,
+          metadata: {
+            ...verifiedMetadata,
+            current_evidence_retry_required: true,
+            current_evidence_retry_reason: "stored_verified_record_is_no_longer_complete",
+          },
+        })
+        .eq("id", verified.id)
+        .eq("status", "verified");
+      if (staleVerifiedError) {
+        console.error("Stale verified identity downgrade failed", staleVerifiedError);
+        return bad("Could not prepare a fresh verification attempt.", 500);
+      }
+      forcedRetryIdentityId = verified.id;
+      forcedRetryReason = "stored_verified_record_is_no_longer_complete";
     }
 
-    const { data: existing, error: existingError } = await supabase
-      .from("identity_verifications")
-      .select("id, status, provider_session_id, metadata")
-      .eq("user_id", user.id)
-      .eq("role", role)
-      .eq("provider", STRIPE_IDENTITY_PROVIDER)
-      .in("status", ["pending", "manual_review"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<{
-        id: string;
-        status: string;
-        provider_session_id: string | null;
-        metadata: Record<string, unknown> | null;
-      }>();
-    if (existingError) {
-      console.error("Stripe Identity lookup failed", existingError);
-      return bad("Could not check verification status.", 500);
-    }
-    let retryOfVerificationId: string | null = null;
-    let retryReason: string | null = null;
-    if (existing?.provider_session_id) {
-      const { error: consentUpdateError } = await supabase
+    type ExistingVerification = {
+      id: string;
+      status: string;
+      provider_session_id: string | null;
+      provider_session_claim_token: string | null;
+      provider_session_creation_status: string;
+      metadata: Record<string, unknown> | null;
+    };
+    let existing: ExistingVerification | null = null;
+    if (!forcedRetryIdentityId) {
+      const { data: existingData, error: existingError } = await supabase
         .from("identity_verifications")
-        .update(consentValues)
-        .eq("id", existing.id);
-      if (consentUpdateError) return bad("Could not save the signed identity consent.", 500);
-      const stripe = getStripe();
+        .select("id, status, provider_session_id, provider_session_claim_token, provider_session_creation_status, metadata")
+        .eq("user_id", user.id)
+        .eq("role", role)
+        .eq("provider", STRIPE_IDENTITY_PROVIDER)
+        .in("status", ["pending", "manual_review"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<ExistingVerification>();
+      if (existingError) {
+        console.error("Stripe Identity lookup failed", existingError);
+        return bad("Could not check verification status.", 500);
+      }
+      existing = existingData;
+    }
+    let retryOfVerificationId: string | null = forcedRetryIdentityId;
+    let retryReason: string | null = forcedRetryReason;
+    if (existing?.provider_session_id) {
+      const existingLivemode = existing.metadata?.stripe_livemode;
+      if (typeof existingLivemode !== "boolean") {
+        return bad("The prior identity attempt requires provider-mode reconciliation.", 409);
+      }
+      const stripe = getStripeForLivemode(existingLivemode);
       if (!stripe) return bad("Stripe Identity is not configured.", 503);
       try {
         const reconciled = await reconcileExistingProfileIdentity({
@@ -469,13 +713,42 @@ export async function POST(request: Request) {
           metadata: existing.metadata,
         });
         if (!reconciled.freshAttemptRequired) {
-          return NextResponse.json({ ok: true, ...reconciled, existing: true });
+          return NextResponse.json({ ok: true, ...reconciled, existing: true, operationalMode });
         }
         retryOfVerificationId = existing.id;
         retryReason = reconciled.freshAttemptReason;
       } catch (error) {
         console.error("Stripe Identity session retrieval failed", error);
         return bad("Could not reopen the secure identity session.", 502);
+      }
+    }
+
+    if (existing && !existing.provider_session_id) {
+      try {
+        const session = await createBoundStripeIdentitySession({
+          supabase,
+          verificationId: existing.id,
+          userId: user.id,
+          email: user.email ?? undefined,
+          phone: phone ?? undefined,
+          role,
+          documentType,
+          request,
+          bindMetadata: existing.metadata ?? {},
+        });
+        return NextResponse.json({
+          ok: true,
+          status: existing.status,
+          url: session.url,
+          existing: true,
+          operationalMode: session.livemode ? "live" : "rehearsal",
+        });
+      } catch (providerError) {
+        console.error("Stripe Identity protected retry failed", providerError);
+        return bad(
+          "The secure identity attempt is awaiting safe provider reconciliation. Custody remains blocked.",
+          503,
+        );
       }
     }
 
@@ -495,6 +768,8 @@ export async function POST(request: Request) {
         metadata: {
           source: "profile",
           requested_by: user.id,
+          operational_mode: operationalMode,
+          stripe_livemode: expectedLivemode,
           raw_document_stored_by_travelyt: false,
           ...(retryOfVerificationId
             ? {
@@ -513,7 +788,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      const session = await createStripeIdentitySession({
+      const session = await createBoundStripeIdentitySession({
+        supabase,
         verificationId: data.id,
         userId: user.id,
         email: user.email ?? undefined,
@@ -521,39 +797,26 @@ export async function POST(request: Request) {
         role,
         documentType,
         request,
-      });
-      const { error: sessionWriteError } = await supabase
-        .from("identity_verifications")
-        .update({
-          provider_session_id: session.id,
-          metadata: {
-            source: "profile",
-            requested_by: user.id,
-            stripe_livemode: session.livemode,
-            raw_document_stored_by_travelyt: false,
-            ...(retryOfVerificationId
-              ? {
-                  retry_of_verification_id: retryOfVerificationId,
-                  retry_reason: retryReason,
-                }
-              : {}),
-          },
-        })
-        .eq("id", data.id);
-      if (sessionWriteError) throw sessionWriteError;
-      return NextResponse.json({ ok: true, status: data.status, url: session.url });
-    } catch (providerError) {
-      console.error("Stripe Identity session creation failed", providerError);
-      await supabase.from("identity_verifications").update({
-        status: "manual_review",
-        liveness_status: "manual_review",
-        metadata: {
+        bindMetadata: {
           source: "profile",
           requested_by: user.id,
-          provider_launch_failed: true,
+          stripe_livemode: expectedLivemode,
+          operational_mode: operationalMode,
           raw_document_stored_by_travelyt: false,
+          ...(retryOfVerificationId
+            ? {
+                retry_of_verification_id: retryOfVerificationId,
+                retry_reason: retryReason,
+              }
+            : {}),
         },
-      }).eq("id", data.id);
+      });
+      return NextResponse.json({ ok: true, status: data.status, url: session.url, operationalMode });
+    } catch (providerError) {
+      console.error("Stripe Identity session creation failed", providerError);
+      // The protected provider-session claim owns this failure state. In
+      // particular, an ambiguous Stripe timeout must retain its original
+      // livemode/idempotency metadata so a retry cannot create a second row.
       return bad("Secure identity verification is not available yet. Custody remains blocked.", 503);
     }
   } catch {

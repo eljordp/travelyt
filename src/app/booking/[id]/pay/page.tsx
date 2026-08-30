@@ -115,7 +115,9 @@ export default function PayPage() {
       purchaseTracked ||
       checkoutState !== "success" ||
       !booking ||
-      booking.status === "pending"
+      !booking.paidAt ||
+      booking.priceCents <= 0 ||
+      booking.operationalMode === "rehearsal"
     ) {
       return;
     }
@@ -156,17 +158,20 @@ export default function PayPage() {
         ok?: boolean;
         url?: string;
         error?: string;
+        noPaymentDue?: boolean;
       };
       if (!response.ok || !data.url) {
         throw new Error(data.error || "Could not start checkout.");
       }
-      trackBeginCheckout({
-        bookingId: booking.id,
-        service: booking.service,
-        airport: booking.airport,
-        bags: booking.bags,
-        value: booking.priceCents / 100,
-      });
+      if (!data.noPaymentDue && booking.operationalMode !== "rehearsal") {
+        trackBeginCheckout({
+          bookingId: booking.id,
+          service: booking.service,
+          airport: booking.airport,
+          bags: booking.bags,
+          value: booking.priceCents / 100,
+        });
+      }
       window.location.href = data.url;
     } catch (error) {
       setCheckoutError(
@@ -209,16 +214,38 @@ export default function PayPage() {
     expiresAt: booking.pilotEligibilityExpiresAt,
   });
   const checkoutUnlocked = isPending && !eligibilityBlocker;
+  const isRehearsal = booking.operationalMode === "rehearsal";
+  const isNoPaymentBooking = booking.priceCents <= 0;
+  const noPaymentDue = !isPending && booking.priceCents <= 0;
+  const paymentConfirmed = !isPending && booking.priceCents > 0 && Boolean(booking.paidAt);
+  const unpaidTerminal = !isPending && !noPaymentDue && !paymentConfirmed;
 
   return (
     <AppChrome title="Payment">
       <div>
         <div className="mb-5">
           <h1 className="text-2xl font-bold text-navy mb-1">
-            {isPending ? "Secure checkout" : "Payment confirmed"}
+            {isPending
+              ? isNoPaymentBooking
+                ? "Review and confirm — no payment due"
+                : isRehearsal ? "Test checkout" : "Secure checkout"
+              : noPaymentDue
+                ? "No payment due — booking confirmed"
+                : paymentConfirmed
+                  ? isRehearsal ? "Test payment confirmed" : "Payment confirmed"
+                  : "Checkout unavailable"}
           </h1>
           <p className="text-navy/70">Booking {booking.id}</p>
         </div>
+
+        {isRehearsal && (
+          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-950">
+            <p className="text-sm font-black uppercase tracking-wider">Test rehearsal — no live custody</p>
+            <p className="mt-1 text-sm leading-relaxed">
+              This booking uses sandbox identity and Stripe test mode. It cannot record airline transfer or customer delivery.
+            </p>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 overflow-hidden mb-5">
           <div className="px-5 py-5 sm:px-8 sm:py-6 border-b border-gray-100">
@@ -273,7 +300,9 @@ export default function PayPage() {
                 {checkoutState === "success" && (
                   <div className="rounded-xl border border-[#ff6868]/20 bg-[#ff6868]/5 px-4 py-4">
                     <p className="text-sm font-semibold text-navy">
-                      Payment received by Stripe. Confirming with Travelyt...
+                      {isRehearsal
+                        ? "Test authorization received. Confirming the rehearsal booking..."
+                        : "Payment received by Stripe. Confirming with Travelyt..."}
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-navy/70">
                       This usually clears in a few seconds. If this page still
@@ -283,14 +312,16 @@ export default function PayPage() {
                 )}
                 {checkoutUnlocked && <div className="rounded-xl border border-[#ff6868]/20 bg-[#ff6868]/5 px-4 py-4">
                   <p className="text-sm font-semibold text-navy">
-                    Pay securely with Stripe.
+                    {isNoPaymentBooking
+                      ? "No payment is required for this booking."
+                      : isRehearsal ? "Run a Stripe test checkout." : "Pay securely with Stripe."}
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-navy/70">
-                    When you tap pay, you&apos;ll be redirected to Stripe or Link,
-                    Travelyt&apos;s secure payment processor, to enter payment
-                    details. Travelyt confirms operational availability before
-                    custody begins. Airline baggage fees, if any, are paid
-                    separately to the airline.
+                    {isNoPaymentBooking
+                      ? "Confirming still rechecks the current identity, pilot approval, operating mode, and availability gates."
+                      : isRehearsal
+                      ? "Use Stripe test credentials only. No real card is charged and this does not authorize live custody."
+                      : "When you tap pay, you’ll be redirected to Stripe or Link, Travelyt’s secure payment processor, to enter payment details. Travelyt confirms operational availability before custody begins. Airline baggage fees, if any, are paid separately to the airline."}
                   </p>
                 </div>}
 
@@ -308,22 +339,41 @@ export default function PayPage() {
                     className="block w-full rounded-xl bg-gradient-to-r from-[#ff6868] to-[#ff7a85] py-4 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
                   >
                     {checkoutLoading
-                      ? "Opening secure checkout..."
-                      : `Pay ${formatPrice(booking.priceCents)} securely`}
+                      ? isNoPaymentBooking ? "Confirming booking..." : "Opening secure checkout..."
+                      : isNoPaymentBooking
+                        ? "Confirm booking — no payment"
+                        : isRehearsal
+                        ? `Run ${formatPrice(booking.priceCents)} test checkout`
+                        : `Pay ${formatPrice(booking.priceCents)} securely`}
                   </button>
                 )}
               </>
-            ) : (
+            ) : noPaymentDue ? (
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4">
-                <p className="text-sm font-semibold text-green-800">
-                  Payment confirmed.
-                </p>
+                <p className="text-sm font-semibold text-green-800">No payment was required.</p>
                 <p className="mt-1 text-sm leading-relaxed text-green-800/75">
-                  Travelyt coordination can now assign a driver and start custody
-                  checks.
+                  The booking passed its controlled activation gates without a charge.
                 </p>
               </div>
-            )}
+            ) : paymentConfirmed ? (
+              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4">
+                <p className="text-sm font-semibold text-green-800">
+                  {isRehearsal ? "Test payment confirmed." : "Payment confirmed."}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-green-800/75">
+                  {isRehearsal
+                    ? "The rehearsal may continue through test-only custody checkpoints."
+                    : "Travelyt coordination can now assign a driver and start custody checks."}
+                </p>
+              </div>
+            ) : unpaidTerminal ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4">
+                <p className="text-sm font-semibold text-red-800">No payment was confirmed.</p>
+                <p className="mt-1 text-sm leading-relaxed text-red-800/75">
+                  This booking is not payable in its current status. Contact Travelyt operations for review.
+                </p>
+              </div>
+            ) : null}
 
             <Link
               href={getBookingTrackingHref(booking)}

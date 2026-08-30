@@ -25,11 +25,15 @@ import { rateLimit } from "@/lib/rate-limit";
 import { durableRateLimit } from "@/lib/durable-rate-limit";
 import {
   accountHolderNameMatchesVerifiedIdentity,
-  createStripeIdentitySession,
+  createBoundStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
 import { getStripe } from "@/lib/stripe-server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import {
+  configuredOperationalMode,
+  stripeLivemodeForOperationalMode,
+} from "@/lib/operational-mode";
 
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 const REQUIRED_EVIDENCE_TYPES: AgentEvidenceType[] = [
@@ -94,6 +98,8 @@ export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("token")?.trim() ?? "";
   const context = await loadContext(request, token);
   if (!context) return bad("Sign in with your driver access code or use a valid onboarding link.", 401);
+  const operationalMode = configuredOperationalMode();
+  const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
 
   const [
     { data: uploads, error: uploadError },
@@ -108,14 +114,18 @@ export async function GET(request: Request) {
         .order("uploaded_at", { ascending: false }),
       context.supabase
         .from("identity_verifications")
-        .select("status, verified_at, expires_at, metadata, raw_document_paths")
+        .select("id, status, verified_at, expires_at, metadata, raw_document_paths")
         .eq("email", context.driver.driver_email?.toLowerCase() ?? "")
         .eq("role", "driver")
         .eq("provider", STRIPE_IDENTITY_PROVIDER)
-        .contains("metadata", { driver_access_id: context.driver.id })
+        .contains("metadata", {
+          driver_access_id: context.driver.id,
+          stripe_livemode: expectedLivemode,
+        })
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle<{
+          id: string;
           status: string;
           verified_at: string | null;
           expires_at: string | null;
@@ -136,6 +146,13 @@ export async function GET(request: Request) {
         }>(),
     ]);
   if (uploadError || identityError || trainingError) return bad("Could not load onboarding status.", 500);
+  const { data: identityEvidenceCurrent, error: identityEvidenceError } = identity
+    ? await context.supabase.rpc("identity_verification_is_current_complete_for_mode", {
+        p_identity_id: identity.id,
+        p_operational_mode: operationalMode,
+      })
+    : { data: false, error: null };
+  if (identityEvidenceError) return bad("Could not validate current identity evidence.", 500);
 
   const documentsComplete = REQUIRED_EVIDENCE_TYPES.every((type) => {
     const latest = (uploads ?? []).find((upload) => upload.evidence_type === type);
@@ -162,7 +179,8 @@ export async function GET(request: Request) {
   const identityComplete = Boolean(
     identity?.status === "verified" && identity.verified_at &&
       (!identity.expires_at || Date.parse(identity.expires_at) > Date.now()) &&
-      identityHasDocument && identityHasSelfie && identityNameMatches
+      identityHasDocument && identityHasSelfie && identityNameMatches &&
+      identityEvidenceCurrent === true
   );
   const trainingComplete = training?.passed === true && training.review_status === "accepted";
 
@@ -170,6 +188,7 @@ export async function GET(request: Request) {
     ok: true,
     driver: { name: context.driver.driver_name },
     accessMode: context.invite ? "invite" : "driver_session",
+    operationalMode,
     expiresAt: context.invite?.expires_at ?? null,
     identity: identity ?? { status: "not_started", verified_at: null },
     training: training ?? null,
@@ -276,13 +295,18 @@ export async function POST(request: Request) {
     }
     const stripe = getStripe();
     if (!stripe) return bad("Stripe Identity is not configured.", 503);
+    const operationalMode = configuredOperationalMode();
+    const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
     const { data: existing, error: existingError } = await context.supabase
       .from("identity_verifications")
-      .select("id, status, provider_session_id, verified_at, expires_at, metadata, raw_document_paths")
+      .select("id, status, provider_session_id, provider_session_claim_token, provider_session_creation_status, verified_at, expires_at, metadata, raw_document_paths, raw_purpose_ended_at, raw_destroyed_at, raw_deletion_status")
       .eq("email", context.driver.driver_email.toLowerCase())
       .eq("role", "driver")
       .eq("provider", STRIPE_IDENTITY_PROVIDER)
-      .contains("metadata", { driver_access_id: context.driver.id })
+      .contains("metadata", {
+        driver_access_id: context.driver.id,
+        stripe_livemode: expectedLivemode,
+      })
       .in("status", ["pending", "manual_review", "verified"])
       .order("created_at", { ascending: false })
       .limit(1)
@@ -290,21 +314,33 @@ export async function POST(request: Request) {
         id: string;
         status: string;
         provider_session_id: string | null;
+        provider_session_claim_token: string | null;
+        provider_session_creation_status: string;
         verified_at: string | null;
         expires_at: string | null;
         metadata: Record<string, unknown> | null;
         raw_document_paths: unknown;
+        raw_purpose_ended_at: string | null;
+        raw_destroyed_at: string | null;
+        raw_deletion_status: string;
       }>();
     if (existingError) return bad("Could not check identity status.", 500);
     const existingPaths = Array.isArray(existing?.raw_document_paths)
       ? existing.raw_document_paths
       : [];
+    const { data: existingEvidenceCurrent, error: existingEvidenceError } = existing
+      ? await context.supabase.rpc("identity_verification_is_current_complete_for_mode", {
+          p_identity_id: existing.id,
+          p_operational_mode: operationalMode,
+        })
+      : { data: false, error: null };
+    if (existingEvidenceError) return bad("Could not validate current identity evidence.", 500);
     const existingVerifiedIsUsable = Boolean(
       existing?.status === "verified" && existing.verified_at &&
       (!existing.expires_at || Date.parse(existing.expires_at) > Date.now()) &&
       existingPaths.some((item) => Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")) &&
       existingPaths.some((item) => Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")) &&
-      accountHolderNameMatchesVerifiedIdentity({
+      existingEvidenceCurrent === true && accountHolderNameMatchesVerifiedIdentity({
         accountHolderName: context.driver.driver_name,
         verifiedFirstName: typeof existing.metadata?.verified_first_name === "string"
           ? existing.metadata.verified_first_name
@@ -315,9 +351,44 @@ export async function POST(request: Request) {
       })
     );
     if (existingVerifiedIsUsable) return NextResponse.json({ ok: true, status: "verified" });
-    if (existing?.status !== "verified" && existing?.provider_session_id) {
+    const destructionStarted = Boolean(
+      existing?.raw_purpose_ended_at ||
+      existing?.raw_destroyed_at ||
+      existing?.raw_deletion_status === "destroyed" ||
+      existing?.metadata?.raw_destruction_started_at,
+    );
+    if (!destructionStarted && existing?.status !== "verified" && existing?.provider_session_id) {
       const session = await stripe.identity.verificationSessions.retrieve(existing.provider_session_id);
       return NextResponse.json({ ok: true, status: existing.status, url: session.url });
+    }
+
+    if (!destructionStarted && existing && existing.status !== "verified") {
+      try {
+        const session = await createBoundStripeIdentitySession({
+          supabase: context.supabase,
+          verificationId: existing.id,
+          userId: context.driver.id,
+          email: context.driver.driver_email,
+          phone: context.driver.driver_phone ?? undefined,
+          role: "driver",
+          documentType: "driver_license",
+          request,
+          returnPath: "/driver/onboarding?identity=return",
+          bindMetadata: existing.metadata ?? {
+            source: "driver-onboarding",
+            driver_access_id: context.driver.id,
+            operational_mode: operationalMode,
+            stripe_livemode: expectedLivemode,
+          },
+        });
+        return NextResponse.json({ ok: true, status: existing.status, url: session.url });
+      } catch (providerError) {
+        console.error("Driver Stripe Identity retry failed", providerError);
+        return bad(
+          "Secure identity verification is awaiting safe provider reconciliation. Readiness remains blocked.",
+          503,
+        );
+      }
     }
 
     const now = new Date().toISOString();
@@ -345,6 +416,8 @@ export async function POST(request: Request) {
           source: "driver-onboarding",
           driver_access_id: context.driver.id,
           invite_id: context.invite?.id ?? null,
+          operational_mode: operationalMode,
+          stripe_livemode: expectedLivemode,
           raw_document_stored_by_travelyt: false,
         },
       })
@@ -352,7 +425,8 @@ export async function POST(request: Request) {
       .single<{ id: string; status: string }>();
     if (error) return bad("Could not prepare identity verification.", 500);
     try {
-      const session = await createStripeIdentitySession({
+      const session = await createBoundStripeIdentitySession({
+        supabase: context.supabase,
         verificationId: verification.id,
         userId: context.driver.id,
         email: context.driver.driver_email,
@@ -361,18 +435,18 @@ export async function POST(request: Request) {
         documentType: "driver_license",
         request,
         returnPath: "/driver/onboarding?identity=return",
+        bindMetadata: {
+          source: "driver-onboarding",
+          driver_access_id: context.driver.id,
+          invite_id: context.invite?.id ?? null,
+          operational_mode: operationalMode,
+          stripe_livemode: expectedLivemode,
+          raw_document_stored_by_travelyt: false,
+        },
       });
-      await context.supabase
-        .from("identity_verifications")
-        .update({ provider_session_id: session.id })
-        .eq("id", verification.id);
       return NextResponse.json({ ok: true, status: verification.status, url: session.url });
     } catch (providerError) {
       console.error("Driver Stripe Identity launch failed", providerError);
-      await context.supabase
-        .from("identity_verifications")
-        .update({ status: "manual_review", liveness_status: "manual_review" })
-        .eq("id", verification.id);
       return bad("Secure identity verification is temporarily unavailable. Readiness remains blocked.", 503);
     }
   }

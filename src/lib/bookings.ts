@@ -50,6 +50,13 @@ export interface PilotEligibilitySnapshot {
   capacityConfirmed?: boolean;
   airport?: string;
   service?: ServiceType;
+  operationalMode?: "rehearsal" | "live";
+  identityEvidenceMode?: "rehearsal" | "live" | "missing_or_nonlive";
+  identityEvidenceRevalidatedAt?: string;
+  operatingWindowMode?:
+    | "standard"
+    | "confirmed_off_hours"
+    | "requires_off_hours_plan";
 }
 
 export type ServiceType = "departure" | "arrival";
@@ -176,6 +183,8 @@ export interface Booking {
   coverageElection?: "standard" | "declared_value";
   coverageAcceptedAt?: string;
   restrictedItemsAttestedAt?: string;
+  consentToSearchAt?: string;
+  consentToSearchVersion?: string;
   customerIdentityVerifiedAt?: string;
   driverIdentityVerifiedAt?: string;
   status: BookingStatus;
@@ -185,6 +194,7 @@ export interface Booking {
   pilotEligibilityReason?: string;
   pilotEligibilityExpiresAt?: string;
   pilotEligibilitySnapshot?: PilotEligibilitySnapshot;
+  operationalMode?: "rehearsal" | "live";
   priceCents: number;
   promoCode?: string;
   discountCents?: number;
@@ -477,13 +487,20 @@ export async function createBooking(
     expressPickup?: boolean;
     flightTime?: string;
     coverageAccepted?: boolean;
+    consentToSearchAccepted?: boolean;
   }
 ): Promise<Booking> {
   const runtimeService = (data as { service?: unknown }).service;
   if (runtimeService !== "departure" && runtimeService !== "arrival") {
     throw new Error("Book departure and arrival as separate custody legs.");
   }
-  const { expressPickup, flightTime, coverageAccepted, ...bookingData } = data;
+  const {
+    expressPickup,
+    flightTime,
+    coverageAccepted,
+    consentToSearchAccepted,
+    ...bookingData
+  } = data;
   const priceBreakdown = calcPriceBreakdown(
     data.bags,
     data.service,
@@ -526,6 +543,7 @@ export async function createBooking(
       expressPickup,
       flightTime,
       coverageAccepted,
+      consentToSearchAccepted,
       accessToken: getStoredAccessToken(booking.id),
       source: "quote-form",
     }),

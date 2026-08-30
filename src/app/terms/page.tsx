@@ -22,7 +22,7 @@ const sections = [
   },
   {
     title: "Customer responsibilities",
-    body: "Customers are responsible for accurate booking details, accessible pickup and delivery locations, compliance with airline and TSA baggage rules, completing required identity verification before custody handoff, and excluding restricted, illegal, unsafe, or undeclared high-value items.",
+    body: "Customers are responsible for accurate booking details, accessible pickup and delivery locations, compliance with airline and TSA baggage rules, completing required identity verification before custody handoff, and excluding restricted, illegal, unsafe, or undeclared high-value items. Before booking, the customer must separately consent to any inspection or search performed by the airline or TSA; that consent does not authorize Travelyt to open or screen a bag.",
   },
   {
     title: "Identity verification",

@@ -98,6 +98,27 @@ test("booking is marked paid only after amount and currency match", () => {
   assert.doesNotMatch(paymentSource, /session\.created \* 1000/);
 });
 
+test("an amount or currency mismatch cancels or refunds before custody can continue", () => {
+  assert.match(paymentSource, /containPaymentMismatch/);
+  assert.match(
+    paymentSource,
+    /travelyt-cancel-payment-mismatch:\$\{input\.bookingId\}:\$\{input\.paymentIntent\.id\}/,
+  );
+  assert.match(paymentSource, /payment-mismatch-refund:\$\{paymentIntentId\}/);
+  assert.match(paymentSource, /purpose: "payment_mismatch"/);
+  assert.match(
+    paymentSource,
+    /Provider containment started[\s\S]*stripe_payment_intent_id: input\.paymentIntent\.id[\s\S]*status: "manual_review"/,
+  );
+  assert.match(
+    paymentSource,
+    /pilot_eligibility_status: "expired"[\s\S]*Payment amount\/currency mismatch requires financial reconciliation[\s\S]*custody can continue/,
+  );
+  assert.match(confirmationSource, /payment-mismatch-refunded/);
+  assert.match(confirmationSource, /payment-mismatch-refund-pending/);
+  assert.match(webhookSource, /payment-mismatch-refund-pending/);
+});
+
 test("zero-dollar booking shortcut never enters the Stripe receipt flow", () => {
   const zeroDollarBranch = checkoutSource.slice(
     checkoutSource.indexOf("if (booking.priceCents <= 0)"),
@@ -162,6 +183,92 @@ test("a different paid checkout becomes durable manual review", () => {
   assert.match(paymentSource, /duplicate-checkout:\$\{session\.id\}/);
   assert.match(paymentSource, /status: "manual_review"/);
   assert.match(confirmationSource, /flagged for manual review/);
+});
+
+test("capture finalization ambiguity is read back before an idempotent refund", () => {
+  assert.match(paymentSource, /A database\/network error is not proof the transaction rolled back/);
+  assert.match(paymentSource, /checkoutReadback\.data\?\.status === "paid"/);
+  assert.match(paymentSource, /capture-finalization-refund:\$\{input\.paymentIntent\.id\}/);
+  assert.match(paymentSource, /input\.stripe\.refunds\.create/);
+  assert.match(paymentSource, /metadataSource: "capture_finalization_compensation"/);
+  assert.match(paymentSource, /source: metadataSource/);
+});
+
+test("failed finalization never enters the customer receipt path", () => {
+  const compensationStart = paymentSource.indexOf("if (!paymentFinalized) {");
+  const successfulFinalization = paymentSource.indexOf(
+    "const { data: capturedBooking",
+    compensationStart,
+  );
+  assert.ok(compensationStart >= 0 && successfulFinalization > compensationStart);
+  assert.doesNotMatch(
+    paymentSource.slice(compensationStart, successfulFinalization),
+    /sendBookingPaymentConfirmation/,
+  );
+  assert.match(confirmationSource, /capture-finalization-refunded/);
+  assert.match(confirmationSource, /capture-finalization-refund-pending/);
+  assert.match(webhookSource, /capture-finalization-refund-pending/);
+});
+
+test("paid replay checks Stripe compensation before sending a receipt", () => {
+  const exactReplay = paymentSource.indexOf("if (exactPaidReplay && paymentIntent)");
+  const receipt = paymentSource.indexOf("sendBookingPaymentConfirmation", exactReplay);
+  assert.ok(exactReplay >= 0 && receipt > exactReplay);
+  const replayPath = paymentSource.slice(exactReplay, receipt);
+  assert.match(replayPath, /findCaptureFinalizationCompensation/);
+  assert.match(replayPath, /capture-finalization-refunded/);
+  assert.match(replayPath, /capture-finalization-refund-pending/);
+});
+
+test("pending capture compensation retries before generic manual-review routing", () => {
+  const compensationRetry = paymentSource.indexOf(
+    "if (exactCaptureFinalizationReview)",
+  );
+  const genericReview = paymentSource.indexOf(
+    'checkoutState.status === "manual_review"',
+    compensationRetry,
+  );
+  assert.ok(compensationRetry >= 0 && genericReview > compensationRetry);
+  const retryPath = paymentSource.slice(compensationRetry, genericReview);
+  assert.match(retryPath, /capture-finalization:\$\{paymentIntent\.id\}/);
+  assert.match(retryPath, /attemptCaptureFinalizationRefund/);
+  assert.match(retryPath, /capture-finalization-refund-pending/);
+  assert.match(
+    retryPath,
+    /eq\("stripe_checkout_session_id", session\.id\)[\s\S]*eq\("stripe_payment_intent_id", paymentIntent\.id\)[\s\S]*eq\("stripe_livemode", expectedLivemode\)/,
+  );
+  assert.doesNotMatch(retryPath, /sendBookingPaymentConfirmation/);
+});
+
+test("Stripe webhooks bind separate test and live secrets to mode clients", () => {
+  assert.match(webhookSource, /livemode \? "STRIPE_LIVE" : "STRIPE_TEST"/);
+  assert.match(webhookSource, /`\$\{prefix\}_WEBHOOK_SECRET`/);
+  assert.match(webhookSource, /getStripeForLivemode\(livemode\)/);
+  assert.match(webhookSource, /candidateEvent\.livemode !== candidate\.livemode/);
+  assert.match(webhookSource, /markBookingPaidFromCheckoutSession\([\s\S]*stripe/);
+  assert.match(webhookSource, /reconcileIdentity\([\s\S]*stripe,[\s\S]*webhookLivemode/);
+});
+
+test("refunds and disputes require the signed endpoint mode and exact local payment binding", () => {
+  assert.match(webhookSource, /requireBoundFinanceContext/);
+  assert.match(webhookSource, /verifiedWebhookLivemode/);
+  assert.match(
+    webhookSource,
+    /eq\("stripe_payment_intent_id", input\.paymentIntentId\)/,
+  );
+  assert.match(
+    webhookSource,
+    /checkout\.operational_mode !== booking\.operational_mode[\s\S]*checkout\.stripe_livemode !== input\.verifiedWebhookLivemode[\s\S]*input\.verifiedWebhookLivemode !== expectedLivemode/,
+  );
+  assert.match(
+    webhookSource,
+    /reconcileRefund\([\s\S]*event\.id,[\s\S]*webhookLivemode/,
+  );
+  assert.match(
+    webhookSource,
+    /reconcileDispute\([\s\S]*event\.id,[\s\S]*webhookLivemode/,
+  );
+  assert.match(webhookSource, /blockReversedPayment/);
 });
 
 const passed = [];

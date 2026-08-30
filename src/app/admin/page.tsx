@@ -46,6 +46,8 @@ import {
 import { getSlaAlerts, latestLocationEvent } from "@/lib/ops-rules";
 import { passengerManifestCustodyBlockers } from "@/lib/passengers";
 import {
+  derivePilotEligibilitySnapshot,
+  missingPilotChecks,
   PILOT_ELIGIBILITY_LABELS,
   REQUIRED_PILOT_CHECKS,
 } from "@/lib/pilot-eligibility";
@@ -55,7 +57,7 @@ const PILOT_CHECK_LABELS: Record<(typeof REQUIRED_PILOT_CHECKS)[number], string>
   eligibleTraveler: "Traveler and required adult verifications reviewed",
   routeWithinPilotArea: "Pickup or delivery route is within the approved pilot area",
   noticeSatisfied: "Minimum booking notice and route buffer are satisfied",
-  capacityConfirmed: "Agent, vehicle, seal kit, and booking capacity are confirmed",
+  capacityConfirmed: "Agent, vehicle, seal kit, booking capacity, and any required off-hours plan are confirmed",
 };
 
 type DataView = "production" | "demo" | "all";
@@ -313,6 +315,9 @@ function bookingSearchText(booking: Booking) {
 }
 
 function isDemoBooking(booking: Booking) {
+  if (booking.operationalMode === "rehearsal") return true;
+  if (booking.operationalMode === "live") return false;
+
   const created = Date.parse(booking.createdAt);
   if (!Number.isNaN(created) && created < PRELAUNCH_DEMO_CREATED_BEFORE) {
     return true;
@@ -386,6 +391,9 @@ function custodyBlockers(booking: Booking) {
   }
   if (!booking.restrictedItemsAttestedAt) {
     blockers.push("Customer prohibited-item declaration is not complete.");
+  }
+  if (!booking.consentToSearchAt || booking.consentToSearchVersion !== "2026-08-30") {
+    blockers.push("Customer airline/TSA baggage-inspection consent is not complete.");
   }
   blockers.push(
     ...passengerManifestCustodyBlockers(
@@ -3139,6 +3147,12 @@ function BookingCard({
   const [eligibilityChecks, setEligibilityChecks] = useState<
     Partial<Record<(typeof REQUIRED_PILOT_CHECKS)[number], boolean>>
   >({});
+  const eligibilitySnapshot = useMemo(
+    () => derivePilotEligibilitySnapshot(booking, {
+      capacityConfirmed: eligibilityChecks.capacityConfirmed === true,
+    }),
+    [booking, eligibilityChecks.capacityConfirmed],
+  );
   const [arrivalReleaseReference, setArrivalReleaseReference] = useState(
     booking.arrivalReleaseReference ?? "",
   );
@@ -3266,6 +3280,9 @@ function BookingCard({
       travelerBlockers.length === 0
   );
   const restrictedReady = Boolean(booking.restrictedItemsAttestedAt);
+  const searchConsentReady = Boolean(
+    booking.consentToSearchAt && booking.consentToSearchVersion === "2026-08-30"
+  );
   const blockers = custodyBlockers(effectiveBooking);
   const custodyReady = blockers.length === 0;
   const workflowIssues = workflowBlockers(booking);
@@ -3354,7 +3371,12 @@ function BookingCard({
             )}
             {demoBooking && (
               <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                Demo/test
+                Rehearsal/test
+              </span>
+            )}
+            {!booking.operationalMode && booking.pilotEligibilityStatus === "approved" && (
+              <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                Legacy mode unknown — blocked
               </span>
             )}
             {slaAlerts.length > 0 && (
@@ -3423,37 +3445,52 @@ function BookingCard({
           {booking.pilotEligibilityStatus === "pending" || !booking.pilotEligibilityStatus ? (
             <>
               <p className="mt-1 text-xs leading-relaxed text-navy/70">
-                Check each item from actual booking evidence. Approval unlocks
-                Stripe for 24 hours. Waitlisted and declined requests are never
-                sent to checkout.
+                Travelyt derives flight, identity, route, and notice from the
+                stored booking. Confirm only real operating capacity and any
+                required off-hours plan. Approval
+                unlocks Stripe for 24 hours; waitlisted and declined requests
+                are never sent to checkout.
               </p>
               <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-white p-3">
-                {REQUIRED_PILOT_CHECKS.map((checkKey) => (
+                {REQUIRED_PILOT_CHECKS.map((checkKey) => {
+                  const capacityCheck = checkKey === "capacityConfirmed";
+                  const checked = eligibilitySnapshot[checkKey] === true;
+                  return (
                   <label key={checkKey} className="flex items-start gap-2 text-xs leading-relaxed text-navy/75">
                     <input
                       type="checkbox"
-                      checked={eligibilityChecks[checkKey] === true}
+                      checked={checked}
+                      disabled={!capacityCheck}
                       onChange={(event) =>
-                        setEligibilityChecks((current) => ({
-                          ...current,
-                          [checkKey]: event.target.checked,
-                        }))
+                        capacityCheck &&
+                          setEligibilityChecks((current) => ({
+                            ...current,
+                            capacityConfirmed: event.target.checked,
+                          }))
                       }
-                      className="mt-0.5 h-4 w-4 rounded border-amber-300 accent-green-700"
+                      className="mt-0.5 h-4 w-4 rounded border-amber-300 accent-green-700 disabled:opacity-70"
                     />
-                    <span>{PILOT_CHECK_LABELS[checkKey]}</span>
+                    <span>
+                      {PILOT_CHECK_LABELS[checkKey]}
+                      {!capacityCheck && (
+                        <span className={checked ? "ml-1 font-semibold text-green-700" : "ml-1 font-semibold text-red-700"}>
+                          {checked ? "— server verified" : "— not satisfied"}
+                        </span>
+                      )}
+                    </span>
                   </label>
-                ))}
+                  );
+                })}
               </div>
               <textarea
                 value={eligibilityReason}
                 onChange={(event) => setEligibilityReason(event.target.value)}
-                placeholder="Required decision reason or capacity note"
+                placeholder="Required: confirmed 60-minute pickup window, staff/vehicle capacity, any off-hours plan, or reason for waitlist/decline"
                 className="mt-3 min-h-20 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-[#ff6868]"
               />
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {([
-                  ["approved", "Approve: all 5 checks passed", "bg-green-700 text-white"],
+                  ["approved", "Approve derived checks + capacity", "bg-green-700 text-white"],
                   ["waitlisted", "Waitlist — no charge", "bg-amber-200 text-amber-950"],
                   ["declined", "Decline — no charge", "bg-red-100 text-red-700"],
                 ] as const).map(([decision, label, className]) => (
@@ -3465,9 +3502,7 @@ function BookingCard({
                       eligibilityBusy ||
                       eligibilityReason.trim().length < 8 ||
                       (decision === "approved" &&
-                        REQUIRED_PILOT_CHECKS.some(
-                          (checkKey) => eligibilityChecks[checkKey] !== true
-                        ))
+                        missingPilotChecks(eligibilitySnapshot).length > 0)
                     }
                     onClick={() => {
                       setEligibilityBusy(true);
@@ -3476,7 +3511,7 @@ function BookingCard({
                         decision,
                         reason: eligibilityReason.trim(),
                         snapshot:
-                          decision === "approved" ? eligibilityChecks : undefined,
+                          decision === "approved" ? eligibilitySnapshot : undefined,
                       })).finally(() => setEligibilityBusy(false));
                     }}
                     className={`rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40 ${className}`}
@@ -3807,6 +3842,11 @@ function BookingCard({
             restrictedReady ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-800"
           }`}>
             {restrictedReady ? "Bag attested" : "Bag attestation needed"}
+          </span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            searchConsentReady ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-800"
+          }`}>
+            {searchConsentReady ? "Inspection consent recorded" : "Inspection consent needed"}
           </span>
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
             custodyReady ? "bg-green-100 text-green-700" : "bg-red-50 text-red-700"

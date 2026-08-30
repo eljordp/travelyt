@@ -10,6 +10,10 @@ import {
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import {
+  configuredOperationalMode,
+  stripeLivemodeForOperationalMode,
+} from "@/lib/operational-mode";
 
 function bad(error: string, status = 400, migrationRequired = false) {
   return NextResponse.json({ ok: false, error, migrationRequired }, { status });
@@ -87,11 +91,32 @@ export async function GET(request: Request) {
   const byAccessId = new Map(
     ((profiles ?? []) as AgentReadinessProfileRow[]).map((row) => [row.driver_access_id, row]),
   );
+  const operationalMode = configuredOperationalMode();
+  const publicProfiles = await Promise.all(
+    ((accessRows ?? []) as DriverAccessCodeRow[]).map(async (row) => {
+      const profile = byAccessId.get(row.id);
+      const published = publicProfile(row, profile);
+      const identityId = profile?.identity_evidence_reference?.match(
+        /^stripe_identity:([0-9a-f-]{36})$/i,
+      )?.[1];
+      let modeCurrent = false;
+      if (identityId) {
+        const { data, error } = await supabase.rpc(
+          "identity_verification_is_current_complete_for_mode",
+          { p_identity_id: identityId, p_operational_mode: operationalMode },
+        );
+        if (error) return { ...published, ready: false, blockers: [...published.blockers, "Identity mode could not be validated."] };
+        modeCurrent = data === true;
+      }
+      return modeCurrent
+        ? published
+        : { ...published, ready: false, blockers: [...published.blockers, "Identity evidence does not match the active operating mode."] };
+    }),
+  );
   return NextResponse.json({
     ok: true,
-    profiles: ((accessRows ?? []) as DriverAccessCodeRow[]).map((row) =>
-      publicProfile(row, byAccessId.get(row.id)),
-    ),
+    operationalMode,
+    profiles: publicProfiles,
   });
 }
 
@@ -134,6 +159,8 @@ export async function PATCH(request: Request) {
   if (!access.driver_email) {
     return bad("Add the agent's email to the individual access record before certifying readiness.", 409);
   }
+  const operationalMode = configuredOperationalMode();
+  const expectedLivemode = stripeLivemodeForOperationalMode(operationalMode);
   const [
     { data: identity, error: identityError },
     { data: training, error: trainingError },
@@ -146,7 +173,10 @@ export async function PATCH(request: Request) {
       .in("role", ["driver", "employee"])
       .eq("provider", STRIPE_IDENTITY_PROVIDER)
       .eq("status", "verified")
-      .contains("metadata", { driver_access_id: driverAccessId })
+      .contains("metadata", {
+        driver_access_id: driverAccessId,
+        stripe_livemode: expectedLivemode,
+      })
       .order("verified_at", { ascending: false })
       .limit(1)
       .maybeSingle<{
@@ -192,10 +222,18 @@ export async function PATCH(request: Request) {
       ? identity.metadata.verified_last_name
       : undefined,
   }));
+  const { data: identityEvidenceCurrent, error: identityEvidenceError } = identity
+    ? await supabase.rpc("identity_verification_is_current_complete_for_mode", {
+        p_identity_id: identity.id,
+        p_operational_mode: operationalMode,
+      })
+    : { data: false, error: null };
+  if (identityEvidenceError) return bad("Could not validate current identity evidence.", 500);
   const identityCurrent = Boolean(
     identity?.verified_at &&
       (!identity.expires_at || Date.parse(identity.expires_at) > Date.now()) &&
-      identityHasDocument && identityHasSelfie && identityNameMatches,
+      identityHasDocument && identityHasSelfie && identityNameMatches &&
+      identityEvidenceCurrent === true,
   );
   const latestEvidence = (type: string) =>
     (evidenceUploads ?? []).find((item) => item.evidence_type === type && item.reviewed_at);

@@ -1,4 +1,7 @@
-import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
+import {
+  ORD_PILOT_MINIMUM_NOTICE_MINUTES,
+  TRAVELYT_HANDOFF_TARGET_MINUTES,
+} from "./service-rules.ts";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
@@ -111,8 +114,12 @@ export function validateFlightCutoff(
   airport?: string,
   now = new Date()
 ): string | undefined {
-  if (!service || service === "arrival") return undefined;
-  if (!time?.trim()) return "Select a departure time";
+  if (!service) return undefined;
+  if (!time?.trim()) {
+    return service === "arrival"
+      ? "Select the scheduled arrival time"
+      : "Select a departure time";
+  }
 
   const baseError = validateTravelDateTime(date, time, now);
   if (baseError) return baseError;
@@ -121,13 +128,21 @@ export function validateFlightCutoff(
   if (Number.isNaN(flightAt.getTime())) return "Select a valid departure time";
 
   const bufferMinutes = estimateOperationalBufferMinutes(distanceMiles);
+  const requiredNoticeMinutes = service === "departure"
+    ? Math.max(
+        ORD_PILOT_MINIMUM_NOTICE_MINUTES,
+        TRAVELYT_HANDOFF_TARGET_MINUTES + bufferMinutes,
+      )
+    : ORD_PILOT_MINIMUM_NOTICE_MINUTES;
   const latestBookAt = new Date(
-    flightAt.getTime() -
-      (TRAVELYT_HANDOFF_TARGET_MINUTES + bufferMinutes) * 60_000
+    flightAt.getTime() - requiredNoticeMinutes * 60_000
   );
 
   if (now > latestBookAt) {
-    return `This departure is too close for Travelyt custody. Book at least ${TRAVELYT_HANDOFF_TARGET_MINUTES + bufferMinutes} minutes before departure so pickup and travel can finish before Travelyt's three-hour carrier-handoff target.`;
+    if (service === "arrival") {
+      return "This arrival is too close for the ORD pilot. Requests require at least four hours' notice before the scheduled arrival time. No booking or charge was created.";
+    }
+    return `This departure is too close for Travelyt custody. This route requires at least ${requiredNoticeMinutes} minutes before departure so pickup and travel can finish before Travelyt's three-hour traveler-handoff target. No booking or charge was created.`;
   }
 
   return undefined;

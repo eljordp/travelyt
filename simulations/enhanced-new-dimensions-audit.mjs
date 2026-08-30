@@ -139,7 +139,7 @@ const liveIdentityVerified = Boolean(
 check(
   "IDENTITY-01",
   "Identity fraud",
-  has("identityRequest", /createStripeIdentitySession/) &&
+  has("identityRequest", /createBoundStripeIdentitySession/) &&
   has("stripeIdentity", /require_live_capture:\s*true/) &&
   has("stripeIdentity", /require_matching_selfie:\s*true/) &&
   has("stripeWebhook", /verifiedIdentityProfile/) &&

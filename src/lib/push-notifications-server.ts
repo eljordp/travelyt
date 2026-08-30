@@ -109,7 +109,10 @@ export async function queueBookingNotification(
 
   if (!tokens?.length) return 0;
 
-  const title = statusTitles[booking.status] ?? "Travelyt update";
+  const baseTitle = statusTitles[booking.status] ?? "Travelyt update";
+  const title = booking.operational_mode === "rehearsal"
+    ? `TEST — ${baseTitle}`
+    : baseTitle;
   const body =
     reason === "proof"
       ? `New proof photo added for booking ${booking.id}.`
@@ -128,6 +131,7 @@ export async function queueBookingNotification(
           bookingId: booking.id,
           status: booking.status,
           reason,
+          operationalMode: booking.operational_mode,
         },
       }))
     );

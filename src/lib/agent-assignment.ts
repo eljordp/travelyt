@@ -52,6 +52,7 @@ export type AgentAssignmentRow = {
   booking_id: string;
   primary_driver_access_id: string;
   backup_driver_access_id: string;
+  operational_mode: "rehearsal" | "live" | null;
   status: "assigned" | "accepted" | "declined" | "expired" | "superseded" | "revoked";
   assigned_by: string;
   assigned_at: string;
@@ -130,6 +131,9 @@ export function bookingAssignmentBlockers(booking: BookingRow, now = new Date())
   if (scheduleError) blockers.push(`${scheduleError}.`);
   if (!booking.restricted_items_attested_at) {
     blockers.push("Customer prohibited-item declaration is incomplete.");
+  }
+  if (!booking.consent_to_search_at || booking.consent_to_search_version !== "2026-08-30") {
+    blockers.push("Customer airline/TSA baggage-inspection consent is incomplete.");
   }
   blockers.push(...passengerManifestCustodyBlockers(
     booking.passenger_manifest,

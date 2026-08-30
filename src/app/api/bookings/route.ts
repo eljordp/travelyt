@@ -45,6 +45,8 @@ import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
 } from "@/lib/passengers";
+import { configuredOperationalMode } from "@/lib/operational-mode";
+import { BAGGAGE_SCREENING_CONSENT_VERSION } from "@/lib/baggage-screening-consent";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[+\d][\d\s().-]{6,}$/;
@@ -469,9 +471,11 @@ function hasRequiredProof(row: BookingRow, kind: Booking["proofs"][number]["kind
 
 function custodyIdentityReady(row: BookingRow) {
   return Boolean(
-    row.customer_identity_verified_at &&
+      row.customer_identity_verified_at &&
       row.driver_identity_verified_at &&
       row.restricted_items_attested_at &&
+      row.consent_to_search_at &&
+      row.consent_to_search_version === BAGGAGE_SCREENING_CONSENT_VERSION &&
       passengerManifestCustodyBlockers(
         row.passenger_manifest,
         Boolean(row.customer_identity_verified_at)
@@ -643,6 +647,7 @@ function validateBooking(
     flightTime?: string;
     expressPickup?: boolean;
     coverageAccepted?: boolean;
+    consentToSearchAccepted?: boolean;
   },
   verifiedDistanceMiles: number
 ) {
@@ -687,6 +692,9 @@ function validateBooking(
   if (phone && !phonePattern.test(phone)) return "Enter a valid phone number.";
   if (!body.restrictedItemsAttestedAt) {
     return "Confirm that your bags do not contain restricted or undeclared high-value items.";
+  }
+  if (body.consentToSearchAccepted !== true) {
+    return "Consent to airline and TSA baggage inspection is required before booking.";
   }
   if (declaredValueCents && body.coverageAccepted !== true) {
     return "Confirm the declared-value coverage notice.";
@@ -734,6 +742,8 @@ function validateBooking(
     coverageElection: declaredValueCents ? "declared_value" : "standard",
     coverageAcceptedAt: undefined,
     restrictedItemsAttestedAt: body.restrictedItemsAttestedAt,
+    consentToSearchAt: undefined,
+    consentToSearchVersion: undefined,
     customerIdentityVerifiedAt: body.customerIdentityVerifiedAt,
     driverIdentityVerifiedAt: body.driverIdentityVerifiedAt,
     status: "pending",
@@ -951,6 +961,7 @@ export async function POST(request: Request) {
       source?: string;
       expressPickup?: boolean;
       coverageAccepted?: boolean;
+      consentToSearchAccepted?: boolean;
     };
     const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!mapsApiKey) {
@@ -989,10 +1000,18 @@ export async function POST(request: Request) {
     validated.customerAccessToken = newAccessToken();
     validated.customerUserId = user?.id;
     validated.status = "pending";
+    // Bind every new booking to the server's current operating mode at the
+    // moment it is created. Adult-traveler identity happens before approval,
+    // so waiting until approval would leave the provider mode ambiguous.
+    validated.pilotEligibilitySnapshot = {
+      operationalMode: configuredOperationalMode(),
+    };
     validated.createdAt = new Date().toISOString();
     // The request carries the customer's affirmative checkbox; the server owns
     // the attestation time so a client cannot backdate the declaration.
     validated.restrictedItemsAttestedAt = new Date().toISOString();
+    validated.consentToSearchAt = new Date().toISOString();
+    validated.consentToSearchVersion = BAGGAGE_SCREENING_CONSENT_VERSION;
     validated.coverageAcceptedAt = validated.declaredValueCents
       ? new Date().toISOString()
       : undefined;
@@ -1014,62 +1033,75 @@ export async function POST(request: Request) {
       if (!signedInEmail || validated.email !== signedInEmail) {
         return bad("Use the verified email address on your signed-in Travelyt account for the booking owner.", 409);
       }
-      const { data: identity, error: identityError } = await supabase
+      type CandidateIdentity = {
+        id: string;
+        verified_at: string | null;
+        email: string | null;
+        metadata: Record<string, unknown> | null;
+        raw_document_paths: unknown;
+      };
+      const { data: identities, error: identityError } = await supabase
         .from("identity_verifications")
-        .select("verified_at, email, metadata, raw_document_paths")
+        .select("id, verified_at, email, metadata, raw_document_paths")
         .eq("user_id", user.id)
         .eq("role", "customer")
         .eq("provider", STRIPE_IDENTITY_PROVIDER)
         .eq("status", "verified")
         .order("verified_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<{
-          verified_at: string | null;
-          email: string | null;
-          metadata: Record<string, unknown> | null;
-          raw_document_paths: unknown;
-        }>();
+        .limit(10)
+        .returns<CandidateIdentity[]>();
       if (identityError) {
         console.error("Verified customer identity lookup failed", identityError);
-      } else if (identity?.verified_at) {
-        const verifiedFirstName = typeof identity.metadata?.verified_first_name === "string"
-          ? identity.metadata.verified_first_name.trim()
-          : "";
-        const verifiedLastName = typeof identity.metadata?.verified_last_name === "string"
-          ? identity.metadata.verified_last_name.trim()
-          : "";
-        const verifiedDob = typeof identity.metadata?.verified_dob === "string"
-          ? identity.metadata.verified_dob.trim()
-          : "";
-        const archivedPaths = Array.isArray(identity.raw_document_paths)
-          ? identity.raw_document_paths
-          : [];
-        const hasDocument = archivedPaths.some((item) =>
-          Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")
-        );
-        const hasSelfie = archivedPaths.some((item) =>
-          Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")
-        );
-        const identityEmailMatches = identity.email?.trim().toLowerCase() === signedInEmail;
-        const identityNameMatches = accountHolderNameMatchesVerifiedIdentity({
-          accountHolderName: validated.name,
-          verifiedFirstName,
-          verifiedLastName,
-        });
-        const identityDobComplete = /^\d{4}-\d{2}-\d{2}$/.test(verifiedDob);
-        if (!identityEmailMatches || !identityNameMatches || !identityDobComplete || !hasDocument || !hasSelfie) {
-          return bad(
-            "The booking owner does not match the complete verified identity record. Reopen identity verification before booking under this traveler name.",
-            409
+      } else {
+        for (const identity of identities ?? []) {
+          if (!identity.verified_at) continue;
+          const { data: currentComplete, error: currentCompleteError } =
+            await supabase.rpc("identity_verification_is_current_complete_for_mode", {
+              p_identity_id: identity.id,
+              p_operational_mode: configuredOperationalMode(),
+            });
+          if (currentCompleteError) {
+            console.error("Current customer identity evidence lookup failed", currentCompleteError);
+            break;
+          }
+          if (currentComplete !== true) continue;
+          const verifiedFirstName = typeof identity.metadata?.verified_first_name === "string"
+            ? identity.metadata.verified_first_name.trim()
+            : "";
+          const verifiedLastName = typeof identity.metadata?.verified_last_name === "string"
+            ? identity.metadata.verified_last_name.trim()
+            : "";
+          const verifiedDob = typeof identity.metadata?.verified_dob === "string"
+            ? identity.metadata.verified_dob.trim()
+            : "";
+          const archivedPaths = Array.isArray(identity.raw_document_paths)
+            ? identity.raw_document_paths
+            : [];
+          const hasDocument = archivedPaths.some((item) =>
+            Boolean(item && typeof item === "object" && "kind" in item && item.kind === "document")
           );
+          const hasSelfie = archivedPaths.some((item) =>
+            Boolean(item && typeof item === "object" && "kind" in item && item.kind === "selfie")
+          );
+          const identityEmailMatches = identity.email?.trim().toLowerCase() === signedInEmail;
+          const identityNameMatches = accountHolderNameMatchesVerifiedIdentity({
+            accountHolderName: validated.name,
+            verifiedFirstName,
+            verifiedLastName,
+          });
+          const identityDobComplete = /^\d{4}-\d{2}-\d{2}$/.test(verifiedDob);
+          if (!identityEmailMatches || !identityNameMatches || !identityDobComplete || !hasDocument || !hasSelfie) {
+            continue;
+          }
+          accountHolderVerifiedAt = identity.verified_at;
+          accountHolderVerifiedDob = verifiedDob;
+          accountHolderVerifiedFirstName = verifiedFirstName;
+          accountHolderVerifiedLastName = verifiedLastName;
+          validated.name = `${verifiedFirstName} ${verifiedLastName}`.trim();
+          validated.email = signedInEmail;
+          validated.customerIdentityVerifiedAt = accountHolderVerifiedAt;
+          break;
         }
-        accountHolderVerifiedAt = identity.verified_at;
-        accountHolderVerifiedDob = verifiedDob;
-        accountHolderVerifiedFirstName = verifiedFirstName;
-        accountHolderVerifiedLastName = verifiedLastName;
-        validated.name = `${verifiedFirstName} ${verifiedLastName}`.trim();
-        validated.email = signedInEmail;
-        validated.customerIdentityVerifiedAt = accountHolderVerifiedAt;
       }
     }
     const normalizedPassengers = normalizeBookingPassengers(validated.passengers, {
@@ -1532,6 +1564,10 @@ export async function PATCH(request: Request) {
           existing.restricted_items_attested_at
             ? ""
             : "Identity and customer declaration review is not complete.",
+          existing.consent_to_search_at &&
+          existing.consent_to_search_version === BAGGAGE_SCREENING_CONSENT_VERSION
+            ? ""
+            : "Customer airline/TSA baggage-inspection consent is not complete.",
           ...travelerBlockers,
         ].filter(Boolean);
         await recordOpsException(

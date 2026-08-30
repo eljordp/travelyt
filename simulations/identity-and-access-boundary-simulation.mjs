@@ -46,7 +46,7 @@ check("Operations can reject but cannot manually verify an adult identity", () =
 
 check("Independent adults use email OTP plus Stripe Identity", () => {
   assert.match(travelerVerification, /consume_traveler_verification_otp/);
-  assert.match(travelerVerification, /createStripeIdentitySession/);
+  assert.match(travelerVerification, /createBoundStripeIdentitySession/);
   assert.match(travelerVerification, /provider:\s*STRIPE_IDENTITY_PROVIDER/);
 });
 
@@ -88,7 +88,11 @@ check("Driver cookies are revalidated against active access and rotation version
 check("Only accepted onboarding evidence and training can complete readiness", () => {
   assert.match(driverOnboarding, /review_status === "accepted"/);
   assert.match(readiness, /eq\("review_status", "accepted"\)/);
-  assert.match(readiness, /contains\("metadata", \{ driver_access_id: driverAccessId \}\)/);
+  assert.match(
+    readiness,
+    /contains\("metadata", \{[\s\S]*driver_access_id: driverAccessId,[\s\S]*stripe_livemode: expectedLivemode,[\s\S]*\}\)/,
+  );
+  assert.match(readiness, /identity_verification_is_current_complete_for_mode/);
 });
 
 check("OTP attempts and public throttles are database-atomic", () => {

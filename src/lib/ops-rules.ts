@@ -1,4 +1,8 @@
-import type { Booking } from "@/lib/bookings";
+import type { Booking } from "./bookings.ts";
+import {
+  ORD_PILOT_ARRIVAL_MAX_MINUTES,
+  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
+} from "./service-rules.ts";
 
 export type SlaAlert = {
   code: string;
@@ -32,6 +36,26 @@ function alertIfLate(
     label,
     detail,
     minutesLate: elapsed - limit,
+  });
+}
+
+function alertAtThresholds(
+  alerts: SlaAlert[],
+  elapsed: number,
+  warningAt: number,
+  criticalAt: number,
+  code: string,
+  label: string,
+  detail: string
+) {
+  if (elapsed < warningAt) return;
+  const critical = elapsed >= criticalAt;
+  alerts.push({
+    code,
+    severity: critical ? "critical" : "warning",
+    label,
+    detail,
+    minutesLate: Math.max(0, elapsed - (critical ? criticalAt : warningAt)),
   });
 }
 
@@ -105,14 +129,30 @@ export function getSlaAlerts(booking: Booking, now = new Date()): SlaAlert[] {
   }
 
   if (booking.status === "in_transit") {
-    alertIfLate(
-      alerts,
-      minutesSince(booking.pickedUpAt || booking.arrivedAt || booking.createdAt, now),
-      240,
-      "IN_CUSTODY_TOO_LONG",
-      "In custody too long",
-      "Booking has crossed the internal four-hour custody-review threshold. This is an operations alert, not a published delivery SLA."
+    const custodyMinutes = minutesSince(
+      booking.pickedUpAt || booking.arrivedAt || booking.createdAt,
+      now
     );
+    if (booking.service === "arrival") {
+      alertAtThresholds(
+        alerts,
+        custodyMinutes,
+        ORD_PILOT_ARRIVAL_TARGET_MINUTES,
+        ORD_PILOT_ARRIVAL_MAX_MINUTES,
+        "ARRIVAL_DELIVERY_SLA",
+        "Arrival delivery SLA at risk",
+        "Elapsed time is measured from Travelyt's custody-accepted scan. Four hours is the delivery target and six hours is the maximum confirmed pilot window."
+      );
+    } else {
+      alertIfLate(
+        alerts,
+        custodyMinutes,
+        240,
+        "IN_CUSTODY_TOO_LONG",
+        "In custody too long",
+        "Departure custody has crossed the internal four-hour operations-review threshold."
+      );
+    }
   }
 
   if (booking.status === "delivery_pending") {

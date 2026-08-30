@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   destroyIdentityOriginals,
   identityRetentionIsDue,
+  requestIdentityProviderRedaction,
   type IdentityRetentionRow,
 } from "@/lib/identity-retention";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
@@ -26,19 +27,41 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "Identity backend is not configured." }, { status: 503 });
   }
 
-  const { data, error } = await supabase
-    .from("identity_verifications")
-    .select("id, raw_document_paths, raw_retention_until, raw_purpose_ended_at, raw_legal_hold_at, raw_deletion_status, metadata")
-    .in("raw_deletion_status", ["scheduled", "failed"])
-    .is("raw_legal_hold_at", null)
-    .order("raw_retention_until", { ascending: true, nullsFirst: false })
-    .limit(100);
-  if (error) {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const staleClaimCutoff = new Date(now.getTime() - 60 * 60_000).toISOString();
+  const selectFields = "id, provider_session_id, provider_session_livemode, provider_redaction_status, provider_redaction_claim_token, provider_redaction_claimed_at, raw_document_paths, raw_retention_until, raw_purpose_ended_at, raw_legal_hold_at, raw_deletion_status, metadata";
+  const [destructionQueue, providerQueue] = await Promise.all([
+    supabase
+      .from("identity_verifications")
+      .select(selectFields)
+      .in("raw_deletion_status", ["scheduled", "failed"])
+      .is("raw_legal_hold_at", null)
+      .or(`raw_retention_until.lte.${nowIso},raw_purpose_ended_at.lte.${nowIso}`)
+      .order("raw_retention_until", { ascending: true, nullsFirst: false })
+      .limit(100),
+    supabase
+      .from("identity_verifications")
+      .select(selectFields)
+      .eq("raw_deletion_status", "destroyed")
+      .not("provider_session_id", "is", null)
+      .in("provider_redaction_status", [
+        "not_requested",
+        "requesting",
+        "processing",
+        "outcome_unknown",
+        "failed",
+      ])
+      .is("raw_legal_hold_at", null)
+      .or(`provider_redaction_claim_token.is.null,provider_redaction_claimed_at.lte.${staleClaimCutoff}`)
+      .order("provider_redaction_requested_at", { ascending: true, nullsFirst: true })
+      .limit(100),
+  ]);
+  if (destructionQueue.error || providerQueue.error) {
     return NextResponse.json({ ok: false, error: "Could not load identity-retention queue." }, { status: 500 });
   }
 
-  const now = new Date();
-  const due = ((data ?? []) as IdentityRetentionRow[]).filter((row) =>
+  const due = ((destructionQueue.data ?? []) as IdentityRetentionRow[]).filter((row) =>
     identityRetentionIsDue(row, now)
   );
   const results = [];
@@ -49,13 +72,26 @@ export async function GET(request: Request) {
     const result = await destroyIdentityOriginals({ supabase, row, reason, now });
     results.push({ id: row.id, ...result });
   }
+  const providerResults = [];
+  for (const row of (providerQueue.data ?? []) as IdentityRetentionRow[]) {
+    const result = await requestIdentityProviderRedaction({
+      supabase,
+      row,
+      reason: "purpose_ended",
+    });
+    providerResults.push({ id: row.id, ...result });
+  }
 
-  const failed = results.filter((result) => !result.ok);
+  const failed = [
+    ...results.filter((result) => !result.ok),
+    ...providerResults.filter((result) => !result.ok),
+  ];
   return NextResponse.json({
     ok: failed.length === 0,
-    scanned: data?.length ?? 0,
+    scanned: (destructionQueue.data?.length ?? 0) + (providerQueue.data?.length ?? 0),
     due: due.length,
     destroyed: results.filter((result) => result.ok).length,
+    providerRedactionReconciled: providerResults.filter((result) => result.ok).length,
     failed: failed.length,
   }, { status: failed.length ? 207 : 200 });
 }

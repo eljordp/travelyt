@@ -30,6 +30,7 @@ function publicAssignment(row: AgentAssignmentRow, primaryName: string, backupNa
     primaryDriverName: primaryName,
     backupDriverAccessId: row.backup_driver_access_id,
     backupDriverName: backupName,
+    operationalMode: row.operational_mode,
     status: row.status,
     assignedAt: row.assigned_at,
     acceptanceDueAt: row.acceptance_due_at,

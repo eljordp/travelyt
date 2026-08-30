@@ -90,6 +90,7 @@ export default async function BackupBookingPage({
               <ChecklistItem label="Customer ID/manual review" done={Boolean(booking.customerIdentityVerifiedAt)} />
               <ChecklistItem label="Driver ID/manual review" done={Boolean(booking.driverIdentityVerifiedAt)} />
               <ChecklistItem label="Restricted items attested" done={Boolean(booking.restrictedItemsAttestedAt)} />
+              <ChecklistItem label="Airline/TSA inspection consent" done={Boolean(booking.consentToSearchAt && booking.consentToSearchVersion === "2026-08-30")} />
               <ChecklistItem label="Seal ID logged" done={Boolean(latestSealId(booking))} />
               <ChecklistItem label="Proof on file" done={booking.proofs.length > 0} />
               <ChecklistItem label="GPS/location trail" done={(booking.locationEvents?.length ?? 0) > 0} />

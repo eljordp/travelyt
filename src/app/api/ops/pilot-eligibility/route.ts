@@ -10,9 +10,11 @@ import type {
   PilotEligibilityStatus,
 } from "@/lib/bookings";
 import {
+  derivePilotEligibilitySnapshot,
   missingPilotChecks,
   PILOT_APPROVAL_WINDOW_MINUTES,
 } from "@/lib/pilot-eligibility";
+import { configuredOperationalMode } from "@/lib/operational-mode";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 const DECISIONS = new Set<PilotEligibilityStatus>([
@@ -63,11 +65,35 @@ export async function POST(request: Request) {
     return bad("This request already has a final eligibility decision.", 409);
   }
 
-  const snapshot: PilotEligibilitySnapshot = {
-    ...(body.snapshot ?? {}),
-    airport: existing.airport,
-    service: existing.service === "both" ? undefined : existing.service,
-  };
+  if (existing.service === "both") {
+    return bad("Legacy combined bookings cannot enter pilot eligibility. Create separate departure and arrival requests.", 409);
+  }
+  const operationalMode = configuredOperationalMode();
+  const { data: identityEvidenceCurrent, error: identityEvidenceError } =
+    await supabase.rpc("booking_has_current_identity_for_mode", {
+      p_booking_id: bookingId,
+      p_operational_mode: operationalMode,
+    });
+  if (identityEvidenceError) {
+    console.error("Current booking identity evidence check failed", identityEvidenceError);
+    return bad("Current identity evidence could not be verified. Approval remains blocked.", 503);
+  }
+  const snapshot: PilotEligibilitySnapshot = derivePilotEligibilitySnapshot(
+    rowToBooking(existing),
+    {
+      // Flight, identity, route, and notice checks are always derived from the
+      // stored booking. The admin supplies only the real-world capacity call.
+      capacityConfirmed: body.snapshot?.capacityConfirmed === true,
+      identityEvidenceCurrent: identityEvidenceCurrent === true,
+    },
+  );
+  if (decision === "approved") {
+    snapshot.operationalMode = operationalMode;
+  }
+  snapshot.identityEvidenceMode = identityEvidenceCurrent === true
+    ? operationalMode
+    : "missing_or_nonlive";
+  snapshot.identityEvidenceRevalidatedAt = new Date().toISOString();
   if (decision === "approved") {
     const missing = missingPilotChecks(snapshot);
     if (missing.length > 0) {

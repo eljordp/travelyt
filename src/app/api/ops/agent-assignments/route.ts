@@ -30,6 +30,7 @@ function publicAssignment(row: AgentAssignmentRow, names: Map<string, string>) {
     primaryDriverName: names.get(row.primary_driver_access_id) ?? "Unknown agent",
     backupDriverAccessId: row.backup_driver_access_id,
     backupDriverName: names.get(row.backup_driver_access_id) ?? "Unknown agent",
+    operationalMode: row.operational_mode,
     status: row.status,
     assignedBy: row.assigned_by,
     assignedAt: row.assigned_at,

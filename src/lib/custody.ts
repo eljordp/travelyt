@@ -269,6 +269,8 @@ type CustodyGateBooking = {
   customer_identity_verified_at: string | null;
   driver_identity_verified_at: string | null;
   restricted_items_attested_at: string | null;
+  consent_to_search_at: string | null;
+  consent_to_search_version: string | null;
   passenger_manifest: unknown;
   proofs: Array<Record<string, unknown>> | null;
   pilot_eligibility_status: string;
@@ -307,7 +309,8 @@ export async function validateDriverCustodyWrite(input: {
     await Promise.all([
       supabase.from("bookings").select([
         "id", "service", "status", "bags", "paid_at", "customer_identity_verified_at",
-        "driver_identity_verified_at", "restricted_items_attested_at", "passenger_manifest",
+        "driver_identity_verified_at", "restricted_items_attested_at", "consent_to_search_at",
+        "consent_to_search_version", "passenger_manifest",
         "proofs",
         "pilot_eligibility_status", "pilot_eligibility_expires_at", "external_provider",
         "external_reference", "external_status", "arrival_release_status",
@@ -356,8 +359,14 @@ export async function validateDriverCustodyWrite(input: {
   ) {
     return { ok: false, error: "Pilot eligibility was not used for payment before its deadline.", status: 409 };
   }
-  if (!booking.customer_identity_verified_at || !booking.driver_identity_verified_at || !booking.restricted_items_attested_at) {
-    return { ok: false, error: "Identity and prohibited-item declaration gates are incomplete.", status: 409 };
+  if (
+    !booking.customer_identity_verified_at ||
+    !booking.driver_identity_verified_at ||
+    !booking.restricted_items_attested_at ||
+    !booking.consent_to_search_at ||
+    booking.consent_to_search_version !== "2026-08-30"
+  ) {
+    return { ok: false, error: "Identity, prohibited-item declaration, and baggage-inspection consent gates are incomplete.", status: 409 };
   }
   if (!Array.isArray(booking.passenger_manifest) || booking.passenger_manifest.length === 0) {
     return { ok: false, error: "An explicit verified traveler manifest is required.", status: 409 };

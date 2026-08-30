@@ -74,6 +74,9 @@ function custodyBlockers(booking: Booking) {
   if (!booking.restrictedItemsAttestedAt) {
     blockers.push("Identity and customer declaration review is not complete.");
   }
+  if (!booking.consentToSearchAt || booking.consentToSearchVersion !== "2026-08-30") {
+    blockers.push("Customer airline/TSA baggage-inspection consent is not complete.");
+  }
   return blockers;
 }
 
@@ -1240,6 +1243,18 @@ export default function DriverJobPage() {
               {getBookingStatusLabel(booking)}
             </span>
           </div>
+
+          {booking.operationalMode === "rehearsal" && (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold leading-relaxed text-blue-900">
+              TEST REHEARSAL — no airline transfer or arrival delivery. Return
+              the sealed bag only through the rehearsal handoff shown here.
+            </div>
+          )}
+          {!booking.operationalMode && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              Operating mode is unclassified. Do not accept or move this bag.
+            </div>
+          )}
 
           <div className="mt-5 grid gap-3 rounded-xl bg-white/70 p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="min-w-0">

@@ -47,12 +47,24 @@ function deliveryPatch(result: TransactionalEmailResult, now = new Date()) {
 export async function sendBookingPaymentConfirmation(input: {
   booking: PaymentConfirmationBooking;
   session: Stripe.Checkout.Session;
+  confirmedPaymentIntent?: Stripe.PaymentIntent;
   siteUrl: string;
 }) {
   const sessionBookingId =
     input.session.metadata?.bookingId || input.session.client_reference_id;
+  const sessionPaymentIntentId = typeof input.session.payment_intent === "string"
+    ? input.session.payment_intent
+    : input.session.payment_intent?.id;
+  const confirmedByPaymentIntent = Boolean(
+    input.confirmedPaymentIntent &&
+      input.confirmedPaymentIntent.status === "succeeded" &&
+      input.confirmedPaymentIntent.id === sessionPaymentIntentId &&
+      input.confirmedPaymentIntent.livemode === input.session.livemode &&
+      input.confirmedPaymentIntent.amount_received === input.session.amount_total &&
+      input.confirmedPaymentIntent.currency === input.session.currency
+  );
   if (
-    input.session.payment_status !== "paid" ||
+    (input.session.payment_status !== "paid" && !confirmedByPaymentIntent) ||
     sessionBookingId !== input.booking.id ||
     typeof input.session.amount_total !== "number"
   ) {

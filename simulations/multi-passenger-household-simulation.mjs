@@ -367,7 +367,11 @@ test("The family flow is connected to invite, atomic OTP, Stripe verification, r
   assert.match(verifyPage, /action: "consent"/);
   assert.match(inviteRoute, /verificationStatus: "invite_sent"/);
   assert.match(verificationRoute, /consume_traveler_verification_otp/);
-  assert.match(verificationRoute, /createStripeIdentitySession/);
+  assert.match(verificationRoute, /createBoundStripeIdentitySession/);
+  assert.match(inviteRoute, /classify_pending_booking_operational_mode/);
+  assert.match(inviteRoute, /stripe_livemode: bookingStripeLivemode/);
+  assert.match(verificationRoute, /data\.metadata\?\.operational_mode !== bookingMode/);
+  assert.match(verificationRoute, /data\.metadata\?\.stripe_livemode !== bookingStripeLivemode/);
   assert.match(verificationRoute, /verificationStatus: "pending"/);
   assert.match(reviewRoute, /action !== "reject"/);
   assert.doesNotMatch(reviewRoute, /status:\s*"verified"/);

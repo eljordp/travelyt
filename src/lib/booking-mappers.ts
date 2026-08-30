@@ -31,6 +31,8 @@ export const BOOKING_SELECT_COLUMNS = [
   "coverage_election",
   "coverage_accepted_at",
   "restricted_items_attested_at",
+  "consent_to_search_at",
+  "consent_to_search_version",
   "customer_identity_verified_at",
   "driver_identity_verified_at",
   "status",
@@ -40,6 +42,7 @@ export const BOOKING_SELECT_COLUMNS = [
   "pilot_eligibility_reason",
   "pilot_eligibility_expires_at",
   "pilot_eligibility_snapshot",
+  "operational_mode",
   "price_cents",
   "pricing_quote",
   "pricing_fingerprint",
@@ -105,6 +108,8 @@ export interface BookingRow {
   coverage_election: "standard" | "declared_value" | null;
   coverage_accepted_at: string | null;
   restricted_items_attested_at: string | null;
+  consent_to_search_at: string | null;
+  consent_to_search_version: string | null;
   customer_identity_verified_at: string | null;
   driver_identity_verified_at: string | null;
   status: BookingStatus;
@@ -114,6 +119,7 @@ export interface BookingRow {
   pilot_eligibility_reason: string | null;
   pilot_eligibility_expires_at: string | null;
   pilot_eligibility_snapshot: PilotEligibilitySnapshot | null;
+  operational_mode: "rehearsal" | "live" | null;
   price_cents: number;
   pricing_quote?: Record<string, unknown> | null;
   pricing_fingerprint?: string | null;
@@ -178,6 +184,8 @@ export function rowToBooking(row: BookingRow): Booking {
     coverageElection: row.coverage_election ?? undefined,
     coverageAcceptedAt: row.coverage_accepted_at ?? undefined,
     restrictedItemsAttestedAt: row.restricted_items_attested_at ?? undefined,
+    consentToSearchAt: row.consent_to_search_at ?? undefined,
+    consentToSearchVersion: row.consent_to_search_version ?? undefined,
     customerIdentityVerifiedAt: row.customer_identity_verified_at ?? undefined,
     driverIdentityVerifiedAt: row.driver_identity_verified_at ?? undefined,
     status: row.status,
@@ -187,6 +195,7 @@ export function rowToBooking(row: BookingRow): Booking {
     pilotEligibilityReason: row.pilot_eligibility_reason ?? undefined,
     pilotEligibilityExpiresAt: row.pilot_eligibility_expires_at ?? undefined,
     pilotEligibilitySnapshot: row.pilot_eligibility_snapshot ?? undefined,
+    operationalMode: row.operational_mode ?? undefined,
     priceCents: row.price_cents,
     createdAt: row.created_at,
     paidAt: row.paid_at ?? undefined,
@@ -230,7 +239,7 @@ export function rowToBooking(row: BookingRow): Booking {
 export function bookingToInsert(
   booking: Booking,
   source = "quote-form"
-): Omit<BookingRow, "source"> & { source: string } {
+): Omit<BookingRow, "source" | "operational_mode"> & { source: string } {
   return {
     id: booking.id,
     service: booking.service,
@@ -249,6 +258,8 @@ export function bookingToInsert(
     coverage_election: booking.coverageElection ?? "standard",
     coverage_accepted_at: booking.coverageAcceptedAt ?? null,
     restricted_items_attested_at: booking.restrictedItemsAttestedAt ?? null,
+    consent_to_search_at: booking.consentToSearchAt ?? null,
+    consent_to_search_version: booking.consentToSearchVersion ?? null,
     customer_identity_verified_at: booking.customerIdentityVerifiedAt ?? null,
     driver_identity_verified_at: booking.driverIdentityVerifiedAt ?? null,
     status: booking.status,

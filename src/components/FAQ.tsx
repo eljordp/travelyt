@@ -2,12 +2,18 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
+import {
+  ORD_PILOT_ARRIVAL_MAX_MINUTES,
+  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
+  ORD_PILOT_MINIMUM_NOTICE_MINUTES,
+  ORD_PILOT_STANDARD_FIELD_HOURS,
+  TRAVELYT_HANDOFF_TARGET_MINUTES,
+} from "@/lib/service-rules";
 
 const faqs = [
   {
     q: "How far in advance do I need to book?",
-    a: `We recommend booking at least 24 hours before your flight. Same-day bookings depend on distance, driver availability, traffic, and carrier rules. During controlled launch operations, Travelyt targets terminal handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; airline- or station-specific earlier requirements always control.`,
+    a: `Requests are accepted online 24/7 and require at least ${ORD_PILOT_MINIMUM_NOTICE_MINUTES / 60} hours' notice. Departure uses a route-aware cutoff and targets traveler handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before the flight. Standard ORD field operations are ${ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}; every request still requires confirmed capacity before checkout.`,
   },
   {
     q: "What airports and cities do you serve?",
@@ -16,6 +22,10 @@ const faqs = [
   {
     q: "How does departure handoff work?",
     a: "Standard service returns the sealed bags to the verified ticketed traveler in the public ticketing area, and the traveler completes airline check-in and bag acceptance. Travelyt never performs screening, issues airline bag tags, or enters secure/badged areas. Passenger-absent tender is available only where the carrier and station authorize a named airline or ground-handler recipient and the full acceptance process.",
+  },
+  {
+    q: "How long does arrival delivery take?",
+    a: `Where airport release is authorized and bags are made available normally, the ORD pilot targets delivery within ${ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60} to ${ORD_PILOT_ARRIVAL_MAX_MINUTES / 60} hours of actual landing. Travelyt's accountable custody clock starts at the custody-accepted scan, and external release delays are recorded as exceptions. A request is never charged until the release path, delivery window, and capacity are confirmed.`,
   },
   {
     q: "Is my luggage insured?",

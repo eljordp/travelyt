@@ -127,6 +127,7 @@ export default function ProfilePage() {
   const [identityConsent, setIdentityConsent] = useState(false);
   const [identitySignatureName, setIdentitySignatureName] = useState("");
   const [identityStatus, setIdentityStatus] = useState<string | null>(null);
+  const [identityOperationalMode, setIdentityOperationalMode] = useState<"rehearsal" | "live" | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -216,6 +217,7 @@ export default function ProfilePage() {
         ok?: boolean;
         error?: string;
         status?: string | null;
+        operationalMode?: "rehearsal" | "live";
       } | null;
       if (cancelled) return;
 
@@ -225,9 +227,12 @@ export default function ProfilePage() {
         return;
       }
       setIdentityStatus(data.status ?? null);
+      setIdentityOperationalMode(data.operationalMode ?? null);
       setNotice(
         data.status === "verified"
-          ? "Your identity is verified."
+          ? data.operationalMode === "rehearsal"
+            ? "Your identity passed for this test rehearsal only. It is not live-operation verification."
+            : "Your identity is verified for the active live mode."
           : data.status === "manual_review"
             ? "Identity evidence requires manual review. Custody remains blocked."
             : data.status === "expired"
@@ -410,6 +415,7 @@ export default function ProfilePage() {
       existing?: boolean;
       status?: string;
       url?: string | null;
+      operationalMode?: "rehearsal" | "live";
     } | null;
 
     setIdentitySubmitting(false);
@@ -425,9 +431,12 @@ export default function ProfilePage() {
     }
 
     setIdentityStatus(data.status ?? null);
+    setIdentityOperationalMode(data.operationalMode ?? null);
     setNotice(
       data.status === "verified"
-        ? "Your identity is already verified."
+        ? data.operationalMode === "rehearsal"
+          ? "Your identity already passed for this test rehearsal only."
+          : "Your identity is already verified for the active live mode."
         : data.status === "manual_review"
           ? "Identity evidence requires manual review. Custody remains blocked."
           : "Identity verification is processing. Custody remains blocked until it passes."
@@ -652,6 +661,11 @@ export default function ProfilePage() {
               <p className="mt-1 text-xs leading-relaxed text-navy/70">
                 {IDENTITY_CONSENT_DISCLOSURE}
               </p>
+              {identityOperationalMode === "rehearsal" && (
+                <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold uppercase tracking-wide text-amber-900">
+                  Test rehearsal identity — not valid for live custody
+                </p>
+              )}
               <label className="mt-3 block text-xs font-semibold text-navy/70">
                 Legal name - electronic signature
                 <input
@@ -679,7 +693,9 @@ export default function ProfilePage() {
                     : "bg-yellow-100 text-yellow-800"
               }`}>
                 {identityStatus === "verified"
-                  ? "Identity verified"
+                  ? identityOperationalMode === "rehearsal"
+                    ? "Test identity passed"
+                    : "Live-mode identity verified"
                   : identityStatus === "manual_review"
                     ? "Manual review required"
                     : "Secure verification link pending"}
@@ -693,7 +709,9 @@ export default function ProfilePage() {
                 {identitySubmitting
                   ? "Requesting..."
                   : identityStatus === "verified"
-                    ? "Identity verified"
+                    ? identityOperationalMode === "rehearsal"
+                      ? "Test identity passed"
+                      : "Identity verified"
                     : "Request verification link"}
               </button>
             </div>

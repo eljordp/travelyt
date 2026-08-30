@@ -43,6 +43,7 @@ import {
   passengerReviewContactLabel,
 } from "@/lib/passengers";
 import AppChrome from "@/components/AppChrome";
+import { BAGGAGE_SCREENING_CONSENT_COPY } from "@/lib/baggage-screening-consent";
 
 type ServiceType = "departure" | "arrival" | "";
 
@@ -63,6 +64,7 @@ interface FormData {
   declaredValue: string;
   coverageNoticeAccepted: boolean;
   restrictedItemsAttested: boolean;
+  consentToSearchAccepted: boolean;
 }
 
 interface DateParts {
@@ -120,6 +122,7 @@ const emptyForm: FormData = {
   declaredValue: "",
   coverageNoticeAccepted: false,
   restrictedItemsAttested: false,
+  consentToSearchAccepted: false,
 };
 
 export default function QuotePage() {
@@ -168,7 +171,7 @@ export default function QuotePage() {
               promoCode?: string;
             };
             if (draft.form && draft.dateParts && Array.isArray(draft.travelers)) {
-              setForm(draft.form);
+              setForm({ ...emptyForm, ...draft.form });
               setDateParts(draft.dateParts);
               setTravelers(draft.travelers);
               setPromoCode(draft.promoCode);
@@ -339,6 +342,10 @@ export default function QuotePage() {
     if (step === 3 && !form.restrictedItemsAttested) {
       e.restrictedItemsAttested =
         "Confirm your bags do not contain restricted or undeclared high-value items";
+    }
+    if (step === 3 && !form.consentToSearchAccepted) {
+      e.consentToSearchAccepted =
+        "Consent to airline and TSA baggage inspection is required";
     }
     if (step === 3 && form.declaredValue.trim()) {
       const declaredValue = Number(form.declaredValue);
@@ -545,6 +552,7 @@ export default function QuotePage() {
           Boolean(declaredValueCents && declaredValueCents > 0) &&
           form.coverageNoticeAccepted,
         restrictedItemsAttestedAt: new Date().toISOString(),
+        consentToSearchAccepted: form.consentToSearchAccepted,
         passengers: [
           {
             id: crypto.randomUUID(), firstName: form.name, lastName: "", category: "account_holder" as const,
@@ -1301,6 +1309,29 @@ export default function QuotePage() {
                       <span className="font-bold text-navy">Screening is never a Travelyt checkpoint.</span>{" "}
                       Travelyt does not x-ray, clear, open for screening, issue an airline bag tag, or enter a secure/badged area. Standard service returns the sealed bags to the verified traveler in the public ticketing area. Passenger-absent acceptance requires a named airline or authorized handler and written station approval.
                     </div>
+                  )}
+
+                  <label
+                    className={`mt-4 flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed ${
+                      errors.consentToSearchAccepted
+                        ? "border-red-300 bg-red-50 text-red-700"
+                        : "border-navy/10 bg-navy/[0.03] text-navy/70"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.consentToSearchAccepted}
+                      onChange={(event) =>
+                        set("consentToSearchAccepted", event.target.checked)
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#ff6868] focus:ring-[#ff6868]"
+                    />
+                    <span>{BAGGAGE_SCREENING_CONSENT_COPY}</span>
+                  </label>
+                  {errors.consentToSearchAccepted && (
+                    <p className="mt-2 text-xs text-red-500">
+                      {errors.consentToSearchAccepted}
+                    </p>
                   )}
 
                   <label

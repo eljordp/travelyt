@@ -111,6 +111,7 @@ export default function BookingPage() {
 
   const terminalStatus =
     booking.status === "cancelled" || booking.status === "issue";
+  const isRehearsal = booking.operationalMode === "rehearsal";
   const eligibilityStatus = booking.pilotEligibilityStatus ?? "pending";
   const eligibilityBlocker = checkoutEligibilityBlocker({
     status: eligibilityStatus,
@@ -197,6 +198,15 @@ export default function BookingPage() {
           </p>
         </div>
 
+        {isRehearsal && (
+          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-4 text-amber-950">
+            <p className="text-sm font-black uppercase tracking-wider">Test rehearsal — no live custody</p>
+            <p className="mt-1 text-sm leading-relaxed">
+              Events, photos, and notifications on this booking are test evidence. Airline transfer and customer delivery are disabled.
+            </p>
+          </div>
+        )}
+
         {terminalStatus && (
           <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm leading-relaxed text-red-800">
             <div className="font-bold">{getBookingStatusLabel(booking)}</div>
@@ -248,7 +258,7 @@ export default function BookingPage() {
         {/* Status timeline */}
         <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-8 mb-5">
           <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-5">
-            Live status
+            {isRehearsal ? "Rehearsal status" : "Live status"}
           </h2>
           <div className="space-y-4">
             {VISIBLE_STATUSES.map((s) => {
@@ -283,7 +293,7 @@ export default function BookingPage() {
           <div className="bg-white rounded-2xl shadow-sm shadow-navy/5 p-5 md:p-6 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xs font-semibold text-navy/70 uppercase tracking-wider mb-1">
-                Live app updates
+                {isRehearsal ? "Test app updates" : "Live app updates"}
               </h2>
               <p className="text-sm text-navy/70">
                 Send status alerts on this device for this booking.
@@ -505,6 +515,14 @@ export default function BookingPage() {
             )}
             {booking.flight && <Row label="Flight" value={booking.flight} />}
             <Row label="Bags" value={`${booking.bags}`} />
+            <Row
+              label="Bag inspection consent"
+              value={
+                booking.consentToSearchAt && booking.consentToSearchVersion === "2026-08-30"
+                  ? `Recorded ${new Date(booking.consentToSearchAt).toLocaleString()}`
+                  : "Not recorded"
+              }
+            />
             <Row
               label="Coverage"
               value={

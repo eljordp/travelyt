@@ -10,10 +10,11 @@ import {
   validConsentSignature,
 } from "@/lib/identity-consent";
 import {
-  createStripeIdentitySession,
+  createBoundStripeIdentitySession,
   STRIPE_IDENTITY_PROVIDER,
 } from "@/lib/stripe-identity";
 import { sendTransactionalEmail } from "@/lib/transactional-email";
+import { configuredOperationalMode, isOperationalMode } from "@/lib/operational-mode";
 
 type InviteRow = {
   id: string; booking_id: string | null; passenger_id: string | null; subject_name: string | null;
@@ -82,6 +83,28 @@ export async function POST(request: Request) {
   const { data, error } = await loadInvite(supabase, token);
   if (error) return bad("Could not load verification link.", 500);
   if (!data || !data.booking_id || !data.passenger_id || !active(data)) return bad("Verification link is invalid or expired.", 410);
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("operational_mode, passenger_manifest")
+    .eq("id", data.booking_id)
+    .maybeSingle<{ operational_mode: string | null; passenger_manifest: unknown }>();
+  if (bookingError || !booking) {
+    return bad("The booking could not be loaded for identity verification.", 502);
+  }
+  if (!isOperationalMode(booking.operational_mode)) {
+    return bad("The booking is not bound to an operating mode. Operations review is required.", 409);
+  }
+  const bookingMode = booking.operational_mode;
+  const bookingStripeLivemode = bookingMode === "live";
+  if (
+    data.metadata?.operational_mode !== bookingMode ||
+    data.metadata?.stripe_livemode !== bookingStripeLivemode
+  ) {
+    return bad("The traveler invite does not match the booking operating mode. Operations review is required.", 409);
+  }
+  if (configuredOperationalMode() !== bookingMode) {
+    return bad("This booking is bound to another operating mode. Identity verification remains blocked.", 409);
+  }
 
   if (body.action === "request_code") {
     if (!data.email) return bad("Email confirmation is not configured.", 503);
@@ -131,26 +154,31 @@ export async function POST(request: Request) {
     body.consentVersion !== IDENTITY_CONSENT_VERSION ||
     !validConsentSignature(signatureName)
   ) return bad("Review the identity disclosure and enter your legal name as an electronic signature.");
-  const code = typeof body.emailCode === "string" ? body.emailCode.trim() : "";
-  if (!/^\d{6}$/.test(code)) return bad("Enter the six-digit code sent to the traveler email.");
-  const suppliedOtpHmac = otpHmac(code);
-  if (!suppliedOtpHmac) return bad("Traveler OTP security is not configured.", 503);
-  const { data: otpResult, error: otpError } = await supabase.rpc(
-    "consume_traveler_verification_otp",
-    { p_verification_id: data.id, p_supplied_otp_hmac: suppliedOtpHmac, p_max_attempts: 5 },
-  );
-  if (otpError) return bad("Could not verify the email confirmation code.", 503);
-  if (otpResult === "expired") return bad("Email confirmation has expired. Request a new code.", 410);
-  if (otpResult === "locked") return bad("Too many invalid code attempts. Ask the booking owner to send a new link.", 429);
-  if (otpResult === "already_consumed") return bad("That email confirmation code was already used. Request a new code if verification did not open.", 409);
-  if (otpResult !== "verified") return bad("That email confirmation code does not match.", 403);
+  if (!data.verification_invite_otp_verified_at) {
+    const code = typeof body.emailCode === "string" ? body.emailCode.trim() : "";
+    if (!/^\d{6}$/.test(code)) return bad("Enter the six-digit code sent to the traveler email.");
+    const suppliedOtpHmac = otpHmac(code);
+    if (!suppliedOtpHmac) return bad("Traveler OTP security is not configured.", 503);
+    const { data: otpResult, error: otpError } = await supabase.rpc(
+      "consume_traveler_verification_otp",
+      { p_verification_id: data.id, p_supplied_otp_hmac: suppliedOtpHmac, p_max_attempts: 5 },
+    );
+    if (otpError) return bad("Could not verify the email confirmation code.", 503);
+    if (otpResult === "expired") return bad("Email confirmation has expired. Request a new code.", 410);
+    if (otpResult === "locked") return bad("Too many invalid code attempts. Ask the booking owner to send a new link.", 429);
+    if (otpResult === "already_consumed") {
+      return bad("That email confirmation code was already used. Refresh the verification link and try again.", 409);
+    }
+    if (otpResult !== "verified") return bad("That email confirmation code does not match.", 403);
+  }
   const consentAt = new Date().toISOString();
   const documentType = ["passport", "driver_license", "other"].includes(String(body.documentType)) ? body.documentType : "passport";
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const userAgent = request.headers.get("user-agent")?.trim() || "unknown";
-  let providerSession: Awaited<ReturnType<typeof createStripeIdentitySession>>;
+  let providerSession: Awaited<ReturnType<typeof createBoundStripeIdentitySession>>;
   try {
-    providerSession = await createStripeIdentitySession({
+    providerSession = await createBoundStripeIdentitySession({
+      supabase,
       verificationId: data.id,
       userId: data.passenger_id,
       email: data.email ?? undefined,
@@ -158,37 +186,35 @@ export async function POST(request: Request) {
       documentType: documentType as "passport" | "driver_license" | "other",
       request,
       returnPath: `/verify-traveler?token=${encodeURIComponent(token)}&identity=return`,
+      bindFields: {
+        provider: STRIPE_IDENTITY_PROVIDER,
+        document_type: documentType,
+        consent_at: consentAt,
+        consent_version: IDENTITY_CONSENT_VERSION,
+        consent_signature_name: signatureName,
+        consent_scope: identityConsentScope(STRIPE_IDENTITY_PROVIDER),
+        consent_ip_hash: consentEvidenceHash(forwardedFor),
+        consent_user_agent_hash: consentEvidenceHash(userAgent),
+        status: "pending",
+        liveness_status: "pending",
+      },
+      bindMetadata: {
+        ...(data.metadata ?? {}),
+        invite_state: "accepted",
+        self_consent_at: consentAt,
+        consent_version: IDENTITY_CONSENT_VERSION,
+        stripe_livemode: bookingStripeLivemode,
+        operational_mode: bookingMode,
+        raw_document_stored_by_travelyt: false,
+        archive_required_before_custody: true,
+      },
     });
-    if (!providerSession.url) throw new Error("Stripe Identity did not return a verification URL.");
   } catch (providerError) {
     console.error("Adult traveler identity session creation failed", providerError);
     return bad("Secure document and selfie verification is unavailable. Custody remains blocked.", 503);
   }
 
-  const { data: consentRecord, error: consentError } = await supabase.from("identity_verifications").update({
-    provider: STRIPE_IDENTITY_PROVIDER, document_type: documentType, consent_at: consentAt,
-    consent_version: IDENTITY_CONSENT_VERSION,
-    consent_signature_name: signatureName,
-    consent_scope: identityConsentScope(STRIPE_IDENTITY_PROVIDER),
-    consent_ip_hash: consentEvidenceHash(forwardedFor),
-    consent_user_agent_hash: consentEvidenceHash(userAgent),
-    status: "pending",
-    liveness_status: "pending",
-    provider_session_id: providerSession.id,
-    metadata: {
-      ...(data.metadata ?? {}),
-      invite_state: "accepted",
-      self_consent_at: consentAt,
-      consent_version: IDENTITY_CONSENT_VERSION,
-      stripe_livemode: providerSession.livemode,
-      raw_document_stored_by_travelyt: false,
-      archive_required_before_custody: true,
-    },
-  }).eq("id", data.id).is("consent_at", null).select("id").maybeSingle<{ id: string }>();
-  if (consentError) return bad("Could not submit traveler verification.", 500);
-  if (!consentRecord) return bad("This traveler verification was already submitted.", 409);
-  const { data: booking, error: bookingError } = await supabase.from("bookings").select("passenger_manifest").eq("id", data.booking_id).maybeSingle<{ passenger_manifest: unknown }>();
-  if (bookingError || !booking || !isBookingPassengerArray(booking.passenger_manifest)) return bad("Verification submitted, but booking reconciliation is required.", 502);
+  if (!isBookingPassengerArray(booking.passenger_manifest)) return bad("Verification submitted, but booking reconciliation is required.", 502);
   const manifest = booking.passenger_manifest.map((passenger) => passenger.id === data.passenger_id ? { ...passenger, consentAt, verificationStatus: "pending" as const } : passenger);
   const { error: manifestError } = await supabase.from("bookings").update({ passenger_manifest: manifest }).eq("id", data.booking_id);
   if (manifestError) return bad("Verification submitted, but booking reconciliation is required.", 502);

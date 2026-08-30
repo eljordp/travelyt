@@ -8,6 +8,12 @@ import {
   SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
+import {
+  ORD_PILOT_ARRIVAL_MAX_MINUTES,
+  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
+  ORD_PILOT_DEPARTURE_PICKUP_WINDOW_MINUTES,
+  ORD_PILOT_STANDARD_FIELD_HOURS,
+} from "@/lib/service-rules";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -43,7 +49,7 @@ export default function ORDPage() {
             Travelyt <span className="text-[#ff6868]">ORD</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
-            Request pilot availability for Chicago O&apos;Hare. A submitted quote does not confirm a live service area, terminal location, or delivery SLA.
+            Request pilot availability for Chicago O&apos;Hare within 30 route miles. Field operations are available {ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}, with every booking still subject to confirmed capacity.
           </p>
           <Link href="/quote?airport=ORD" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
             Get a Quote for ORD
@@ -66,6 +72,21 @@ export default function ORDPage() {
                 <p className="text-sm text-navy/70 leading-relaxed">{s.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-navy/10 bg-white py-14">
+        <div className="mx-auto grid max-w-5xl gap-6 px-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-navy/10 p-6">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Departure SLA</p>
+            <h2 className="mt-2 text-xl font-bold text-navy">Confirmed {ORD_PILOT_DEPARTURE_PICKUP_WINDOW_MINUTES}-minute pickup window</h2>
+            <p className="mt-2 text-sm leading-relaxed text-navy/70">Sealed bags return to the verified ticketed traveler at the approved public-terminal meeting point at least three hours before departure. The route-aware cutoff or any earlier carrier rule controls.</p>
+          </div>
+          <div className="rounded-2xl border border-navy/10 p-6">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Arrival SLA</p>
+            <h2 className="mt-2 text-xl font-bold text-navy">{ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60}-hour target · {ORD_PILOT_ARRIVAL_MAX_MINUTES / 60}-hour maximum</h2>
+            <p className="mt-2 text-sm leading-relaxed text-navy/70">The target is measured from actual landing when airport release is authorized and baggage is made available normally. Travelyt&apos;s accountable custody clock begins at the custody-accepted scan, and external release delays are recorded as exceptions.</p>
           </div>
         </div>
       </section>
@@ -128,7 +149,7 @@ export default function ORDPage() {
               { num: "83M+", label: "Annual ORD passengers" },
               { num: "30mi", label: "Base-pricing radius" },
               { num: "TBD", label: "Live terminal coverage" },
-              { num: "TBD", label: "Confirmed delivery SLA" },
+              { num: "4–6h", label: "Authorized arrival SLA" },
             ].map((s) => (
               <div key={s.label}>
                 <div className="text-3xl font-bold text-[#ff6868]">{s.num}</div>

@@ -13,7 +13,12 @@ import {
   SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
-import { TRAVELYT_HANDOFF_TARGET_MINUTES } from "@/lib/service-rules";
+import {
+  ORD_PILOT_ARRIVAL_MAX_MINUTES,
+  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
+  ORD_PILOT_STANDARD_FIELD_HOURS,
+  TRAVELYT_HANDOFF_TARGET_MINUTES,
+} from "@/lib/service-rules";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -59,7 +64,7 @@ const plans = [
       "Delivery to any address",
       "Status and custody updates",
       "Coverage subject to bound policy",
-      "Delivery timing confirmed per booking",
+      `${ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60}-hour target / ${ORD_PILOT_ARRIVAL_MAX_MINUTES / 60}-hour maximum from custody acceptance`,
       `$${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each additional bag`,
     ],
     cta: "Request Arrival Availability",
@@ -69,6 +74,7 @@ const plans = [
 ];
 
 const addons = [
+  { name: "ORD Operating Window", detail: `Requests are accepted online 24/7. Standard field operations are ${ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}, with capacity confirmed before checkout` },
   { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance, the Travelyt handoff target, and any earlier airline or station requirement` },
   { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
   { name: "Arrival Bag Bundle", detail: `$${SERVICE_PRICES_CENTS.arrival / 100} per arrival booking includes up to ${ARRIVAL_INCLUDED_BAGS} bags; additional bags are $${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each` },
@@ -82,7 +88,7 @@ const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
 const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
 
 const competitors = [
-  { name: "Travelyt", departure: "$49/bag", arrival: "$49 / 2 bags", sameDay: "By availability", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
+  { name: "Travelyt", departure: "$49/bag", arrival: "$49 / 2 bags", sameDay: "4–6 hrs*", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
   { name: "Bags VIP", departure: "—", arrival: "$49.95 / 2 bags", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
   { name: "LugLess", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
   { name: "Luggage Forward", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },

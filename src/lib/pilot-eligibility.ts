@@ -1,7 +1,14 @@
 import type {
+  Booking,
   PilotEligibilitySnapshot,
   PilotEligibilityStatus,
-} from "@/lib/bookings";
+} from "./bookings.ts";
+import { validateFlightCutoff } from "./booking-time.ts";
+import { passengerManifestCustodyBlockers } from "./passengers.ts";
+import {
+  ORD_PILOT_AIRPORT,
+  ORD_PILOT_ROUTE_BOUNDARY_MILES,
+} from "./service-rules.ts";
 
 export const PILOT_APPROVAL_WINDOW_MINUTES = 24 * 60;
 
@@ -23,6 +30,93 @@ export const REQUIRED_PILOT_CHECKS = [
 
 export function missingPilotChecks(snapshot: PilotEligibilitySnapshot) {
   return REQUIRED_PILOT_CHECKS.filter((key) => snapshot[key] !== true);
+}
+
+export function requiresConfirmedOffHoursPlan(
+  service: Booking["service"],
+  flightTime?: string,
+) {
+  const match = /^(\d{2}):(\d{2})$/.exec(flightTime?.trim() ?? "");
+  if (!match) return true;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return true;
+  void service;
+  return false;
+}
+
+export function derivePilotEligibilitySnapshot(
+  booking: Pick<
+    Booking,
+    | "airport"
+    | "service"
+    | "flight"
+    | "flightTime"
+    | "date"
+    | "distanceMiles"
+    | "customerIdentityVerifiedAt"
+    | "restrictedItemsAttestedAt"
+    | "consentToSearchAt"
+    | "consentToSearchVersion"
+    | "passengers"
+  >,
+  options: {
+    capacityConfirmed?: boolean;
+    identityEvidenceCurrent?: boolean;
+    now?: Date;
+  } = {},
+): PilotEligibilitySnapshot {
+  const airport = booking.airport.trim().toUpperCase();
+  const distanceMiles = booking.distanceMiles;
+  const identityReady = options.identityEvidenceCurrent ??
+    Boolean(booking.customerIdentityVerifiedAt);
+  const travelerBlockers = passengerManifestCustodyBlockers(
+    booking.passengers,
+    identityReady,
+  );
+  const offHoursPlanRequired = requiresConfirmedOffHoursPlan(
+    booking.service,
+    booking.flightTime,
+  );
+
+  return {
+    eligibleFlight: Boolean(
+      booking.flight?.trim() &&
+        booking.flightTime?.trim() &&
+        booking.date?.trim(),
+    ),
+    eligibleTraveler:
+      identityReady &&
+      Boolean(booking.restrictedItemsAttestedAt) &&
+      Boolean(
+        booking.consentToSearchAt &&
+        booking.consentToSearchVersion === "2026-08-30"
+      ) &&
+      travelerBlockers.length === 0,
+    routeWithinPilotArea:
+      airport === ORD_PILOT_AIRPORT &&
+      typeof distanceMiles === "number" &&
+      Number.isFinite(distanceMiles) &&
+      distanceMiles >= 0 &&
+      distanceMiles <= ORD_PILOT_ROUTE_BOUNDARY_MILES,
+    noticeSatisfied:
+      !validateFlightCutoff(
+        booking.date,
+        booking.flightTime,
+        booking.service,
+        distanceMiles,
+        airport,
+        options.now ?? new Date(),
+      ),
+    capacityConfirmed: options.capacityConfirmed === true,
+    airport,
+    service: booking.service,
+    operatingWindowMode: offHoursPlanRequired
+      ? options.capacityConfirmed === true
+        ? "confirmed_off_hours"
+        : "requires_off_hours_plan"
+      : "standard",
+  };
 }
 
 export function checkoutEligibilityBlocker(

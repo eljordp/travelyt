@@ -232,7 +232,7 @@ gap(
   7,
   "Real service area and SLA",
   policyComplete ? "VERIFIED_DONE" : "PARTIAL",
-  `Known internal pilot facts: ${policy.airport}, ${policy.routeBoundaryMiles}-mile route boundary, ${policy.operatingDays}, ${policy.minimumBookingNoticeMinutes / 60}-hour minimum notice, capacity ${policy.capacity}. The four-hour custody timer is labeled as an internal review threshold, not a published SLA: ${/not a published delivery SLA/.test(opsRules)}.`,
+  `Known internal pilot facts: ${policy.airport}, ${policy.routeBoundaryMiles}-mile route boundary, ${policy.operatingDays}, ${policy.minimumBookingNoticeMinutes / 60}-hour minimum notice, capacity ${policy.capacity}. Arrival operations warn at the four-hour target and become critical at the six-hour maximum from custody acceptance: ${/ORD_PILOT_ARRIVAL_TARGET_MINUTES/.test(opsRules) && /ORD_PILOT_ARRIVAL_MAX_MINUTES/.test(opsRules)}.`,
   [
     !policy.operatingHours && "Exact operating hours",
     !policy.departureSla && "Departure service-level target",
@@ -283,7 +283,8 @@ const internalRemediations = {
     /\? "traveler" : "operations"/.test(bookingApi),
   pilotApprovalUsesExplicitChecks:
     /REQUIRED_PILOT_CHECKS\.map/.test(adminPage) &&
-    /eligibilityChecks\[checkKey\] !== true/.test(adminPage),
+    /disabled=\{!capacityCheck\}/.test(adminPage) &&
+    /capacityConfirmed: eligibilityChecks\.capacityConfirmed === true/.test(adminPage),
   publicClaimsScrubbed:
     !/vetted handlers with background checks|in-house AI|anomaly detection on bag photos|handle baggage for flights on all major|handle bags for all carriers/i.test(
       cityAndPrivacyText
@@ -328,7 +329,7 @@ const result = {
     "Two controlled real inboxes for the independent-adult family invite/OTP test",
     "Stripe test access for the refund/dispute control",
     "Vercel production access for the phone feature flag and redeploy",
-    "Mo's exact operating hours and separate departure/arrival SLA",
+    "Mo confirms staffing capacity for each booking and any off-hours operating plan",
   ],
   meetingBoundary:
     "TSA meeting readiness is separate from live-custody readiness. Do not present carrier authorization, insurance, physical rehearsal, SMS, AI bag analysis, or a direct TSA data feed as complete.",
