@@ -154,6 +154,10 @@ test("Review copy distinguishes a household spouse, minor, and independent adult
     }, travelDate),
     "Separate email required before submission",
   );
+  assert.equal(
+    passengerReviewContactLabel({ relationship: "spouse" }, travelDate),
+    "Valid date of birth required before submission",
+  );
 });
 
 test("Mo household normalizes to six travelers and seven assigned bags", () => {

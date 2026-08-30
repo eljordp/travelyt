@@ -164,7 +164,10 @@ export function passengerReviewContactLabel(
   const age = passenger.dateOfBirth
     ? ageOnDate(passenger.dateOfBirth, travelDate)
     : undefined;
-  if (age !== undefined && age < 18) {
+  if (age === undefined) {
+    return "Valid date of birth required before submission";
+  }
+  if (age < 18) {
     return "Guardian-managed minor — no separate email";
   }
   if (passenger.relationship === "spouse") {
