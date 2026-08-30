@@ -22,13 +22,36 @@ export type ArchiveOutcome = {
 };
 
 async function downloadStripeFile(fileId: string) {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) throw new Error("Stripe is not configured.");
-  const response = await fetch(`https://files.stripe.com/v1/files/${fileId}/contents`, {
-    headers: { Authorization: `Bearer ${secretKey}` },
+  const restrictedKey = process.env.STRIPE_IDENTITY_RESTRICTED_KEY;
+  if (!restrictedKey) {
+    throw new Error("Stripe Identity image access is not configured.");
+  }
+
+  // Stripe requires a restricted key for sensitive Identity images. Create a
+  // short-lived FileLink and consume it server-side immediately; standard
+  // secret keys receive 403 for these file contents.
+  const linkResponse = await fetch("https://api.stripe.com/v1/file_links", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${restrictedKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      file: fileId,
+      expires_at: String(Math.floor(Date.now() / 1000) + 30),
+    }),
   });
+  if (!linkResponse.ok) {
+    throw new Error(`Stripe FileLink creation failed (${linkResponse.status}).`);
+  }
+  const link = (await linkResponse.json()) as { url?: string };
+  if (!link.url) {
+    throw new Error("Stripe FileLink did not include a download URL.");
+  }
+
+  const response = await fetch(link.url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Stripe file ${fileId} download failed (${response.status}).`);
+    throw new Error(`Stripe Identity image download failed (${response.status}).`);
   }
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
   return { bytes: Buffer.from(await response.arrayBuffer()), contentType };
