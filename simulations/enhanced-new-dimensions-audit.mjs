@@ -6,7 +6,7 @@ const sourceRoot = process.env.TRAVELYT_SOURCE_ROOT || process.cwd();
 const outputDir = path.resolve(process.argv[2] || "/private/tmp/travelyt-enhanced-new-dimensions-audit");
 const liveEvidencePath = path.resolve(
   process.env.TRAVELYT_LIVE_EVIDENCE ||
-    path.join(sourceRoot, "simulations/evidence/live-evidence-2026-08-29.json")
+    path.join(sourceRoot, "simulations/evidence/live-evidence-current.json")
 );
 let liveEvidence = null;
 try {
@@ -287,7 +287,13 @@ const result = {
     sourceControls: counts.MISSING === 0 ? "PRESENT_IN_CURRENT_SOURCE" : "INCOMPLETE",
     integratedTestEnvironment: liveEvidence?.journeys?.sixPersonRealIndependentAdultEmailOtpPaymentRefundDriverCustodyClose
       ? "VERIFIED_FULL_JOURNEY"
-      : liveEvidence ? "PARTIAL_TWO_PERSON_PAYMENT_EMAIL_AND_SOURCE_SIMULATIONS" : "NOT_RUN",
+      : liveEvidence?.journeys?.twoPersonPaymentAndReceipt
+        ? "PARTIAL_TWO_PERSON_PAYMENT_AND_SOURCE_SIMULATIONS"
+        : liveEvidence?.journeys?.twoPersonWaitlistedNoChargeControl
+          ? "PARTIAL_TWO_PERSON_WAITLISTED_NO_CHARGE_AND_SOURCE_SIMULATIONS"
+          : liveEvidence
+            ? "SOURCE_SIMULATIONS_AND_PROVIDER_EMAIL_ONLY"
+            : "NOT_RUN",
     productionDeployment: productionEvidenceMatchesSource
       ? `VERIFIED_READY_AS_OF_${liveEvidence.asOf}`
       : "NOT_VERIFIED_FOR_CURRENT_SOURCE_REVISION",
