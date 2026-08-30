@@ -1,9 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const sourceRoot = process.env.TRAVELYT_SOURCE_ROOT || process.cwd();
 const fixturePath = path.join(sourceRoot, "simulations/fixtures/rj-ord-current-state.v1.json");
-const outputDir = path.resolve(process.argv[2] || "/private/tmp/travelyt-rj-ord-integrated-checkpoint");
+const outputDir = path.resolve(
+  process.argv[2] || path.join(tmpdir(), "travelyt-rj-ord-integrated-checkpoint"),
+);
 const facts = JSON.parse(await readFile(fixturePath, "utf8"));
 
 const unknowns = Object.entries(facts.facts)

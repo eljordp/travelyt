@@ -20,6 +20,7 @@ const checks = [
   ["node", ["simulations/custody-atomic-security-simulation.mjs"], "Atomic custody"],
   ["node", ["simulations/customer-close-ledger-integrity-simulation.mjs"], "Customer close"],
   ["node", ["--experimental-strip-types", "simulations/communications-readiness-simulation.mjs"], "Communications"],
+  ["node", ["simulations/audit-output-portability-simulation.mjs"], "Audit output portability"],
   ["node", ["simulations/enhanced-new-dimensions-audit.mjs"], "Enhanced audit"],
   ["node", ["simulations/original-nine-readiness-audit.mjs"], "Original-nine audit"],
   ["npm", ["run", "build"], "Production build"],

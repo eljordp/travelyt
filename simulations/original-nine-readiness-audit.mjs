@@ -2,12 +2,13 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputDir = path.resolve(
-  process.argv[2] || "/private/tmp/travelyt-original-nine-readiness-audit"
+  process.argv[2] || path.join(tmpdir(), "travelyt-original-nine-readiness-audit"),
 );
 const evidencePath = path.resolve(
   process.env.TRAVELYT_LIVE_EVIDENCE ||

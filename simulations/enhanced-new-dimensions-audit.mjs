@@ -1,9 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const sourceRoot = process.env.TRAVELYT_SOURCE_ROOT || process.cwd();
-const outputDir = path.resolve(process.argv[2] || "/private/tmp/travelyt-enhanced-new-dimensions-audit");
+const outputDir = path.resolve(
+  process.argv[2] || path.join(tmpdir(), "travelyt-enhanced-new-dimensions-audit"),
+);
 const liveEvidencePath = path.resolve(
   process.env.TRAVELYT_LIVE_EVIDENCE ||
     path.join(sourceRoot, "simulations/evidence/live-evidence-current.json")
