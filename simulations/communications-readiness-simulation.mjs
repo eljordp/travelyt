@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   emailDeliveryReadiness,
   sendTransactionalEmail,
@@ -12,6 +15,7 @@ const original = {
   fetch: globalThis.fetch,
 };
 const checks = [];
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function check(name, run) {
   try {
@@ -83,6 +87,18 @@ await check("provider rejection remains a failed delivery", async () => {
     subject: "Test",
     text: "Test",
   }), { status: "failed", providerStatus: 422 });
+});
+
+await check("admin email readiness requires a durable sent receipt", async () => {
+  const source = await readFile(
+    path.join(root, "src/app/api/admin/communications-readiness/route.ts"),
+    "utf8"
+  );
+  assert.match(source, /from\("booking_payment_receipts"\)/);
+  assert.match(source, /eq\("status", "sent"\)/);
+  assert.match(source, /deliveryTested: Boolean\(latestPaymentEmailSentAt\)/);
+  assert.match(source, /latestDeliveryTestedAt: latestPaymentEmailSentAt/);
+  assert.match(source, /sms:[\s\S]*deliveryTested: false/);
 });
 
 if (original.apiKey === undefined) delete process.env.RESEND_API_KEY;

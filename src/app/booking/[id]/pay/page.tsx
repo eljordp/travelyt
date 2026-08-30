@@ -66,8 +66,7 @@ export default function PayPage() {
 
       if (
         checkoutState === "success" &&
-        checkoutSessionId &&
-        result?.status === "pending"
+        checkoutSessionId
       ) {
         try {
           const response = await fetch("/api/stripe/confirm-session", {

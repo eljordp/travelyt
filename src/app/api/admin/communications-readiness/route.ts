@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { emailDeliveryReadiness } from "@/lib/transactional-email";
 
 export async function GET(request: Request) {
@@ -10,6 +11,23 @@ export async function GET(request: Request) {
 
   const email = emailDeliveryReadiness();
   const phoneOtpEnabled = process.env.NEXT_PUBLIC_SUPABASE_PHONE_OTP_ENABLED === "true";
+  const supabase = getSupabaseAdmin();
+  let latestPaymentEmailSentAt: string | null = null;
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("booking_payment_receipts")
+      .select("sent_at")
+      .eq("status", "sent")
+      .not("sent_at", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ sent_at: string }>();
+    if (error) {
+      console.error("Could not load durable email delivery proof", error);
+    } else {
+      latestPaymentEmailSentAt = data?.sent_at ?? null;
+    }
+  }
 
   return NextResponse.json({
     ok: true,
@@ -18,7 +36,8 @@ export async function GET(request: Request) {
       configured: email.apiKeyConfigured && email.fromAddressConfigured,
       apiKeyConfigured: email.apiKeyConfigured,
       fromAddressConfigured: email.fromAddressConfigured,
-      deliveryTested: false,
+      deliveryTested: Boolean(latestPaymentEmailSentAt),
+      latestDeliveryTestedAt: latestPaymentEmailSentAt,
     },
     sms: {
       provider: "supabase_auth",

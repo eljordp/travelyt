@@ -21,6 +21,7 @@
     "simulate:separate-legs": "node simulations/separate-booking-legs-simulation.mjs",
     "simulate:arrival-pricing": "node simulations/arrival-bundle-pricing-simulation.mjs",
     "simulate:pilot-eligibility": "node --experimental-strip-types simulations/pilot-eligibility-gate-simulation.mjs",
+    "simulate:payment-email": "node --experimental-strip-types simulations/payment-confirmation-email-simulation.mjs",
     "simulate:household-sizes": "node --experimental-strip-types simulations/household-size-journey-simulation.mjs",
     "simulate:rj:integrated": "node simulations/rj-ord-integrated-checkpoint.mjs",
     "backup:export": "node scripts/export-backup-ops-kit.mjs",

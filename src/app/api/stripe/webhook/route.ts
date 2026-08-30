@@ -233,10 +233,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (event.type === "checkout.session.completed") {
-      await markBookingPaidFromCheckoutSession(
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
+      const result = await markBookingPaidFromCheckoutSession(
         event.data.object as Stripe.Checkout.Session
       );
+      if (!result.ok && result.reason === "payment-mismatch") {
+        throw new Error("Stripe payment details do not match the booking.");
+      }
+      if (!result.ok && result.reason === "checkout-session-mismatch") {
+        console.error("Stripe Checkout Session was routed to manual review", {
+          eventId: event.id,
+        });
+      }
     }
     if (event.type === "refund.updated") {
       await reconcileRefund(event.data.object as Stripe.Refund, event.id);

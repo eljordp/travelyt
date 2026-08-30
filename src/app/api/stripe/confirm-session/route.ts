@@ -64,6 +64,18 @@ export async function POST(request: Request) {
 
     const result = await markBookingPaidFromCheckoutSession(session);
     if (!result.ok) {
+      if (result.reason === "payment-mismatch") {
+        return bad(
+          "Stripe payment details do not match this booking. No booking status was changed; contact Travelyt support.",
+          409
+        );
+      }
+      if (result.reason === "checkout-session-mismatch") {
+        return bad(
+          "This paid Stripe session does not match the checkout recorded for this booking. It was flagged for manual review.",
+          409
+        );
+      }
       return bad("Stripe has not marked this checkout as paid yet.", 409);
     }
 

@@ -4,6 +4,10 @@
     {
       "path": "/api/internal/identity-retention",
       "schedule": "17 6 * * *"
+    },
+    {
+      "path": "/api/internal/payment-email-retry",
+      "schedule": "23 6 * * *"
     }
   ]
 }
