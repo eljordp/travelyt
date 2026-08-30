@@ -37,7 +37,10 @@ import {
   trackBookingRequestCreated,
   trackLeadSubmission,
 } from "@/lib/analytics";
-import { normalizeBookingPassengers } from "@/lib/passengers";
+import {
+  MAX_BOOKING_BAGS,
+  normalizeBookingPassengers,
+} from "@/lib/passengers";
 import AppChrome from "@/components/AppChrome";
 
 type ServiceType = "departure" | "arrival" | "";
@@ -956,7 +959,7 @@ export default function QuotePage() {
                       <button type="button" onClick={() => set("bags", Math.max(1, form.bags - 1))}
                         className="w-10 h-10 rounded-xl bg-gray-100 text-navy font-bold text-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center">−</button>
                       <span className="text-2xl font-bold text-navy w-8 text-center">{form.bags}</span>
-                      <button type="button" onClick={() => set("bags", Math.min(10, form.bags + 1))}
+                      <button type="button" onClick={() => set("bags", Math.min(MAX_BOOKING_BAGS, form.bags + 1))}
                         className="w-10 h-10 rounded-xl bg-gray-100 text-navy font-bold text-lg hover:bg-gray-200 transition-colors cursor-pointer flex items-center justify-center">+</button>
                       <span className="text-sm text-navy/70">bags</span>
                     </div>

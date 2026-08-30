@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   normalizeBookingPassengers,
   passengerManifestCustodyBlockers,
@@ -11,6 +12,13 @@ import { checkoutEligibilityBlocker } from "../src/lib/pilot-eligibility.ts";
 const now = "2026-08-29T20:00:00.000Z";
 const travelDate = "2026-09-15";
 const approvalExpiry = "2026-08-30T20:00:00.000Z";
+const quotePage = fs.readFileSync(new URL("../src/app/quote/page.tsx", import.meta.url), "utf8");
+
+assert.match(
+  quotePage,
+  /Math\.min\(MAX_BOOKING_BAGS, form\.bags \+ 1\)/,
+  "The public quote flow must not impose the obsolete 10-bag UI cap."
+);
 
 function passenger(firstName, index, options = {}) {
   const category = options.category ?? "minor";
