@@ -3,10 +3,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [route, custody, migration] = await Promise.all([
+const [route, custody, migration, verificationMigration] = await Promise.all([
   readFile(new URL("../src/app/api/custody/route.ts", import.meta.url), "utf8"),
   readFile(new URL("../src/lib/custody.ts", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/041_atomic_custody_checkpoints.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/049_custody_chain_verifier_privilege.sql", import.meta.url), "utf8"),
 ]);
 
 const checks = [];
@@ -199,6 +200,10 @@ check("hash functions use explicit extension schema and safe search paths", () =
 
 check("verification coordinates with concurrent inserts", () => {
   assert.match(migration, /verify_custody_chain[\s\S]*where id = p_bag_id for share/);
+  assert.match(verificationMigration, /verify_custody_chain[\s\S]*security definer[\s\S]*where id = p_bag_id for share/);
+  assert.match(verificationMigration, /set search_path = pg_catalog/);
+  assert.match(verificationMigration, /grant execute on function public\.verify_custody_chain\(uuid\)[\s\S]*to service_role/);
+  assert.match(verificationMigration, /revoke all on function public\.verify_custody_chain\(uuid\)[\s\S]*from public, anon, authenticated/);
 });
 
 check("chain rows bind to the locked bag and server time", () => {
