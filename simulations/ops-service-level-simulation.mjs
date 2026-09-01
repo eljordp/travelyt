@@ -44,17 +44,16 @@ assert.equal(
   false,
 );
 
-const [rules, ordPage, faq] = await Promise.all([
+const [rules, ordPage] = await Promise.all([
   readFile(path.join(root, "src/lib/service-rules.ts"), "utf8"),
   readFile(path.join(root, "src/app/cities/ord/page.tsx"), "utf8"),
-  readFile(path.join(root, "src/components/FAQ.tsx"), "utf8"),
 ]);
 assert.match(rules, /24 hours daily \(Central Time\)/);
 assert.match(rules, /four to six hours of actual landing/);
 assert.match(ordPage, /ORD_PILOT_ARRIVAL_TARGET_MINUTES \/ 60/);
 assert.match(ordPage, /ORD_PILOT_ARRIVAL_MAX_MINUTES \/ 60/);
-assert.match(faq, /hours of actual landing/);
-assert.match(faq, /accountable custody clock starts at the custody-accepted scan/);
+assert.match(ordPage, /measured from actual landing/);
+assert.match(ordPage, /accountable custody clock begins at the custody-accepted scan/);
 
 console.log(JSON.stringify({
   verdict: "PASS",
