@@ -22,7 +22,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Travelyt — Travel Light, Arrive Smart",
+    default: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
     template: "%s | Travelyt",
   },
   description: SITE_DESCRIPTION,
@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: "Travelyt",
-    title: "Travelyt — Travel Light, Arrive Smart",
+    title: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Travelyt — Travel Light, Arrive Smart",
+    title: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
     description: SITE_DESCRIPTION,
   },
   robots: {

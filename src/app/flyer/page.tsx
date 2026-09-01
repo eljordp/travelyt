@@ -1,6 +1,6 @@
 "use client";
 
-import { Send } from "lucide-react";
+import Image from "next/image";
 import { SITE_HOST } from "@/lib/site";
 
 export default function FlyerPage() {
@@ -40,11 +40,10 @@ export default function FlyerPage() {
           {/* Top navy band */}
           <div className="bg-[#081546] text-white px-12 py-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Send className="w-[34px] h-[34px] text-[#ff6868]" fill="currentColor" strokeWidth={1.2} />
-              <div className="text-2xl font-bold tracking-tight">Travelyt</div>
+              <Image src="/logo-white.png" alt="Travelyt" width={1200} height={815} className="h-14 w-auto" />
             </div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
-              Pilot Routes · 2026
+              Proposed journey · 2026
             </div>
           </div>
 
@@ -64,12 +63,12 @@ export default function FlyerPage() {
               <span className="text-[#ff6868]">You move freely.</span>
             </h1>
             <p className="text-lg leading-relaxed max-w-[5.5in] text-[#081546]/75">
-              Travelyt picks up your luggage at home, records each custody
-              checkpoint, and returns the sealed bags to you in the public
-              ticketing area for airline check-in.
+              Travelyt is building a lighter airport day: pickup at home,
+              a recorded custody path toward authorized airline acceptance,
+              and normal destination baggage claim.
             </p>
             <p className="italic text-[#081546]/55 mt-5 text-base">
-              Travel light, arrive smart.
+              One pickup. Two paths. Travel lighter.
             </p>
           </div>
 
@@ -89,7 +88,7 @@ export default function FlyerPage() {
                   n: "01",
                   title: "Doorstep pickup",
                   body:
-                    "A vetted Travelyt agent comes to your door, weighs your bags, and seals each one.",
+                    "The proposed pickup matches traveler, trip, and bags before weighing, condition evidence, and numbered sealing.",
                 },
                 {
                   n: "02",
@@ -99,9 +98,9 @@ export default function FlyerPage() {
                 },
                 {
                   n: "03",
-                  title: "Verified handoff",
+                  title: "Authorized handoff",
                   body:
-                    "Receive your sealed bags in the public ticketing area, verify the seal, and complete airline check-in.",
+                    "A carrier receives bags only through its authorized station procedure. Passenger screening and normal destination claim stay unchanged.",
                 },
               ].map((step) => (
                 <div key={step.n}>

@@ -665,12 +665,18 @@ export default function QuotePage() {
   }
 
   return (
-    <AppChrome title="Book bags">
+    <AppChrome title="Request a route">
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Book your handoff</h1>
+          <h1 className="text-2xl font-bold text-navy">Request your route</h1>
           <p className="mt-1 text-sm text-navy/65">
             Choose one custody leg at a time so each handoff has its own proof chain.
+          </p>
+          <p className="mt-3 rounded-xl border border-navy/10 bg-white p-4 text-sm leading-relaxed text-navy/70">
+            This form creates a request, not a confirmed seamless departure.
+            The standard departure option below returns bags to the traveler.
+            Passenger-absent carrier acceptance requires separate route-specific
+            authorization and confirmation.
           </p>
         </div>
 

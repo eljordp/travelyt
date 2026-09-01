@@ -16,7 +16,7 @@ import LeadCapture from "@/components/LeadCapture";
 export const metadata: Metadata = {
   title: "Embassy and Consular Luggage Coordination",
   description:
-    "Travelyt coordinates sealed, trackable luggage pickup and airport handoff for embassy, consular, diplomatic, and official travel teams.",
+    "Proposed Travelyt luggage coordination for official travel teams, with per-bag custody records and route-specific handoff authorization.",
 };
 
 const useCases = [
@@ -58,10 +58,10 @@ export default function EmbassyPage() {
               Coordinated luggage handling for official travel.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-navy/65 sm:text-lg">
-              Travelyt helps diplomatic, consular, and official travel teams
-              move baggage through pickup, sealing, passenger-present terminal
-              return, and proof of custody. Direct carrier handoff is used only
-              where the carrier and station explicitly authorize it.
+              Travelyt is developing coordinated pickup, sealing, and per-bag
+              custody records for official travel teams. The seamless departure
+              goal is a direct carrier handoff, offered only after the carrier
+              and station explicitly authorize the route and receiving procedure.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
@@ -86,7 +86,7 @@ export default function EmbassyPage() {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-                  Pilot program
+                  Proposed pilot program
                 </p>
                 <p className="font-bold">Structured handling, clear records.</p>
               </div>
@@ -125,7 +125,7 @@ export default function EmbassyPage() {
         <section className="mt-14 grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
-              How the pilot works
+              How a proposed pilot would work
             </p>
             <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
               A documented chain of custody from pickup to handoff.
@@ -152,14 +152,14 @@ export default function EmbassyPage() {
         <section className="mt-14">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c41e2a]">
-              Start a diplomatic pilot
+              Discuss a controlled pilot
             </p>
             <h2 className="mt-3 text-3xl font-bold leading-tight text-navy sm:text-4xl">
               Tell us who is traveling and where the bags need to move.
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-navy/65 sm:text-base">
-              We will follow up to confirm airports, pickup sites, handling
-              requirements, and whether the route fits the current pilot.
+              We will follow up to review airports, pickup sites, handling
+              requirements, and whether the required operating gates can be met.
             </p>
           </div>
           <div className="mt-7">

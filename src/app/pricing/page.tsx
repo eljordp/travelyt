@@ -1,310 +1,180 @@
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleCheck, ShieldCheck, Tag } from "lucide-react";
+import { CircleCheck, CircleDollarSign, ShieldCheck } from "lucide-react";
+import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
 import {
   ARRIVAL_ADDITIONAL_BAG_CENTS,
   ARRIVAL_INCLUDED_BAGS,
-  EXPRESS_PICKUP_CENTS,
   EXPRESS_DISTANCE_RATE_CENTS,
-  FAMILY_BUNDLE_MIN_BAGS,
-  FAMILY_BUNDLE_PERCENT,
   INCLUDED_DISTANCE_MILES,
   SERVICE_PRICES_CENTS,
   STANDARD_DISTANCE_RATE_CENTS,
 } from "@/lib/pricing";
-import {
-  ORD_PILOT_ARRIVAL_MAX_MINUTES,
-  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
-  ORD_PILOT_STANDARD_FIELD_HOURS,
-  TRAVELYT_HANDOFF_TARGET_MINUTES,
-} from "@/lib/service-rules";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Launch Pricing",
   description:
-    "Travelyt booking pricing for departure pickup, bundled arrival delivery, and distance-based route surcharges.",
+    "Travelyt planning prices for requested launch routes. A quote remains subject to route, capacity, coverage, and authorized handoff confirmation.",
   alternates: {
     canonical: "/pricing",
-  },
-  openGraph: {
-    title: "Travelyt Pricing",
-    description:
-      "See departure per-bag rates and arrival booking bundles for Travelyt custody and delivery services.",
-    url: "/pricing",
   },
 };
 
 const plans = [
   {
-    name: "Departure",
+    name: "Departure pickup",
     price: SERVICE_PRICES_CENTS.departure / 100,
-    unit: "per bag",
-    description: "When pilot availability is confirmed, we collect sealed bags and return them to you at the approved public-terminal meet point.",
+    unit: "planned base per bag",
+    body: "The current request estimate covers departure pickup. It does not confirm a seamless carrier handoff; the exact service model and final price must be confirmed for the route.",
     features: [
-      "Doorstep bag collection",
-      "Weigh, tag, and seal",
-      "GPS custody checkpoints",
-      "Verified traveler terminal handoff",
-      "Coverage subject to bound policy",
-      "Status updates; SMS/email where configured",
+      "Traveler, trip, and bag match",
+      "Weight + condition evidence",
+      "Numbered tamper-evident seal",
+      "Recorded custody checkpoints",
+      "Authorized receiving gate required",
     ],
-    cta: "Request Departure Availability",
-    href: "/quote?service=departure",
-    popular: false,
   },
   {
-    name: "Arrival",
+    name: "Arrival delivery",
     price: SERVICE_PRICES_CENTS.arrival / 100,
-    unit: `per booking, up to ${ARRIVAL_INCLUDED_BAGS} bags`,
-    description: "Where airport release is authorized and a delivery window is confirmed, we collect bags after arrival and deliver them to your address.",
+    unit: `planned base for ${ARRIVAL_INCLUDED_BAGS} bags`,
+    body: "A separate post-flight service, offered only where airport release authority and the delivery operating window are confirmed.",
     features: [
-      "Airport release path confirmed before service",
-      "Delivery to any address",
-      "Status and custody updates",
-      "Coverage subject to bound policy",
-      `${ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60}-hour target / ${ORD_PILOT_ARRIVAL_MAX_MINUTES / 60}-hour maximum from custody acceptance`,
-      `$${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each additional bag`,
+      "Airport release path confirmed first",
+      "Recorded release evidence",
+      "Delivery to an eligible address",
+      "Customer receipt confirmation",
+      `$${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} planned additional-bag price`,
     ],
-    cta: "Request Arrival Availability",
-    href: "/quote?service=arrival",
-    popular: false,
   },
 ];
 
-const addons = [
-  { name: "ORD Operating Window", detail: `Requests are accepted online 24/7. Standard field operations are ${ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}, with capacity confirmed before checkout` },
-  { name: "Express Pickup", detail: `+$${EXPRESS_PICKUP_CENTS / 100} per booking — priority route coordination; timing depends on distance, the Travelyt handoff target, and any earlier airline or station requirement` },
-  { name: "Distance Surcharge", detail: `${INCLUDED_DISTANCE_MILES} miles from the airport included, then $${(STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi standard or $${(EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2)}/mi with express` },
-  { name: "Arrival Bag Bundle", detail: `$${SERVICE_PRICES_CENTS.arrival / 100} per arrival booking includes up to ${ARRIVAL_INCLUDED_BAGS} bags; additional bags are $${ARRIVAL_ADDITIONAL_BAG_CENTS / 100} each` },
-  { name: "Departure Extra Bag Discount", detail: "$10 off each additional departure bag on the same booking" },
-  { name: "Departure Family Bundle", detail: `${FAMILY_BUNDLE_MIN_BAGS}+ departure bags: ${FAMILY_BUNDLE_PERCENT}% off eligible service fees` },
-  { name: "Controlled Handoff Target", detail: `Departure service targets terminal handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before departure; standard service returns bags to the traveler, and airline- or station-specific earlier requirements always control` },
-  { name: "Oversized / Sports Equipment", detail: "+$15 per item (golf bags, skis, surfboards)" },
-];
-
-const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
-const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
-
-const competitors = [
-  { name: "Travelyt", departure: "$49/bag", arrival: "$49 / 2 bags", sameDay: "4–6 hrs*", tracking: "Checkpoints", curbside: "Where approved", highlight: true },
-  { name: "Bags VIP", departure: "—", arrival: "$49.95 / 2 bags", sameDay: "4-6 hrs", tracking: "Updates", curbside: "No", highlight: false },
-  { name: "LugLess", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
-  { name: "Luggage Forward", departure: "Quote based", arrival: "Quote based", sameDay: "Carrier timing", tracking: "Carrier", curbside: "No", highlight: false },
-  { name: "AirPortr (UK/EU)", departure: "Quote based", arrival: "Quote based", sameDay: "Yes", tracking: "Yes", curbside: "Yes", highlight: false },
+const routeGates = [
+  "Operating market and capacity",
+  "Named agent, vehicle, and route",
+  "Coverage bound for the final custody model",
+  "Carrier and station receiving authorization where required",
+  "Final timing, exceptions, and service price",
 ];
 
 export default function PricingPage() {
+  const standardDistanceRate = (STANDARD_DISTANCE_RATE_CENTS / 100).toFixed(2);
+  const expressDistanceRate = (EXPRESS_DISTANCE_RATE_CENTS / 100).toFixed(2);
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* Hero */}
-      <section className="pt-28 pb-16 bg-gradient-to-b from-[#f5f0ee] to-white">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Pricing</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-navy mt-3 mb-4">Simple, transparent pricing</h1>
-          <p className="text-navy/70 max-w-2xl mx-auto text-lg">
-            Departure is priced per bag. Arrival starts with one booking price for up to {ARRIVAL_INCLUDED_BAGS} bags. Routes beyond {INCLUDED_DISTANCE_MILES} miles from the airport add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi with express.
-          </p>
-        </div>
-      </section>
+      <main>
+        <section className="bg-gradient-to-b from-[#f5f0ee] to-white pb-16 pt-28">
+          <div className="mx-auto max-w-5xl px-6 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#ff6868]">
+              Launch pricing
+            </p>
+            <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-bold leading-tight text-navy md:text-6xl">
+              Clear planning prices. Confirmed route before custody.
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-navy/70">
+              These prices help travelers plan and submit a route request. They
+              are not proof that a city, airline lane, delivery SLA, or insurance
+              benefit is live.
+            </p>
+          </div>
+        </section>
 
-      {/* Plans */}
-      <section className="pb-20 -mt-4">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {plans.map((plan) => (
-              <div key={plan.name} className={`relative rounded-2xl p-8 ${plan.popular ? "bg-navy text-white shadow-2xl shadow-navy/20 md:-mt-4 md:mb-[-1rem] ring-2 ring-[#ff6868]" : "bg-white border border-gray-100 shadow-lg shadow-navy/5"}`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#ff6868] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
-                    Most Popular
+        <section className="pb-20">
+          <div className="mx-auto max-w-5xl px-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {plans.map((plan) => (
+                <article
+                  key={plan.name}
+                  className="rounded-3xl border border-navy/10 bg-white p-8 shadow-lg shadow-navy/5"
+                >
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#ff6868]">
+                    {plan.name}
+                  </p>
+                  <div className="mt-5 flex items-end gap-2 text-navy">
+                    <span className="text-5xl font-bold">${plan.price}</span>
+                    <span className="pb-1 text-sm text-navy/60">{plan.unit}</span>
                   </div>
-                )}
-                <div className="mb-6">
-                  <h3 className={`text-lg font-bold mb-1 ${plan.popular ? "text-white" : "text-navy"}`}>{plan.name}</h3>
-                  <p className={`text-sm ${plan.popular ? "text-white/60" : "text-navy/70"}`}>{plan.description}</p>
-                </div>
-                <div className="mb-6">
-                  <span className={`text-5xl font-bold ${plan.popular ? "text-white" : "text-navy"}`}>${plan.price}</span>
-                  <span className={`text-sm ml-1 ${plan.popular ? "text-white/70" : "text-navy/70"}`}>{plan.unit}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <CircleCheck
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${plan.popular ? "text-[#ff6868]" : "text-[#ff6868]"}`}
-                        fill="currentColor"
-                        strokeWidth={1.5}
-                      />
-                      <span className={plan.popular ? "text-white/80" : "text-navy/70"}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href={plan.href}
-                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${plan.popular ? "bg-[#ff6868] text-white hover:bg-[#ff6868]" : "bg-navy text-white hover:bg-navy/90"}`}>
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-sm text-navy/70 mt-8 max-w-2xl mx-auto">
-            Airline baggage fees are paid separately to the airline at check-in.
-            Travelyt base fees cover pickup, transport, sealing, and custody
-            checkpoints within {INCLUDED_DISTANCE_MILES} miles of the
-            airport. Addresses farther than {INCLUDED_DISTANCE_MILES} miles
-            add ${standardDistanceRate}/mi standard or ${expressDistanceRate}/mi
-            with express. Any coverage is subject to a policy bound for the final
-            service model before live custody begins.
-          </p>
-        </div>
-      </section>
-
-      {/* Add-ons */}
-      <section className="py-16 bg-[#f5f0ee]">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-2xl font-bold text-navy text-center mb-3">Add-ons & automatic discounts</h2>
-          <p className="mx-auto mb-8 max-w-2xl text-center text-sm text-navy/65">
-            Express pickup is a single departure-booking add-on, not a per-bag charge. Arrival already bundles the first two bags. Departure extra-bag and family discounts are calculated before promo codes are applied.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {addons.map((a) => (
-              <div key={a.name} className="bg-white rounded-xl p-5 shadow-sm">
-                <div className="font-bold text-navy text-sm mb-1">{a.name}</div>
-                <div className="text-navy/70 text-sm">{a.detail}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Promo example */}
-      <section className="py-16">
-        <div className="max-w-5xl mx-auto grid gap-6 px-6 lg:grid-cols-[1fr_1.2fr] lg:items-center">
-          <div>
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6868]/10 text-[#ff6868]">
-              <Tag className="h-5 w-5" strokeWidth={2} />
-            </span>
-            <h2 className="mt-4 text-2xl font-bold text-navy">Discounts show before you pay</h2>
-            <p className="mt-3 text-sm leading-relaxed text-navy/70">
-              Enter a promo code or open a launch-offer link and Travelyt recalculates the booking total automatically. The review screen shows service subtotal, express pickup, distance surcharge, automatic bag discount, promo discount, and estimated total.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-navy/10 bg-[#f6f7fb] p-5 shadow-sm shadow-navy/5">
-            <div className="space-y-3 rounded-xl bg-white p-5 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-navy/65">Departure pickup · 4 bags</span>
-                <span className="font-semibold text-navy">$196.00</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-navy/65">Express pickup</span>
-                <span className="font-semibold text-navy">$20.00</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-navy/65">Distance surcharge · 7 mi express</span>
-                <span className="font-semibold text-navy">$31.50</span>
-              </div>
-              <div className="flex justify-between gap-4 text-[#ff6868]">
-                <span>Extra bag discount</span>
-                <span className="font-semibold">−$30.00</span>
-              </div>
-              <div className="flex justify-between gap-4 text-[#ff6868]">
-                <span>Launch offer (TRAVELYT30)</span>
-                <span className="font-semibold">−$55.80</span>
-              </div>
-              <div className="flex justify-between gap-4 border-t border-navy/10 pt-3 text-base">
-                <span className="font-bold text-navy">Base estimate</span>
-                <span className="font-bold text-navy">$161.70</span>
-              </div>
+                  <p className="mt-5 text-sm leading-relaxed text-navy/70">
+                    {plan.body}
+                  </p>
+                  <ul className="mt-7 space-y-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex gap-3 text-sm text-navy/70">
+                        <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6868]" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
-            <p className="mt-4 text-xs leading-relaxed text-navy/60">
-              Example only. Promo availability, eligibility, service areas,
-              timing, distance surcharges, and coverage terms may vary.
-              Discounts do not apply to airline baggage fees, distance
-              surcharges, oversized-item fees, declared-value upgrades, taxes,
-              or third-party charges unless stated.
+
+            <div className="mt-8 rounded-2xl bg-[#f5f0ee] p-6 text-sm leading-relaxed text-navy/70">
+              The first {INCLUDED_DISTANCE_MILES} route miles are included in the
+              current planning model. Proposed distance pricing is ${standardDistanceRate}/mile
+              standard or ${expressDistanceRate}/mile with express coordination
+              beyond that radius. Airline baggage fees and other third-party charges
+              remain separate.
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-navy py-20 text-white">
+          <div className="mx-auto grid max-w-5xl gap-10 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[#ff6868]">
+                <ShieldCheck className="h-6 w-6" />
+              </span>
+              <h2 className="mt-5 text-3xl font-bold md:text-4xl">
+                A price does not open a custody lane.
+              </h2>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Travelyt confirms the operating path before a live customer bag
+                moves. Missing authority, coverage, capacity, or receiving details
+                means the request is held, changed, or declined.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {routeGates.map((gate) => (
+                <div
+                  key={gate}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4"
+                >
+                  <CircleDollarSign className="h-5 w-5 shrink-0 text-[#ff6868]" />
+                  <span className="text-sm font-semibold text-white/85">{gate}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 text-center">
+          <div className="mx-auto max-w-2xl px-6">
+            <h2 className="text-3xl font-bold text-navy">Tell us the route first.</h2>
+            <p className="mt-4 text-navy/70">
+              Submit the trip for review or join the launch list for market updates.
             </p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                href="/quote"
+                className="rounded-full bg-navy px-8 py-4 font-bold text-white"
+              >
+                Request Route Review
+              </Link>
+              <Link
+                href="/#route-updates"
+                className="rounded-full bg-[#ff6868] px-8 py-4 font-bold text-white"
+              >
+                Join the Launch
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Insurance */}
-      <section className="bg-navy py-16 text-white">
-        <div className="mx-auto grid max-w-5xl gap-8 px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#ff6868]">
-              <ShieldCheck className="h-6 w-6" strokeWidth={2} />
-            </span>
-            <h2 className="mt-4 text-3xl font-bold">Coverage must be bound before live custody</h2>
-            <p className="mt-4 text-sm leading-relaxed text-white/70">
-              The final policy must cover the selected driver, vehicle, route, and custody model. Until that binder and its terms are confirmed, pricing and declared-value selections are proposals—not evidence of active insurance.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              ["Policy binder", "Required before any live customer bag"],
-              ["Chain of custody", "Photos, seals, timestamps, and handoff logs"],
-              ["Claims support", "Documented claim process if something goes wrong"],
-            ].map(([title, body]) => (
-              <div key={title} className="rounded-2xl bg-white/[0.06] p-5">
-                <p className="font-bold text-white">{title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-white/65">{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Comparison */}
-      <section className="py-20">
-        <div className="max-w-5xl mx-auto px-6">
-          <h2 className="text-2xl font-bold text-navy text-center mb-3">How we compare</h2>
-          <p className="text-navy/70 text-center mb-10 max-w-xl mx-auto">Availability-based pickup, documented custody checkpoints, and airport meet-up only where approved. The participating airline and airport control acceptance, check-in, tagging, and screening.</p>
-          <p className="text-center text-xs text-navy/50 mb-2 sm:hidden">Swipe to see all columns →</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-gray-100">
-                  {["Service", "Departure", "Arrival", "Same Day", "GPS Checkpoints", "Curbside Meet-up"].map((h) => (
-                    <th key={h} className="text-left text-xs font-semibold text-navy/70 uppercase tracking-wider px-4 py-3">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {competitors.map((c) => (
-                  <tr key={c.name} className={c.highlight ? "bg-[#ff6868]/5" : "hover:bg-gray-50/50"}>
-                    <td className={`px-4 py-4 font-semibold ${c.highlight ? "text-[#ff6868]" : "text-navy"}`}>{c.name}</td>
-                    <td className="px-4 py-4 text-navy/70">{c.departure}</td>
-                    <td className="px-4 py-4 text-navy/70">{c.arrival}</td>
-                    <td className="px-4 py-4 text-navy/70">{c.sameDay}</td>
-                    <td className="px-4 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.tracking === "Yes" ? "bg-green-100 text-green-700" : c.tracking === "Limited" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>{c.tracking}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.curbside === "Yes" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{c.curbside}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-navy/70 mt-6 text-center">
-            Bags VIP pricing and timing were checked against its public United service page in August 2026. Other competitor notes remain approximate. No endorsement, affiliation, or partnership is implied.
-          </p>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-16 bg-navy text-white text-center">
-        <div className="max-w-2xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">Ready to travel hands-free?</h2>
-          <p className="text-white/60 mb-8">Get a free quote in under 60 seconds.</p>
-          <Link href="/quote" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-[#ff6868] transition-colors">
-            Get Your Quote
-          </Link>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <Footer />
     </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ShieldCheck, Tag, X } from "lucide-react";
+import { ArrowRight, PackageCheck, ShieldCheck, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { isNative } from "@/lib/native";
 
@@ -18,19 +18,18 @@ type Promo = {
 
 const PROMOS: Promo[] = [
   {
-    icon: Tag,
-    eyebrow: "Launch pricing",
-    text: "30% off your first booking",
-    code: "TRAVELYT30",
-    cta: "Claim discount",
-    href: "/quote?promo=TRAVELYT30",
+    icon: PackageCheck,
+    eyebrow: "Launching market by market",
+    text: "Tell us where you want to travel lighter.",
+    cta: "Join the launch",
+    href: "/#route-updates",
   },
   {
     icon: ShieldCheck,
-    eyebrow: "Every bag",
-    text: "Sealed, weighed, and tracked through documented custody.",
-    cta: "See how it works",
-    href: "/trust",
+    eyebrow: "One pickup. Two paths.",
+    text: "The bags take the custody path. You take the passenger path.",
+    cta: "See the journey",
+    href: "/#journey",
   },
 ];
 
@@ -80,6 +79,7 @@ export default function StickyPromoBar() {
   }, [dismissed]);
 
   if (!mounted || dismissed || native) return null;
+  if (pathname === "/") return null;
   if (HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
 
   const promo = PROMOS[index];
@@ -96,7 +96,7 @@ export default function StickyPromoBar() {
     <div
       className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-2 sm:px-6 sm:pb-5"
       role="region"
-      aria-label="Current Travelyt offers"
+      aria-label="Travelyt launch updates"
     >
       <div className="mx-auto flex max-w-5xl items-center gap-2 rounded-xl bg-navy/95 px-3 py-2.5 text-white shadow-2xl shadow-navy/40 backdrop-blur sm:gap-3 sm:rounded-2xl sm:px-5 sm:py-4">
         <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff6868]/20 text-[#ff6868] sm:flex">

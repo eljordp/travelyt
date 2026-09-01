@@ -47,7 +47,7 @@ export default function AppHome() {
           </span>
           <span className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/85">
-              Launch offer · 1 hour left
+              Launch offer · subject to availability
             </p>
             <p className="mt-0.5 text-base font-bold leading-tight">
               30% off your first booking
@@ -96,7 +96,7 @@ export default function AppHome() {
 
         <section className="rounded-2xl bg-white p-4 shadow-sm shadow-navy/5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold text-navy">Trip activity</h2>
+            <h2 className="text-base font-bold text-navy">Example trip activity</h2>
             <Link
               href="/profile"
               className="flex items-center gap-1 text-xs font-semibold text-[#ff6868]"
@@ -133,7 +133,7 @@ export default function AppHome() {
 
         <section className="grid grid-cols-3 gap-3">
           {[
-            { label: "Insured", icon: ShieldCheck },
+            { label: "Coverage gate", icon: ShieldCheck },
             { label: "Sealed + tracked", icon: MapPin },
             { label: "Courier", icon: CarFront },
           ].map((item) => {

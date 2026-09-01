@@ -25,9 +25,9 @@ const NEARBY = [
   "Redondo Beach", "Torrance", "Anaheim", "Irvine", "Burbank",
 ];
 
-const AIRLINES = [
-  "American Airlines", "Delta Air Lines", "United Airlines", "Southwest Airlines",
-  "Alaska Airlines", "JetBlue Airways", "Spirit Airlines", "Frontier Airlines",
+const ROUTE_GATES = [
+  "Written carrier and station authorization", "Named receiving party and location",
+  "Confirmed cutoffs and exception procedure", "Cleared agent, vehicle, and coverage",
 ];
 
 export default function LAXPage() {
@@ -47,7 +47,7 @@ export default function LAXPage() {
             Request pilot availability for LAX. Base pricing includes the first {INCLUDED_DISTANCE_MILES} route miles, but a quote does not confirm a live service area, terminal location, or delivery SLA.
           </p>
           <Link href="/quote?airport=LAX" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get a Quote for LAX
+            Request LAX Route Review
           </Link>
         </div>
       </section>
@@ -58,9 +58,9 @@ export default function LAXPage() {
           <h2 className="text-3xl font-bold text-navy text-center mb-12">Proposed LA pilot flow</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "01", title: "Availability confirmed", desc: "Travelyt first confirms the address, route, agent, operating window, and eligible public-terminal handoff point." },
-              { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal your bags on-site. GPS custody checkpoints are recorded from pickup through handoff so you can follow the bag status from your phone." },
-              { step: "03", title: "Confirmed handoff", desc: "A departure rehearsal returns sealed bags to the traveler at an approved public meet point. Arrival delivery remains unavailable until airport release authority and an SLA are confirmed." },
+              { step: "01", title: "Route gates confirmed", desc: "Travelyt confirms the address, operating window, agent readiness, coverage, and the exact authorized receiving path before releasing a request into custody." },
+              { step: "02", title: "Verify, weigh + seal", desc: "At the door, the traveler, trip, and physical bags are matched. Weight, condition evidence, and a numbered tamper-evident seal begin each bag record." },
+              { step: "03", title: "Authorized acceptance only", desc: "Passenger-absent tender occurs only through the carrier- and station-approved recipient, location, timing, tagging, screening, and exception procedure." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#ff6868]/20 mb-3">{s.step}</div>
@@ -87,11 +87,11 @@ export default function LAXPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Carrier reference list</span>
+              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Before launch</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">Availability is approval-dependent</h2>
-              <p className="text-navy/70 mb-6">These airlines operate at LAX; listing them does not mean Travelyt is approved by or available for that carrier. Service is confirmed per booking, and any passenger-absent checked-bag handoff requires written carrier and station authorization.</p>
+              <p className="text-navy/70 mb-6">No carrier relationship is implied. Each passenger-absent checked-bag route must clear these requirements before service can be confirmed.</p>
               <div className="space-y-2">
-                {AIRLINES.map((a) => (
+                {ROUTE_GATES.map((a) => (
                   <div key={a} className="flex items-center gap-2 text-sm text-navy/70">
                     <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#ff6868]" />
                     {a}
@@ -106,7 +106,7 @@ export default function LAXPage() {
       {/* Pricing */}
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-navy mb-4">LAX Pricing</h2>
+          <h2 className="text-3xl font-bold text-navy mb-4">LAX planning estimates</h2>
           <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
@@ -120,7 +120,7 @@ export default function LAXPage() {
             ))}
           </div>
           <Link href="/quote?airport=LAX" className="inline-block mt-10 bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get Your LAX Quote
+            Request LAX Route Review
           </Link>
         </div>
       </section>
@@ -130,7 +130,7 @@ export default function LAXPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { num: "88M+", label: "Annual LAX passengers" },
+              { num: "1", label: "Record per physical bag" },
               { num: "30mi", label: "Base-pricing radius" },
               { num: "TBD", label: "Live terminal coverage" },
               { num: "TBD", label: "Confirmed delivery SLA" },

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 const securityFeatures = [
   {
     title: "Tamper-Evident Seals",
-    desc: "Every bag is sealed with a unique, numbered tamper-evident seal at your door. If the seal is broken at any point before you or your recipient receive the bag, our system flags it and you're notified immediately.",
+    desc: "Each bag receives a unique, numbered tamper-evident seal at the door. A broken or mismatched seal stops the normal handoff and creates an exception record for review.",
     icon: (
       <LockKeyhole className="w-7 h-7" strokeWidth={1.5} />
     ),
@@ -36,7 +36,7 @@ const securityFeatures = [
   },
   {
     title: "Chain of Custody Logging",
-    desc: "Every handoff is logged — who handled your bag, where, and when. A full digital audit trail from your door through transport to final delivery.",
+    desc: "Each required handoff records who acted, where, when, the seal state, and the supporting proof. Missing evidence keeps the workflow from closing normally.",
     icon: (
       <ClipboardCheck className="w-7 h-7" strokeWidth={1.5} />
     ),
@@ -65,11 +65,11 @@ const securityFeatures = [
 ];
 
 const process = [
-  { title: "Pickup", desc: "Agent arrives at your door, verifies your ID, weighs each bag, and applies a uniquely numbered tamper-evident seal." },
-  { title: "Transport", desc: "Bags are loaded for transport, and GPS custody checkpoints are recorded as the driver starts route, arrives, and completes each proof step." },
-  { title: "Airline Handoff", desc: "For departures, we tender bags only through the receiving role, location, cutoff, tagging, screening, and exception process authorized by the participating airline and airport." },
-  { title: "Arrival Delivery", desc: "Where approved, our agent coordinates post-flight bag release using the airline- and airport-required documents and process." },
-  { title: "Delivery", desc: "Bags are delivered to your chosen address — hotel, home, office — within the agreed delivery window." },
+  { title: "Traveler + trip match", desc: "The traveler, flight details, and physical bags are matched before custody begins. A mismatch means no pickup." },
+  { title: "Verify, weigh + seal", desc: "Condition evidence, weight, and a uniquely numbered tamper-evident seal begin the separate record for each physical bag." },
+  { title: "Secure transit", desc: "Route start, pickup, transit, and arrival create timestamped custody checkpoints with actor, location, seal state, and proof references." },
+  { title: "Authorized acceptance", desc: "Passenger-absent tender is unlocked only when the carrier and station authorize the receiving role, location, timing, tagging, screening, and exception procedure." },
+  { title: "Normal destination reunion", desc: "After documented carrier acceptance, airline screening, loading, transport, and normal baggage claim remain under the airline and existing aviation-security process." },
 ];
 
 export default function TrustPage() {
@@ -109,7 +109,7 @@ export default function TrustPage() {
       <section className="py-20 bg-navy text-white">
         <div className="max-w-4xl mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-4">Chain of custody</h2>
-          <p className="text-white/70 text-center mb-12">Every step is logged, tracked, and verified.</p>
+          <p className="text-white/70 text-center mb-12">The bag path is designed to create evidence at every controlled step.</p>
           <div className="space-y-6">
             {process.map((step, i) => (
               <div key={step.title} className="flex gap-6 items-start">
@@ -164,9 +164,9 @@ export default function TrustPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             {[
-              { label: "Every bag sealed and tracked", icon: "✓" },
+              { label: "One record for each physical bag", icon: "✓" },
               { label: "Coverage required before live custody", icon: "✓" },
-              { label: "Federally registered motor carrier", icon: "✓" },
+              { label: "No authorized acceptance, no transfer", icon: "✓" },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl p-8">
                 <div className="text-3xl text-[#ff6868] mb-2 font-bold">{s.icon}</div>
@@ -180,10 +180,10 @@ export default function TrustPage() {
       {/* CTA */}
       <section className="py-16 bg-navy text-white text-center">
         <div className="max-w-2xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">Trust us with your bags</h2>
-          <p className="text-white/60 mb-8">Documented, sealed, and handled through an approved process.</p>
-          <Link href="/quote" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get Your Quote
+          <h2 className="text-3xl font-bold mb-4">Travel lighter—without losing the proof.</h2>
+          <p className="text-white/60 mb-8">Join the route list while Travelyt prepares authorized launch lanes market by market.</p>
+          <Link href="/#route-updates" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
+            Join the Launch
           </Link>
         </div>
       </section>

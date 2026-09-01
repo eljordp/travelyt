@@ -12,7 +12,6 @@ import {
   ORD_PILOT_ARRIVAL_MAX_MINUTES,
   ORD_PILOT_ARRIVAL_TARGET_MINUTES,
   ORD_PILOT_DEPARTURE_PICKUP_WINDOW_MINUTES,
-  ORD_PILOT_STANDARD_FIELD_HOURS,
 } from "@/lib/service-rules";
 import type { Metadata } from "next";
 
@@ -31,9 +30,9 @@ const NEARBY = [
   "Skokie", "Des Plaines", "Arlington Heights", "Elmhurst", "Oak Brook",
 ];
 
-const AIRLINES = [
-  "American Airlines", "United Airlines", "Delta Air Lines", "Southwest Airlines",
-  "Alaska Airlines", "JetBlue Airways", "Spirit Airlines", "Frontier Airlines",
+const ROUTE_GATES = [
+  "Written carrier and station authorization", "Named receiving party and location",
+  "Confirmed cutoffs and exception procedure", "Cleared agent, vehicle, and coverage",
 ];
 
 export default function ORDPage() {
@@ -49,10 +48,10 @@ export default function ORDPage() {
             Travelyt <span className="text-[#ff6868]">ORD</span>
           </h1>
           <p className="text-white/70 max-w-2xl mx-auto text-lg mb-8">
-            Request pilot availability for Chicago O&apos;Hare within 30 route miles. Field operations are available {ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}, with every booking still subject to confirmed capacity.
+            Request a route review for Chicago O&apos;Hare. A proposed pickup area or displayed estimate does not confirm a live service lane, airline agreement, or operating window.
           </p>
           <Link href="/quote?airport=ORD" className="inline-block bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get a Quote for ORD
+            Request ORD Route Review
           </Link>
         </div>
       </section>
@@ -62,9 +61,9 @@ export default function ORDPage() {
           <h2 className="text-3xl font-bold text-navy text-center mb-12">Proposed Chicago pilot flow</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { step: "01", title: "Availability confirmed", desc: "Travelyt first confirms the address, route, agent, operating window, and eligible public-terminal handoff point." },
-              { step: "02", title: "Bags sealed & tracked", desc: "We weigh, tag, and seal each bag at your door. GPS custody checkpoints are recorded as the bag moves through pickup, handoff, and delivery." },
-              { step: "03", title: "Public-terminal return", desc: "For a confirmed departure rehearsal, the agent returns sealed bags to the verified traveler at the approved public meet point before airline check-in." },
+              { step: "01", title: "Route gates confirmed", desc: "Travelyt confirms the address, operating window, agent readiness, coverage, and the exact authorized receiving path before releasing a request into custody." },
+              { step: "02", title: "Verify, weigh + seal", desc: "At the door, the traveler, trip, and physical bags are matched. Weight, condition evidence, and a numbered tamper-evident seal begin each bag record." },
+              { step: "03", title: "Authorized acceptance only", desc: "Passenger-absent tender occurs only through the carrier- and station-approved recipient, location, timing, tagging, screening, and exception procedure." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="text-4xl font-bold text-[#ff6868]/20 mb-3">{s.step}</div>
@@ -79,12 +78,12 @@ export default function ORDPage() {
       <section className="border-y border-navy/10 bg-white py-14">
         <div className="mx-auto grid max-w-5xl gap-6 px-6 md:grid-cols-2">
           <div className="rounded-2xl border border-navy/10 p-6">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Departure SLA</p>
-            <h2 className="mt-2 text-xl font-bold text-navy">Confirmed {ORD_PILOT_DEPARTURE_PICKUP_WINDOW_MINUTES}-minute pickup window</h2>
-            <p className="mt-2 text-sm leading-relaxed text-navy/70">Sealed bags return to the verified ticketed traveler at the approved public-terminal meeting point at least three hours before departure. The route-aware cutoff or any earlier carrier rule controls.</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Proposed pickup window</p>
+            <h2 className="mt-2 text-xl font-bold text-navy">Target {ORD_PILOT_DEPARTURE_PICKUP_WINDOW_MINUTES}-minute arrival window</h2>
+            <p className="mt-2 text-sm leading-relaxed text-navy/70">Pickup timing is confirmed only after the flight cutoff, route, capacity, and authorized receiving window are known. A displayed target is not a live service guarantee.</p>
           </div>
           <div className="rounded-2xl border border-navy/10 p-6">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Arrival SLA</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#ff6868]">Proposed arrival timing</p>
             <h2 className="mt-2 text-xl font-bold text-navy">{ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60}-hour target · {ORD_PILOT_ARRIVAL_MAX_MINUTES / 60}-hour maximum</h2>
             <p className="mt-2 text-sm leading-relaxed text-navy/70">The target is measured from actual landing when airport release is authorized and baggage is made available normally. Travelyt&apos;s accountable custody clock begins at the custody-accepted scan, and external release delays are recorded as exceptions.</p>
           </div>
@@ -105,11 +104,11 @@ export default function ORDPage() {
               </div>
             </div>
             <div>
-              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Carrier reference list</span>
+              <span className="text-sm font-semibold text-[#ff6868] uppercase tracking-wider">Before launch</span>
               <h2 className="text-3xl font-bold text-navy mt-2 mb-4">Availability is approval-dependent</h2>
-              <p className="text-navy/70 mb-6">These airlines operate at ORD; listing them does not mean Travelyt is approved by or available for that carrier. Service is confirmed per booking, and any passenger-absent checked-bag handoff requires written carrier and station authorization.</p>
+              <p className="text-navy/70 mb-6">No carrier relationship is implied. Each passenger-absent checked-bag route must clear these requirements before service can be confirmed.</p>
               <div className="space-y-2">
-                {AIRLINES.map((a) => (
+                {ROUTE_GATES.map((a) => (
                   <div key={a} className="flex items-center gap-2 text-sm text-navy/70">
                     <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#ff6868]" />
                     {a}
@@ -123,7 +122,7 @@ export default function ORDPage() {
 
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-navy mb-4">ORD Pricing</h2>
+          <h2 className="text-3xl font-bold text-navy mb-4">ORD planning estimates</h2>
           <p className="text-navy/70 mb-10">Base rates are consistent, with distance added after {INCLUDED_DISTANCE_MILES} miles.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
@@ -137,7 +136,7 @@ export default function ORDPage() {
             ))}
           </div>
           <Link href="/quote?airport=ORD" className="inline-block mt-10 bg-[#ff6868] text-white px-8 py-4 rounded-full font-bold hover:bg-[#ff6868] transition-colors">
-            Get Your ORD Quote
+            Request ORD Route Review
           </Link>
         </div>
       </section>
@@ -146,10 +145,10 @@ export default function ORDPage() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { num: "83M+", label: "Annual ORD passengers" },
+              { num: "1", label: "Record per physical bag" },
               { num: "30mi", label: "Base-pricing radius" },
               { num: "TBD", label: "Live terminal coverage" },
-              { num: "4–6h", label: "Authorized arrival SLA" },
+              { num: "TBD", label: "Confirmed arrival window" },
             ].map((s) => (
               <div key={s.label}>
                 <div className="text-3xl font-bold text-[#ff6868]">{s.num}</div>

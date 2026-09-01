@@ -1,9 +1,13 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { SITE_HOST } from "@/lib/site";
 
-export const alt = "Travelyt — Travel light, arrive smart.";
+export const alt = "Travelyt — Your bags leave home. You arrive lighter.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+const logoData = await readFile(join(process.cwd(), "public/logo-white.png"), "base64");
+const logoSrc = `data:image/png;base64,${logoData}`;
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -23,31 +27,8 @@ export default function OpengraphImage() {
       >
         {/* Top row: logo lockup */}
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <svg
-            width="56"
-            height="56"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M2 16l20-7-9 13-2-6-9-0z"
-              fill="#ff6868"
-              stroke="#ff6868"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <div
-            style={{
-              color: "white",
-              fontSize: 44,
-              fontWeight: 800,
-              letterSpacing: -1.5,
-            }}
-          >
-            Travelyt
-          </div>
+          {/* The social preview uses the same approved logo as the website. */}
+          <img src={logoSrc} width={150} height={102} alt="Travelyt" />
         </div>
 
         {/* Main content */}
@@ -61,25 +42,25 @@ export default function OpengraphImage() {
           <div
             style={{
               color: "white",
-              fontSize: 88,
+              fontSize: 76,
               fontWeight: 800,
               lineHeight: 1.05,
               letterSpacing: -2.5,
               maxWidth: 900,
             }}
           >
-            We move your bags. You move freely.
+            Your bags leave home. You arrive lighter.
           </div>
           <div
             style={{
-              color: "#7dd3fc",
+              color: "#ff6868",
               fontSize: 32,
               fontWeight: 500,
               fontStyle: "italic",
               letterSpacing: -0.5,
             }}
           >
-            Travel light, arrive smart.
+            One pickup. Two paths. Travel lighter.
           </div>
         </div>
 
@@ -90,16 +71,16 @@ export default function OpengraphImage() {
             alignItems: "center",
             justifyContent: "space-between",
             color: "rgba(255,255,255,0.6)",
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: 500,
           }}
         >
           <div style={{ display: "flex", gap: 32 }}>
             <span>Doorstep pickup</span>
             <span>·</span>
-            <span>Tracked end-to-end</span>
+            <span>Recorded custody</span>
             <span>·</span>
-            <span>Coverage before custody</span>
+            <span>Preparing for launch</span>
           </div>
           <div style={{ color: "white", fontWeight: 700 }}>{SITE_HOST}</div>
         </div>

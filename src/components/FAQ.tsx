@@ -2,30 +2,27 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import {
-  ORD_PILOT_ARRIVAL_MAX_MINUTES,
-  ORD_PILOT_ARRIVAL_TARGET_MINUTES,
-  ORD_PILOT_MINIMUM_NOTICE_MINUTES,
-  ORD_PILOT_STANDARD_FIELD_HOURS,
-  TRAVELYT_HANDOFF_TARGET_MINUTES,
-} from "@/lib/service-rules";
 
 const faqs = [
   {
-    q: "How far in advance do I need to book?",
-    a: `Requests are accepted online 24/7 and require at least ${ORD_PILOT_MINIMUM_NOTICE_MINUTES / 60} hours' notice. Departure uses a route-aware cutoff and targets traveler handoff at least ${TRAVELYT_HANDOFF_TARGET_MINUTES / 60} hours before the flight. Standard ORD field operations are ${ORD_PILOT_STANDARD_FIELD_HOURS.toLowerCase()}; every request still requires confirmed capacity before checkout.`,
+    q: "How do I request a trip?",
+    a: "Start in the Travelyt app or join the route list. Tell us the airport, date, pickup address and bag count. We confirm market availability, capacity, timing and the exact handoff path before a request becomes a live service booking.",
   },
   {
     q: "What airports and cities do you serve?",
-    a: "We're rolling out service market by market. Check our booking tool for availability in your area — and if we're not in your city yet, sign up and we'll let you know when we launch there.",
+    a: "We're preparing launch lanes market by market. Selecting an airport in the request form does not confirm live service. Submit your route for review or join the launch list; we confirm availability directly.",
   },
   {
-    q: "How does departure handoff work?",
-    a: "Standard service returns the sealed bags to the verified ticketed traveler in the public ticketing area, and the traveler completes airline check-in and bag acceptance. Travelyt never performs screening, issues airline bag tags, or enters secure/badged areas. Passenger-absent tender is available only where the carrier and station authorize a named airline or ground-handler recipient and the full acceptance process.",
+    q: "How does the seamless departure path work?",
+    a: "Travelyt picks up, verifies, weighs and seals each bag at the traveler’s door. A passenger-absent airline handoff is offered only where the carrier and station authorize the receiving location, recipient and procedure. If that acceptance path is not confirmed, the request is not released into the seamless lane.",
   },
   {
-    q: "How long does arrival delivery take?",
-    a: `Where airport release is authorized and bags are made available normally, the ORD pilot targets delivery within ${ORD_PILOT_ARRIVAL_TARGET_MINUTES / 60} to ${ORD_PILOT_ARRIVAL_MAX_MINUTES / 60} hours of actual landing. Travelyt's accountable custody clock starts at the custody-accepted scan, and external release delays are recorded as exceptions. A request is never charged until the release path, delivery window, and capacity are confirmed.`,
+    q: "Does Travelyt change passenger screening?",
+    a: "No. The traveler still follows normal passenger screening, and TSA PreCheck applies only when the traveler is eligible. Travelyt’s role is to separate the checked-bag custody journey from the passenger journey before the airport.",
+  },
+  {
+    q: "What if the seamless airline lane is not available for my route?",
+    a: "A seamless carrier handoff will not be confirmed without the required authorization. Any different service model must be identified in your request and confirmed directly; a quote or payment does not create carrier authority.",
   },
   {
     q: "Is my luggage insured?",
@@ -33,11 +30,11 @@ const faqs = [
   },
   {
     q: "Can I track my bags in real time?",
-    a: "The system records status updates and custody checkpoints. Live GPS visibility and automated SMS or email delivery depend on the configured launch environment and are not promised until they have passed end-to-end testing.",
+    a: "The system records status updates and custody checkpoints. Continuous customer-facing live GPS is a future launch feature and will not be advertised as active until it passes end-to-end testing.",
   },
   {
     q: "What if my flight is delayed or cancelled?",
-    a: "We monitor flight status and adjust pickup and delivery timing where possible. If a change requires rescheduling, we'll reach out directly to confirm new times.",
+    a: "Tell Travelyt as soon as your flight changes. The team reviews the pickup window, receiving cutoff, and route capacity, then confirms revised arrangements. Do not assume the original plan still applies.",
   },
   {
     q: "What about fragile items, liquids, or restricted goods?",

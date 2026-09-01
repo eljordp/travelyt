@@ -21,18 +21,6 @@ const interestOptions = [
   { value: "airport-partner", label: "Airport partner" },
 ];
 
-function saveLocalLead(email: string, interest: string, source: string) {
-  try {
-    const key = "travelyt:leads";
-    const raw = window.localStorage.getItem(key);
-    const rows = raw ? (JSON.parse(raw) as unknown[]) : [];
-    rows.push({ email, interest, source, createdAt: new Date().toISOString() });
-    window.localStorage.setItem(key, JSON.stringify(rows));
-  } catch {
-    // Local backup is best-effort; the API request is the primary action.
-  }
-}
-
 export default function LeadCapture({
   source,
   variant = "cta",
@@ -55,7 +43,6 @@ export default function LeadCapture({
 
     setStatus("loading");
     setMessage("");
-    saveLocalLead(cleanEmail, interest, source);
 
     try {
       const response = await fetch("/api/leads", {
@@ -75,7 +62,7 @@ export default function LeadCapture({
       setEmail("");
     } catch {
       setStatus("error");
-      setMessage("Saved on this device. Live email capture still needs setup.");
+      setMessage("We couldn't submit your request. Please try again or email info@travelyt.us.");
     }
   }
 

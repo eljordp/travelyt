@@ -90,7 +90,7 @@ const opsChecklist = [
   },
   {
     title: "Timestamped chain-of-custody log",
-    desc: "A complete digital audit trail per bag, available to your operations and security teams for every pilot movement.",
+    desc: "The software produces a per-bag event record for review. A controlled physical rehearsal remains a launch gate before live movements.",
     icon: <ClipboardCheck className="w-6 h-6" strokeWidth={1.5} />,
   },
   {
@@ -105,7 +105,7 @@ const opsChecklist = [
   },
   {
     title: "Integration-light pilot",
-    desc: "Pilots run on manifests and status updates — no re-architecture of your systems required to start. Deeper integration only when a pilot earns it.",
+    desc: "A proposed pilot can begin with agreed manifests and status updates rather than a full systems re-architecture. Deeper integration follows only after review.",
     icon: <Workflow className="w-6 h-6" strokeWidth={1.5} />,
   },
 ];
@@ -168,8 +168,8 @@ export default function AirlinesPartnerPage() {
             </a>
           </div>
           <p className="text-navy/50 max-w-2xl mx-auto text-sm mt-8">
-            Travelyt is an independent baggage logistics service, currently
-            operating supervised pilot routes. We are not affiliated with,
+            Travelyt is an independent baggage logistics service preparing
+            controlled pilot routes. We are not affiliated with,
             endorsed by, or partnered with any airline unless explicitly stated.
           </p>
         </div>
@@ -205,8 +205,8 @@ export default function AirlinesPartnerPage() {
             </h2>
             <p className="text-navy/70 max-w-2xl mx-auto mt-4">
               The product underneath the service is a chain-of-custody ledger:
-              every time a bag changes hands, it becomes a verifiable event tied
-              to one bag, one ID-verified person, one time and place.
+              every required handoff creates an event tied to one physical bag,
+              its verified traveler record, one actor, and one time and place.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -250,8 +250,8 @@ export default function AirlinesPartnerPage() {
                   What Travelyt adds is the piece the off-airport model has
                   always been missing: verifiable proof that between the
                   passenger&apos;s door and your acceptance point, the bag
-                  stayed bound to a verified traveler under documented custody,
-                  with no untracked gap.
+                  remained bound to a verified traveler record and that every
+                  required handoff either produced evidence or stopped as an exception.
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
@@ -325,11 +325,11 @@ export default function AirlinesPartnerPage() {
             We&apos;d rather show you a custody log than a logo wall.
           </h2>
           <p className="text-navy/70 max-w-2xl mx-auto leading-relaxed">
-            Travelyt is pilot-stage by design. Every launch route runs
-            supervised: dated flight verified, route confirmed, handoff point
-            designated by the airline, and every custody event documented from
-            doorstep to acceptance. A pilot briefing walks your team through the
-            live custody record of real movements — the proof, not the pitch.
+            Travelyt is pilot-stage by design. Today we can walk your team through
+            a synthetic custody record and the controls that prevent an
+            unauthorized handoff. A controlled dummy-bag rehearsal begins only
+            after the route, receiving point, participants, coverage, and
+            observation plan are confirmed in writing.
           </p>
           <div className="mt-8">
             <a

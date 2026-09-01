@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Request a Quote",
   description:
-    "Request a Travelyt quote for doorstep baggage pickup with verified traveler terminal return or for arrival delivery.",
+    "Request review of a Travelyt baggage route. Pricing, timing, coverage, and the exact handoff model are subject to confirmation.",
   alternates: {
     canonical: "/quote",
   },

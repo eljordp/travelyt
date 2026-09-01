@@ -12,11 +12,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="inline-block">
-              <Image src="/logo-white.png" alt="Travelyt" width={140} height={48} className="h-10 w-auto" />
+              <Image src="/logo-white.png" alt="Travelyt" width={1200} height={815} className="h-10 w-auto" />
             </Link>
             <p className="text-white/60 text-sm mt-4 leading-relaxed">
-              Travel light, arrive smart. Door-to-door baggage solutions for the
-              modern traveler.
+              One pickup separates the checked-bag journey from the passenger
+              journey—so the airport starts lighter.
             </p>
             <a
               href={APP_STORE_URL}
@@ -36,23 +36,23 @@ export default function Footer() {
             </div>
             <ul className="space-y-3 text-sm text-white/60">
               <li>
-                <Link href="/#services" className="hover:text-cyan transition-colors">
-                  Doorstep Pickup
+                <Link href="/#journey" className="hover:text-cyan transition-colors">
+                  The seamless journey
                 </Link>
               </li>
               <li>
-                <Link href="/#services" className="hover:text-cyan transition-colors">
-                  Land & Leave
-                </Link>
-              </li>
-              <li>
-                <Link href="/#services" className="hover:text-cyan transition-colors">
-                  City-to-City Baggage
+                <Link href="/#route-updates" className="hover:text-cyan transition-colors">
+                  Route updates
                 </Link>
               </li>
               <li>
                 <Link href="/trust" className="hover:text-cyan transition-colors">
-                  Trust & Security
+                  Custody and trust
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-cyan transition-colors">
+                  Pricing and route review
                 </Link>
               </li>
               <li>
@@ -70,12 +70,12 @@ export default function Footer() {
             </div>
             <ul className="space-y-3 text-sm text-white/60">
               <li>
-                <Link href="/trust" className="hover:text-cyan transition-colors">
-                  About Us
+                <Link href="/#journey" className="hover:text-cyan transition-colors">
+                  How it works
                 </Link>
               </li>
               <li>
-                <Link href="/#route-updates" className="hover:text-cyan transition-colors">
+                <Link href="/airlines" className="hover:text-cyan transition-colors">
                   Partners
                 </Link>
               </li>
@@ -85,8 +85,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/quote" className="hover:text-cyan transition-colors">
-                  Contact
+                <Link href="/#route-updates" className="hover:text-cyan transition-colors">
+                  Join the launch
                 </Link>
               </li>
             </ul>
@@ -109,7 +109,7 @@ export default function Footer() {
           <div className="text-white/70 text-sm">
             &copy; 2026 Travelyt. All rights reserved.
           </div>
-          <div className="flex gap-6 text-sm text-white/70">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-white/70">
             <Link href="/privacy" className="hover:text-cyan transition-colors">
               Privacy
             </Link>

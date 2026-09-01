@@ -137,7 +137,7 @@ await check("customer tracking never puts the long-lived booking token in badge 
   assert.match(trackSource, /privacy-safe custody history/);
 });
 
-await check("ORD, JFK, and LAX carrier lists are approval-dependent references", () => {
+await check("ORD, JFK, and LAX show authorization gates without implied carrier partnerships", () => {
   for (const [airport, source] of [
     ["ORD", ordSource],
     ["JFK", jfkSource],
@@ -146,8 +146,14 @@ await check("ORD, JFK, and LAX carrier lists are approval-dependent references",
     assert.doesNotMatch(source, /All major carriers/i, `${airport} all-carrier claim remains`);
     assert.doesNotMatch(source, /handle(?:s|d)? (?:bags|baggage) for (?:flights on )?all/i);
     assert.match(source, /Availability is approval-dependent/);
-    assert.match(source, /does not mean Travelyt is approved by or available for that carrier/);
-    assert.match(source, /requires written carrier and station authorization/);
+    assert.match(source, /No carrier relationship is implied/);
+    assert.match(source, /must clear these requirements before service can be confirmed/);
+    assert.match(source, /Written carrier and station authorization/);
+    assert.match(source, /Named receiving party and location/);
+    assert.match(source, /Confirmed cutoffs and exception procedure/);
+    assert.match(source, /Cleared agent, vehicle, and coverage/);
+    assert.match(source, /ROUTE_GATES\.map/);
+    assert.doesNotMatch(source, /const AIRLINES\s*=/, `${airport} carrier-name list remains`);
   }
 });
 
