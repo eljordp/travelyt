@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import LeadCapture from "./LeadCapture";
-import { APP_STORE_URL } from "@/lib/site";
+import { APP_STORE_URL, SITE_MOTTO } from "@/lib/site";
 
 export default function Footer() {
   return (
@@ -15,8 +15,7 @@ export default function Footer() {
               <Image src="/logo-white.png" alt="Travelyt" width={1200} height={815} className="h-10 w-auto" />
             </Link>
             <p className="text-white/60 text-sm mt-4 leading-relaxed">
-              One pickup separates the checked-bag journey from the passenger
-              journey—so the airport starts lighter.
+              {SITE_MOTTO}
             </p>
             <a
               href={APP_STORE_URL}

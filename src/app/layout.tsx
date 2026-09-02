@@ -7,7 +7,7 @@ import SiteAnalytics from "@/components/SiteAnalytics";
 import AnalyticsConsent from "@/components/AnalyticsConsent";
 import StickyPromoBar from "@/components/StickyPromoBar";
 import { GA4_MEASUREMENT_ID } from "@/lib/analytics";
-import { SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_MOTTO, SITE_URL } from "@/lib/site";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -22,7 +22,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
+    default: `Travelyt — ${SITE_MOTTO}`,
     template: "%s | Travelyt",
   },
   description: SITE_DESCRIPTION,
@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: "Travelyt",
-    title: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
+    title: `Travelyt — ${SITE_MOTTO}`,
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Travelyt — Your Bags Leave Home. You Arrive Lighter.",
+    title: `Travelyt — ${SITE_MOTTO}`,
     description: SITE_DESCRIPTION,
   },
   robots: {

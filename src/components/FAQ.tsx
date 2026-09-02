@@ -53,7 +53,7 @@ export default function FAQ() {
             FAQ
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-navy mt-3 mb-4">
-            Questions? Answered.
+            Before you travel.
           </h2>
         </div>
 
