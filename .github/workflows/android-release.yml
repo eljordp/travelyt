@@ -24,15 +24,14 @@ jobs:
           node-version: '22'
 
       - name: Configure Firebase for Android push
-        if: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
-
-      - name: Note Firebase push is not configured
-        if: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 == '' }}
-        run: echo "Building without Firebase push configuration"
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
+          else
+            echo "Building without Firebase push configuration"
+          fi
 
       - name: Install JS deps + sync Capacitor Android
         run: |
