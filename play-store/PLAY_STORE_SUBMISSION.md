@@ -34,7 +34,6 @@ Full description:
 > - Review clear service estimates before submitting
 > - View request and bag status
 > - Track chain-of-custody milestones and proof
-> - Receive supported booking notifications
 > - Manage profile details and account deletion
 >
 > Travelyt is launching in selected markets. Service availability, airport procedures, and timing are confirmed after request submission. Travelyt is not an airline. Airline baggage fees, airline acceptance, airport rules, and government screening requirements remain separate from Travelyt service fees.
@@ -61,9 +60,21 @@ product and should not broaden the current customer-app review.
 ## App access for review
 
 - Start at `https://travelyt.us/demo`.
-- Provide the seeded customer credentials in Play Console under App access.
-- Explain that the public quote flow can be tested without login.
+- Select that all core functionality is available without special access.
+- Explain that the public quote flow can be tested without login using the
+  sample data below.
 - Do not give reviewers privileged production admin credentials.
+
+Sample review data:
+
+- Airport: IAD or LAX
+- Address: 123 Main St, Washington, DC
+- Date: any future date
+- Flight: UA 123
+- Bags: 2
+- Name: App Review
+- Email: reviewer@example.com
+- Phone: optional; leave blank or use +1 555 000 0000
 
 ## Data safety working draft
 

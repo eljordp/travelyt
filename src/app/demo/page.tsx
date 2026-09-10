@@ -63,9 +63,9 @@ export default function DemoPage() {
               Review the working Travelyt flow
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-navy/70">
-              Use the credentials in App Store Connect to access customer trips,
-              quote requests, courier jobs, tracking updates, proof review, and
-              the operations console.
+              Use the reviewer credentials supplied with the store submission
+              to access customer trips, quote requests, courier jobs, tracking
+              updates, proof review, and the operations console.
             </p>
           </div>
         </section>
